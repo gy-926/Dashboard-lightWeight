@@ -1,0 +1,129 @@
+import type { RouteRecordRaw } from 'vue-router'
+
+/** 菜单项接口 */
+export interface MenuItem {
+  /** 唯一标识 */
+  key: string
+  /** 路由路径 */
+  path: string
+  /** 菜单标题 */
+  title: string
+  /** 图标类名 */
+  icon?: string
+  /** 子菜单 */
+  children?: MenuItem[]
+  /** 是否隐藏 */
+  hidden?: boolean
+  /** 是否总是展开 */
+  alwaysShow?: boolean
+  /** 父级路径（用于构建完整路径） */
+  parentPath?: string
+  /** 元数据 */
+  meta?: Record<string, unknown>
+  /** 重定向地址 */
+  redirect?: string
+}
+
+/** 菜单配置 */
+export interface MenuConfig {
+  /** 是否显示完整路径 */
+  showFullPath?: boolean
+  /** 是否开启手风琴模式 */
+  accordion?: boolean
+  /** 默认展开的菜单 keys */
+  defaultOpenKeys?: string[]
+  /** 默认选中的菜单 key */
+  defaultSelectedKey?: string
+  /** 是否折叠菜单 */
+  collapsed?: boolean
+}
+
+/** 主题配置 */
+export interface ThemeConfig {
+  /** 布局模式: side-侧边栏, top-顶部菜单, mix-混合布局 */
+  layout: 'side' | 'top' | 'mix'
+  /** 主题色 */
+  primaryColor: string
+  /** 是否暗色模式 */
+  darkMode: boolean
+  /** 侧边栏宽度 */
+  siderWidth: number
+  /** 是否显示标签页 */
+  showTabs: boolean
+  /** 是否显示面包屑 */
+  showBreadcrumb: boolean
+  /** 是否显示页脚 */
+  showFooter: boolean
+}
+
+/** 将路由转换为菜单项 */
+export function transformRouteToMenu(routes: RouteRecordRaw[], parentPath = ''): MenuItem[] {
+  const menu: MenuItem[] = []
+
+  for (const route of routes) {
+    // 跳过隐藏的路由
+    if (route.meta?.hidden === true) {
+      continue
+    }
+
+    const fullPath = parentPath
+      ? `${parentPath}/${route.path.replace(/^\//, '')}`
+      : route.path
+
+    const menuItem: MenuItem = {
+      key: route.name as string || route.path,
+      path: fullPath,
+      title: (route.meta?.title as string) || route.name as string || route.path,
+      icon: route.meta?.icon as string,
+      hidden: route.meta?.hidden as boolean,
+      alwaysShow: route.meta?.alwaysShow as boolean,
+      meta: route.meta as Record<string, unknown>,
+      parentPath,
+      redirect: route.redirect as string,
+    }
+
+    // 递归处理子路由
+    if (route.children && route.children.length > 0) {
+      const children = transformRouteToMenu(route.children, fullPath)
+      // 如果有子菜单且不是总是显示，则过滤掉没有子菜单的项
+      menuItem.children = children.filter(child => !child.hidden)
+    }
+
+    // 如果有子菜单或本身不需要过滤，则添加到菜单
+    if (!route.meta?.hidden) {
+      menu.push(menuItem)
+    }
+  }
+
+  return menu
+}
+
+/** 扁平化菜单（用于标签页） */
+export function flattenMenu(menu: MenuItem[]): MenuItem[] {
+  const result: MenuItem[] = []
+
+  for (const item of menu) {
+    result.push(item)
+    if (item.children && item.children.length > 0) {
+      result.push(...flattenMenu(item.children))
+    }
+  }
+
+  return result
+}
+
+/** 查找菜单项的所有父级路径 */
+export function findMenuParents(menu: MenuItem[], path: string, parents: MenuItem[] = []): MenuItem[] {
+  for (const item of menu) {
+    if (item.path === path) {
+      return parents
+    }
+    if (item.children) {
+      const found = findMenuParents(item.children, path, [...parents, item])
+      if (found.length > 0) {
+        return found
+      }
+    }
+  }
+  return []
+}

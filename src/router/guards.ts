@@ -3,35 +3,48 @@ import type { Router } from 'vue-router'
 // 路由守卫配置
 const guardsConfig = {
   enabled: true,
-  defaultTitle: "",
+  defaultTitle: 'Kivii Admin',
 }
 
 export function setupRouteGuards(router: Router) {
   if (!guardsConfig.enabled) {
     return
   }
-  
-  router.beforeEach((to, from, next) => {
+
+  router.beforeEach(async (to, from, next) => {
     // 设置页面标题
     const title = to.meta?.title as string || guardsConfig.defaultTitle
     if (title) {
       document.title = title
     }
-    
-    // 这里可以根据需要添加自定义的路由守卫逻辑
-    // 例如：检查 to.meta?.params 中的自定义参数
-    
+
+    // 延迟导入 store，确保 Pinia 已安装
+    const { useMenuStore } = await import('@/layouts/modules/global-menu/store')
+    const menuStore = useMenuStore()
+
+    // 初始化菜单（只初始化一次）
+    if (menuStore.menuList.length === 0) {
+      menuStore.setMenuFromRoutes(router.getRoutes())
+    }
+
+    // 设置当前选中的菜单
+    menuStore.setSelectedKey(to.path)
+
+    // 添加到标签页
+    const menuItem = {
+      key: to.name as string || to.path,
+      path: to.path,
+      title: title,
+      icon: to.meta?.icon as string,
+    }
+    menuStore.addTab(menuItem)
+
     next()
   })
-  
+
   router.afterEach((to, from) => {
     // 路由切换完成后的处理
     console.log(`Route changed from ${from.path} to ${to.path}`)
-    
-    // 可以在这里处理页面分析、埋点等
-    if (to.meta?.title) {
-      console.log(`Page title set to: ${to.meta.title}`)
-    }
   })
 }
 
