@@ -1,9 +1,96 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { MenuItem, ThemeConfig, MenuConfig } from './types'
 import { transformRouteToMenu } from './types'
 
+// 辅助函数：颜色变亮
+function lightenColor(hex: string, percent: number): string {
+  const num = parseInt(hex.replace('#', ''), 16)
+  const amt = Math.round(2.55 * percent)
+  const R = Math.min(255, (num >> 16) + amt)
+  const G = Math.min(255, ((num >> 8) & 0x00FF) + amt)
+  const B = Math.min(255, (num & 0x0000FF) + amt)
+  return `rgba(${R}, ${G}, ${B}, 0.2)`
+}
+
+// 辅助函数：颜色变暗
+function darkenColor(hex: string, percent: number): string {
+  const num = parseInt(hex.replace('#', ''), 16)
+  const amt = Math.round(2.55 * percent)
+  const R = Math.max(0, (num >> 16) - amt)
+  const G = Math.max(0, ((num >> 8) & 0x00FF) - amt)
+  const B = Math.max(0, (num & 0x0000FF) - amt)
+  return `#${(1 << 24 | R << 16 | G << 8 | B).toString(16).slice(1)}`
+}
+
+// 辅助函数：hex 转 rgba
+function hexToRgba(hex: string, alpha: number): string {
+  const num = parseInt(hex.replace('#', ''), 16)
+  const R = (num >> 16) & 255
+  const G = (num >> 8) & 255
+  const B = num & 255
+  return `rgba(${R}, ${G}, ${B}, ${alpha})`
+}
+
+// 从本地存储读取保存的主题设置
+function loadThemeFromStorage(): Partial<ThemeConfig> {
+  try {
+    const saved = localStorage.getItem('kivii-theme')
+    if (saved) {
+      return JSON.parse(saved)
+    }
+    // 检查系统偏好
+    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      return { darkMode: true }
+    }
+  } catch (e) {
+    console.warn('Failed to load theme from storage:', e)
+  }
+  return {}
+}
+
+// 应用暗色模式到 DOM
+function applyDarkMode(darkMode: boolean) {
+  if (darkMode) {
+    document.documentElement.classList.add('dark')
+  } else {
+    document.documentElement.classList.remove('dark')
+  }
+}
+
+// 应用主题色到 CSS 变量
+function applyThemeColor(color: string) {
+  const root = document.documentElement
+  root.style.setProperty('--color-primary', color)
+
+  // 计算 lighten 颜色
+  const lightColor = lightenColor(color, 40)
+  root.style.setProperty('--color-primary-light', lightColor)
+
+  // 计算 darker 颜色
+  const darkColor = darkenColor(color, 10)
+  root.style.setProperty('--color-primary-dark', darkColor)
+
+  // 计算 hover 颜色
+  const hoverColor = darkenColor(color, 5)
+  root.style.setProperty('--color-primary-hover', hoverColor)
+
+  // 计算半透明背景色
+  root.style.setProperty('--color-primary-bg', hexToRgba(color, 0.1))
+
+  // 计算暗色模式下的颜色变体
+  const darkModeLight = hexToRgba(color, 0.15)
+  const darkModeBg = hexToRgba(color, 0.1)
+  const darkModeHover = hexToRgba(color, 0.25)
+  root.style.setProperty('--color-primary-dark-mode-light', darkModeLight)
+  root.style.setProperty('--color-primary-dark-mode-bg', darkModeBg)
+  root.style.setProperty('--color-primary-dark-mode-hover', darkModeHover)
+}
+
 export const useMenuStore = defineStore('menu', () => {
+  // 加载保存的设置
+  const savedTheme = loadThemeFromStorage()
+
   // 菜单列表
   const menuList = ref<MenuItem[]>([])
   // 展开的菜单 keys
@@ -14,9 +101,9 @@ export const useMenuStore = defineStore('menu', () => {
   const tabsList = ref<MenuItem[]>([])
   // 主题配置
   const theme = ref<ThemeConfig>({
-    layout: 'side',
-    primaryColor: '#3b82f6',
-    darkMode: false,
+    layout: savedTheme.layout || 'side',
+    primaryColor: savedTheme.primaryColor || '#3b82f6',
+    darkMode: savedTheme.darkMode !== undefined ? savedTheme.darkMode : true, // 优先使用保存的设置，否则默认暗色
     siderWidth: 220,
     showTabs: true,
     showBreadcrumb: true,
@@ -32,6 +119,26 @@ export const useMenuStore = defineStore('menu', () => {
   })
   // 侧边栏折叠状态
   const siderCollapsed = ref(false)
+
+  // 初始化时应用主题
+  applyDarkMode(theme.value.darkMode)
+  applyThemeColor(theme.value.primaryColor)
+
+  // 监听主题变化并保存到本地存储
+  watch(theme, (val) => {
+    try {
+      localStorage.setItem('kivii-theme', JSON.stringify({
+        layout: val.layout,
+        primaryColor: val.primaryColor,
+        darkMode: val.darkMode,
+        showTabs: val.showTabs,
+        showBreadcrumb: val.showBreadcrumb,
+        showFooter: val.showFooter,
+      }))
+    } catch (e) {
+      console.warn('Failed to save theme:', e)
+    }
+  }, { deep: true })
 
   // 计算面包屑
   const breadcrumbs = computed(() => {
@@ -92,16 +199,27 @@ export const useMenuStore = defineStore('menu', () => {
   // 切换主题
   function toggleDarkMode() {
     theme.value.darkMode = !theme.value.darkMode
-    if (theme.value.darkMode) {
-      document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.classList.remove('dark')
-    }
+    applyDarkMode(theme.value.darkMode)
   }
 
   // 更新主题配置
   function setTheme(config: Partial<ThemeConfig>) {
     theme.value = { ...theme.value, ...config }
+
+    // 处理暗色模式
+    if (config.darkMode !== undefined) {
+      applyDarkMode(config.darkMode)
+    }
+
+    // 更新 CSS 变量
+    if (config.primaryColor) {
+      applyThemeColor(config.primaryColor)
+    }
+  }
+
+  // 更新主题色 CSS 变量
+  function updateColorVariables(color: string) {
+    applyThemeColor(color)
   }
 
   // 展开/收起菜单
@@ -190,6 +308,7 @@ export const useMenuStore = defineStore('menu', () => {
     toggleSider,
     toggleDarkMode,
     setTheme,
+    updateColorVariables,
     toggleOpenKey,
     resetState,
   }

@@ -13,4 +13,93 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* 主题色 - 默认蓝色 */
+  --color-primary: #3b82f6;
+  --color-primary-hover: #2563eb;
+  --color-primary-light: #dbeafe;
+  --color-primary-dark: #1d4ed8;
+  --color-primary-bg: rgba(59, 130, 246, 0.1);
+}
+
+/* 暗色模式基础样式 */
+.dark {
+  color-scheme: dark;
+}
+
+.dark body {
+  background-color: #111827;
+  color: #f3f4f6;
+}
+
+/* 暗色模式下的主题色 - 使用动态变量 */
+.dark {
+  --color-primary-light: var(--color-primary-dark-mode-light, rgba(59, 130, 246, 0.15));
+  --color-primary-bg: var(--color-primary-dark-mode-bg, rgba(59, 130, 246, 0.1));
+  --color-primary-hover: var(--color-primary-dark-mode-hover, rgba(59, 130, 246, 0.25));
+}
+
+/* 主题色应用类 */
+.text-primary {
+  color: var(--color-primary);
+}
+
+.bg-primary {
+  background-color: var(--color-primary);
+}
+
+.bg-primary-light {
+  background-color: var(--color-primary-light);
+}
+
+.bg-primary-bg {
+  background-color: var(--color-primary-bg);
+}
+
+.hover\:bg-primary:hover {
+  background-color: var(--color-primary-hover);
+}
+
+.hover\:text-primary:hover {
+  color: var(--color-primary);
+}
+
+.border-primary {
+  border-color: var(--color-primary);
+}
+
+.ring-primary {
+  --tw-ring-color: var(--color-primary);
+}
+
+/* 侧边栏菜单激活状态 */
+.menu-active {
+  background-color: var(--color-primary-bg);
+  color: var(--color-primary);
+}
+
+.menu-active:hover {
+  background-color: var(--color-primary-light);
+}
+
+/* 暗色模式下的菜单激活状态 */
+.dark .menu-active:hover {
+  background-color: var(--color-primary-dark-mode-light);
+}
+
+/* 标签页激活状态 */
+.tab-active {
+  background-color: var(--color-primary-bg);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+/* 按钮主题色 */
+.btn-primary {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: var(--color-primary-hover);
 }

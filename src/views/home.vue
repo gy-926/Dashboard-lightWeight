@@ -5,9 +5,9 @@
 <template>
   <div class="space-y-6">
     <!-- 欢迎卡片 -->
-    <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white">
+    <div class="bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-900 dark:to-gray-800 rounded-xl p-6 text-white">
       <h1 class="text-2xl font-bold mb-2">欢迎使用 Kivii Admin</h1>
-      <p class="text-blue-100">一个现代化的 Vue 3 + Tailwind CSS 中后台管理模板</p>
+      <p class="text-blue-100 dark:text-blue-200">一个现代化的 Vue 3 + Tailwind CSS 中后台管理模板</p>
     </div>
 
     <!-- 统计卡片 -->

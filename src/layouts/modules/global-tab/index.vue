@@ -55,27 +55,27 @@ function canClose(path: string): boolean {
           class="group flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm cursor-pointer transition-all duration-200 whitespace-nowrap border border-transparent"
           :class="[
             activeTab === tab.path
-              ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800'
+              ? 'bg-primary-bg text-primary border-primary/30 dark:bg-gray-700'
               : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:border-gray-200 dark:hover:border-gray-600'
           ]"
           @click="router.push(tab.path)"
         >
-          <i v-if="tab.icon" :class="['fas', tab.icon, 'text-xs flex-shrink-0']" />
-          <span class="truncate max-w-[100px]">{{ tab.title }}</span>
+          <i v-if="tab.icon" :class="['fas', tab.icon, 'text-xs flex-shrink-0', activeTab === tab.path ? 'text-primary' : 'text-gray-400 dark:text-gray-500']" />
+          <span class="truncate max-w-[100px]" :class="activeTab === tab.path ? 'text-primary' : ''">{{ tab.title }}</span>
           <button
             v-if="canClose(tab.path) || activeTab === tab.path"
             class="w-4 h-4 rounded-full flex items-center justify-center transition-all"
             :class="[
               activeTab === tab.path
-                ? 'opacity-100 hover:bg-blue-200 dark:hover:bg-blue-800/50'
+                ? 'opacity-100 hover:bg-gray-200 dark:hover:bg-gray-600'
                 : 'opacity-0 group-hover:opacity-100 hover:bg-gray-200 dark:hover:bg-gray-600'
             ]"
             @click="closeTab(tab.path, $event)"
           >
             <i
               class="fas fa-times text-[12px] not-italic"
-              :class="activeTab === tab.path ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'"
-            >x</i>
+              :class="activeTab === tab.path ? 'text-primary dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'"
+            />
           </button>
         </div>
       </template>

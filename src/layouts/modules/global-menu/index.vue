@@ -39,7 +39,7 @@ function hasChildren(item: MenuItem): boolean {
         <router-link
           :to="item.path"
           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
-          :class="{ 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 font-medium': selectedKey === item.path }"
+          :class="{ 'bg-primary-bg text-primary font-medium': selectedKey === item.path }"
           :title="item.title"
         >
           <i v-if="item.icon" :class="['fas', item.icon, 'w-5 h-5 flex-shrink-0']" />
@@ -51,7 +51,7 @@ function hasChildren(item: MenuItem): boolean {
           <router-link
             :to="item.redirect || item.children[0]?.path || '#'"
             class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
-            :class="{ 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 font-medium': selectedKey.startsWith(item.path) }"
+            :class="{ 'bg-primary-bg text-primary font-medium': selectedKey.startsWith(item.path) }"
             :title="item.title"
           >
             <i v-if="item.icon" :class="['fas', item.icon, 'w-5 h-5 flex-shrink-0']" />
