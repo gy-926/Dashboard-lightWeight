@@ -101,9 +101,9 @@ export const useMenuStore = defineStore('menu', () => {
   const tabsList = ref<MenuItem[]>([])
   // 主题配置
   const theme = ref<ThemeConfig>({
-    layout: savedTheme.layout || 'side',
+    layout: 'top', // 强制使用顶部菜单布局
     primaryColor: savedTheme.primaryColor || '#3b82f6',
-    darkMode: savedTheme.darkMode !== undefined ? savedTheme.darkMode : true, // 优先使用保存的设置，否则默认暗色
+    darkMode: savedTheme.darkMode !== undefined ? savedTheme.darkMode : true,
     siderWidth: 220,
     showTabs: true,
     showBreadcrumb: true,

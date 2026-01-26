@@ -187,7 +187,7 @@ function toggleCustomColor() {
                 v-model="customColorInput"
                 class="flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm"
                 placeholder="#3b82f6"
-                @change="selectColor($event.target.value)"
+                @change="(e) => selectColor((e.target as HTMLInputElement).value)"
               />
             </div>
           </div>
