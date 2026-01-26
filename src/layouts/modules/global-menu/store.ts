@@ -232,6 +232,18 @@ export const useMenuStore = defineStore('menu', () => {
     }
   }
 
+  // 展开菜单（用于 hover）
+  function openKey(key: string) {
+    if (!openKeys.value.includes(key)) {
+      openKeys.value.push(key)
+    }
+  }
+
+  // 关闭所有菜单（用于 hover 离开）
+  function closeAllKeys() {
+    openKeys.value = []
+  }
+
   // 重置菜单状态
   function resetState() {
     openKeys.value = []
@@ -310,6 +322,8 @@ export const useMenuStore = defineStore('menu', () => {
     setTheme,
     updateColorVariables,
     toggleOpenKey,
+    openKey,
+    closeAllKeys,
     resetState,
   }
 })
