@@ -40,7 +40,7 @@ const topMenuList = computed(() => {
   <!-- 顶部菜单布局 -->
   <header
     v-if="isTopLayout"
-    class="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center"
+    class="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between"
   >
     <!-- Logo -->
     <div class="flex items-center px-6 border-r border-gray-200 dark:border-gray-700 h-full">
@@ -53,7 +53,7 @@ const topMenuList = computed(() => {
     </div>
 
     <!-- 顶部导航菜单 -->
-    <div class="flex-1 h-full max-w-4xl overflow-visible">
+    <div class="flex-1 h-full max-w-4xl mx-8 overflow-visible">
       <GlobalTopMenu
         :menu="topMenuList"
         @select="handleMenuSelect"
