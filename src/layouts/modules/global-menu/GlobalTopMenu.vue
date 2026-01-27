@@ -29,8 +29,8 @@ const moreMenuVisible = ref(false)
 const moreMenuOpenKeys = ref<string[]>([])
 
 // 配置
-const MENU_ITEM_EST_WIDTH = 120 // 每个菜单项估算宽度
-const MORE_BUTTON_WIDTH = 80 // 更多按钮宽度
+const MENU_ITEM_EST_WIDTH = 100 // 每个菜单项估算宽度
+const MORE_BUTTON_WIDTH = 60 // 更多按钮宽度
 
 const selectedKey = computed(() => route.path)
 const openKeys = computed(() => menuStore.openKeys)
@@ -149,7 +149,7 @@ onUnmounted(() => {
   <nav class="h-full relative">
     <!-- 菜单容器 -->
     <div ref="containerRef" class="h-full w-full">
-      <ul ref="menuRef" class="flex items-center h-full">
+      <ul ref="menuRef" class="flex items-center h-full w-full justify-start">
         <template v-for="(item, index) in visibleMenus" :key="item.key">
           <!-- 只显示在可见范围内的菜单项 -->
           <template v-if="index < visibleCount">
@@ -157,7 +157,7 @@ onUnmounted(() => {
             <li v-if="!hasChildren(item)" class="h-full flex-shrink-0">
               <router-link
                 :to="item.path"
-                class="h-full flex items-center gap-2 px-4 text-sm font-medium transition-all duration-200 border-b-2 -mb-px"
+                class="h-full flex items-center gap-1.5 px-3 text-sm font-medium transition-all duration-200 border-b-2 -mb-px"
                 :class="[
                   selectedKey === item.path
                     ? 'text-primary border-primary dark:text-primary-dark dark:border-primary-dark'
@@ -166,7 +166,7 @@ onUnmounted(() => {
                 @click="handleSelect(item)"
               >
                 <i v-if="item.icon" :class="['fas', item.icon, 'text-base']" />
-                <span class="truncate max-w-[100px]">{{ item.title }}</span>
+                <span class="truncate max-w-[80px]">{{ item.title }}</span>
               </router-link>
             </li>
 
@@ -178,7 +178,7 @@ onUnmounted(() => {
               @mouseleave="handleMouseLeave"
             >
               <button
-                class="h-full flex items-center gap-2 px-4 text-sm font-medium transition-all duration-200 border-b-2 -mb-px"
+                class="h-full flex items-center gap-1.5 px-3 text-sm font-medium transition-all duration-200 border-b-2 -mb-px"
                 :class="[
                   openKeys.includes(item.key) || isActive(item)
                     ? 'text-primary border-primary dark:text-primary-dark dark:border-primary-dark'
@@ -186,7 +186,7 @@ onUnmounted(() => {
                 ]"
               >
                 <i v-if="item.icon" :class="['fas', item.icon, 'text-base']" />
-                <span class="truncate max-w-[100px]">{{ item.title }}</span>
+                <span class="truncate max-w-[80px]">{{ item.title }}</span>
                 <i class="fas fa-chevron-down text-xs transition-transform duration-200 flex-shrink-0" :class="{ 'rotate-180': openKeys.includes(item.key) }" />
               </button>
 
