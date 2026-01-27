@@ -55,7 +55,7 @@ const topMenuList = computed(() => {
       </div>
 
       <!-- 顶部导航菜单 -->
-      <div class="flex-1 h-full ml-8 pr-8 overflow-visible">
+      <div class="flex-1 h-full ml-8 overflow-visible">
         <GlobalTopMenu
           :menu="topMenuList"
           @select="handleMenuSelect"
