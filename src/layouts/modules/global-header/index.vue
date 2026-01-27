@@ -42,26 +42,29 @@ const topMenuList = computed(() => {
     v-if="isTopLayout"
     class="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between"
   >
-    <!-- Logo -->
-    <div class="flex items-center px-6 border-r border-gray-200 dark:border-gray-700 h-full">
-      <div class="flex items-center gap-2 cursor-pointer">
-        <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-          <i class="fas fa-bolt text-white" />
+    <!-- 左侧：Logo + 菜单 -->
+    <div class="flex items-center h-full">
+      <!-- Logo -->
+      <div class="flex items-center px-6 border-r border-gray-200 dark:border-gray-700 h-full">
+        <div class="flex items-center gap-2 cursor-pointer">
+          <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+            <i class="fas fa-bolt text-white" />
+          </div>
+          <span class="text-lg font-bold text-gray-800 dark:text-white">Kivii</span>
         </div>
-        <span class="text-lg font-bold text-gray-800 dark:text-white">Kivii</span>
+      </div>
+
+      <!-- 顶部导航菜单 -->
+      <div class="h-full max-w-2xl ml-8 overflow-visible">
+        <GlobalTopMenu
+          :menu="topMenuList"
+          @select="handleMenuSelect"
+        />
       </div>
     </div>
 
-    <!-- 顶部导航菜单 -->
-    <div class="flex-1 h-full max-w-4xl mx-8 overflow-visible">
-      <GlobalTopMenu
-        :menu="topMenuList"
-        @select="handleMenuSelect"
-      />
-    </div>
-
     <!-- 右侧：通知、用户 -->
-    <div class="flex items-center gap-1 px-4">
+    <div class="flex items-center gap-1 pr-4">
       <!-- 全屏按钮 -->
       <button
         class="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
