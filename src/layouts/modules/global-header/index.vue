@@ -9,19 +9,12 @@ defineProps<{
 }>()
 
 const menuStore = useMenuStore()
-const searchInput = ref('')
 
 // 菜单列表
 const menuList = ref(menuStore.menuList)
 
 function handleMenuSelect(item: MenuItem) {
   menuStore.addTab(item)
-}
-
-function handleSearch() {
-  if (searchInput.value.trim()) {
-    console.log('搜索:', searchInput.value)
-  }
 }
 
 const userDropdownVisible = ref(false)
@@ -67,20 +60,8 @@ const topMenuList = computed(() => {
       />
     </div>
 
-    <!-- 右侧：搜索、通知、用户 -->
-    <div class="flex items-center gap-2 px-4">
-      <!-- 搜索框 -->
-      <div class="relative hidden md:block">
-        <input
-          v-model="searchInput"
-          type="text"
-          placeholder="搜索..."
-          class="w-64 pl-10 pr-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border-0 text-sm focus:ring-2 focus:ring-primary transition-all"
-          @keyup.enter="handleSearch"
-        />
-        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
-      </div>
-
+    <!-- 右侧：通知、用户 -->
+    <div class="flex items-center gap-1 px-4">
       <!-- 全屏按钮 -->
       <button
         class="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
@@ -133,7 +114,7 @@ const topMenuList = computed(() => {
       </div>
 
       <!-- 用户下拉菜单 -->
-      <div class="relative">
+      <div class="relative ml-2">
         <button
           class="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
           @click="toggleUserDropdown()"
@@ -141,7 +122,7 @@ const topMenuList = computed(() => {
           <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
             <i class="fas fa-user text-blue-600 dark:text-blue-400" />
           </div>
-          <span class="hidden md:block text-sm text-gray-600 dark:text-gray-400">Admin</span>
+          <span class="text-sm text-gray-600 dark:text-gray-400">Admin</span>
           <i class="fas fa-chevron-down text-xs text-gray-400 dark:text-gray-500" />
         </button>
 
@@ -204,20 +185,8 @@ const topMenuList = computed(() => {
       </span>
     </div>
 
-    <!-- 右侧：搜索、通知、用户 -->
-    <div class="flex items-center gap-2">
-      <!-- 搜索框 -->
-      <div class="relative hidden md:block">
-        <input
-          v-model="searchInput"
-          type="text"
-          placeholder="搜索..."
-          class="w-64 pl-10 pr-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border-0 text-sm focus:ring-2 focus:ring-primary transition-all"
-          @keyup.enter="handleSearch"
-        />
-        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
-      </div>
-
+    <!-- 右侧：通知、用户 -->
+    <div class="flex items-center gap-1">
       <!-- 全屏按钮 -->
       <button
         class="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
@@ -270,7 +239,7 @@ const topMenuList = computed(() => {
       </div>
 
       <!-- 用户下拉菜单 -->
-      <div class="relative">
+      <div class="relative ml-2">
         <button
           class="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
           @click="toggleUserDropdown()"
@@ -278,7 +247,7 @@ const topMenuList = computed(() => {
           <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
             <i class="fas fa-user text-blue-600 dark:text-blue-400" />
           </div>
-          <span class="hidden md:block text-sm text-gray-600 dark:text-gray-400">Admin</span>
+          <span class="text-sm text-gray-600 dark:text-gray-400">Admin</span>
           <i class="fas fa-chevron-down text-xs text-gray-400 dark:text-gray-500" />
         </button>
 
