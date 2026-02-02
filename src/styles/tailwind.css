@@ -103,3 +103,15 @@
 .btn-primary:hover {
   background-color: var(--color-primary-hover);
 }
+
+/* 隐藏滚动条样式 */
+.scrollbar-hide {
+  /* IE, Edge, Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Chrome, Safari, Opera */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

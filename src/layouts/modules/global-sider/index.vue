@@ -45,7 +45,7 @@ function handleLogoClick() {
     </div>
 
     <!-- 菜单滚动区域 -->
-    <div class="flex-1 overflow-y-auto overflow-x-hidden py-4 px-3">
+    <div class="flex-1 py-4 px-3 scrollbar-hide overflow-y-auto overflow-x-hidden">
       <GlobalMenu
         :menu="menuList"
         :collapsed="collapsed"
