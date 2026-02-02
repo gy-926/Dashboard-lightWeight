@@ -23,10 +23,10 @@ const showTabs = computed(() => props.showTabs && menuStore.theme.showTabs)
   <main class="flex-1 flex flex-col min-h-0 bg-gray-50 dark:bg-gray-900">
     <!-- 面包屑和标签页同一行 -->
     <div class="flex items-center bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 md:px-6 h-10">
-      <!-- 标签页 - 固定在左侧 -->
-      <GlobalTab v-if="showTabs" class="flex-shrink-0" />
-      <!-- 面包屑 - 在标签右侧 -->
-      <div class="flex items-center flex-1 min-w-0 ml-4 overflow-hidden">
+      <!-- 标签页 -->
+      <GlobalTab v-if="showTabs" class="flex-1 min-w-0" />
+      <!-- 面包屑 -->
+      <div class="flex items-center flex-shrink-0 ml-4 overflow-hidden">
         <GlobalBreadcrumb v-if="menuStore.theme.showBreadcrumb" />
       </div>
     </div>
