@@ -279,6 +279,33 @@ export const autoRoutes: RouteRecordRaw[] = [
         ]
       },
       {
+        path: 'iframe-page',
+        name: 'iframe-page',
+        component: () => import('../../views/_builtin/iframe-page/[url].vue'),
+        meta: {
+          title: 'Iframe 页面',
+          hidden: true
+        },
+        children: [
+          {
+            path: 'detail/:url(.*)',
+            name: 'iframe-page-detail',
+            component: () => import('../../views/_builtin/iframe-page/[url].vue'),
+            props: route => ({
+              url: route.params.url as string,
+              kvid: route.query.kvid as string || '',
+              type: (route.query.type as string) || 'webview',
+              routeQuery: route.query as Record<string, string>,
+            }),
+            meta: {
+              title: 'Iframe 详情页',
+              hidden: true,
+              keepAlive: true,
+            }
+          }
+        ]
+      },
+      {
         path: 'settings',
         name: 'settings',
         meta: {

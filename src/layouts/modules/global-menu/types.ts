@@ -66,9 +66,15 @@ export function transformRouteToMenu(routes: RouteRecordRaw[], parentPath = ''):
       continue
     }
 
-    const fullPath = parentPath
-      ? `${parentPath}/${route.path.replace(/^\//, '')}`
-      : route.path
+    // 如果路径已经是绝对路径（以 / 开头），直接使用；否则拼接父路径
+    let fullPath: string
+    if (route.path.startsWith('/')) {
+      fullPath = route.path
+    } else if (parentPath) {
+      fullPath = `${parentPath}/${route.path}`
+    } else {
+      fullPath = route.path
+    }
 
     const menuItem: MenuItem = {
       key: route.name as string || route.path,

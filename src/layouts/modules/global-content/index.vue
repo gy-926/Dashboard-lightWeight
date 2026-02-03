@@ -20,7 +20,7 @@ const showTabs = computed(() => props.showTabs && menuStore.theme.showTabs)
 </script>
 
 <template>
-  <main class="flex-1 flex flex-col min-h-0 bg-gray-50 dark:bg-gray-900">
+  <main class="flex-1 flex flex-col min-h-0 bg-transparent dark:bg-transparent">
     <!-- 面包屑和标签页同一行 -->
     <div class="flex items-center bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 md:px-6 h-10">
       <!-- 标签页 -->
@@ -32,8 +32,15 @@ const showTabs = computed(() => props.showTabs && menuStore.theme.showTabs)
     </div>
 
     <!-- 内容区域 -->
-    <div class="flex-1 overflow-y-auto p-4 md:p-6">
-      <div class="mx-auto max-w-7xl">
+    <div class="flex-1 overflow-y-auto p-0 relative">
+      <!-- Teleport 目标容器：只接收当前激活页面的内容 -->
+      <div
+        id="global-content-teleport-target"
+        class="absolute inset-0 pointer-events-auto"
+        style="z-index: 1;"
+      />
+
+      <div class="mx-auto max-w-7xl min-h-full relative z-0">
         <template v-if="keepAlive">
           <router-view v-slot="{ Component, route: r }">
             <transition
