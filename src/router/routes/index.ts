@@ -7,7 +7,7 @@ import { fetchMenuData } from './mockData'
 
 // 默认全局配置
 const defaultGlobalConfig: GlobalConfig = {
-  InternalCode: 'KIVII',
+  InternalCode: 'vueDashboard',
   UserCode: 'admin',
   UserName: '管理员'
 }
@@ -191,9 +191,23 @@ export function getMenuTree(items: MenuItem[]): MenuItem[] {
     }
   })
 
-  // 找出根节点（ParentKvid 为空或不在父节点集合中的项）
+  // 调试：打印所有 ParentKvid 引用
+  console.log('[getMenuTree] 所有父级引用:', Array.from(parentKvids))
+
+  // 找出根节点（ParentKvid 为空或 undefined 的项）
+  // 注意：不能包含 ParentKvid 指向不存在父节点的项，这些应该被过滤掉
   const rootItems = items.filter(item => {
-    return !item.ParentKvid || !parentKvids.has(item.ParentKvid)
+    const isRoot = !item.ParentKvid && item.ParentKvid !== ''
+    if (!isRoot) {
+      console.log(`[getMenuTree] 过滤掉: ${item.Title || item.Kvid} (ParentKvid: ${item.ParentKvid})`)
+    }
+    return isRoot
+  })
+
+  // 调试：打印根节点
+  console.log('[getMenuTree] 根节点数量:', rootItems.length)
+  rootItems.forEach(item => {
+    console.log(`[getMenuTree] 根节点: ${item.Title || item.Kvid} (Kvid: ${item.Kvid})`)
   })
 
   // 递归构建子树
@@ -255,6 +269,11 @@ export function analyzeTree(items: MenuItem[], depth = 1): TreeStats {
 
 // ==================== 路由生成 ====================
 
+// 获取菜单显示名称（优先使用 DisplayName，否则使用 Title）
+function getMenuDisplayName(item: MenuItem): string {
+  return item.DisplayName || item.Title
+}
+
 // 生成根级路由
 function generateRootRoute(item: MenuItem, parentPath = ''): ElegantRoute {
   const routeName = item.Type === 'System' ? item.Type : item.Kvid
@@ -270,7 +289,7 @@ function generateRootRoute(item: MenuItem, parentPath = ''): ElegantRoute {
     path: routePath,
     component: 'layout.base',
     meta: {
-      title: item.Title,
+      title: getMenuDisplayName(item),
       icon: item.Icon,
       order: item.Order,
       keepAlive: true
@@ -317,7 +336,7 @@ function generateChildRoutes(
         path: routePath,
         component: 'layout.base',
         meta: {
-          title: item.Title,
+          title: getMenuDisplayName(item),
           icon: item.Icon,
           order: item.Order,
           keepAlive: true
@@ -341,7 +360,7 @@ function generateChildRoutes(
             type: 'webview'
           },
           meta: {
-            title: item.Title,
+            title: getMenuDisplayName(item),
             type: 'iframe',
             keepAlive: true
           }
@@ -365,7 +384,7 @@ function generateChildRoutes(
                item.FunctionKvid?.endsWith('.vue') ? 'vue' : 'webview') as 'webview' | 'extjs' | 'vue'
       },
       meta: {
-        title: item.Title,
+        title: getMenuDisplayName(item),
         icon: item.Icon,
         order: item.Order,
         type: 'iframe',
@@ -473,7 +492,6 @@ export function addRouteWithChildren(router: any, routes: RouteRecordRaw[], pare
       console.warn('[Router] 路由缺少 path 属性，跳过:', route.name, 'parent:', parentName)
       return
     }
-    console.log(`[Router] 添加路由: ${route.path}, parent: ${parentName}, children: ${route.children?.length || 0}`)
     // 使用 parentName 添加子路由（顶级路由不使用 parentName）
     try {
       if (parentName) {
@@ -534,11 +552,13 @@ export async function generateDynamicRoutes(): Promise<{
 
   // 2. 获取菜单数据
   console.log('[DynamicRoutes] 获取菜单数据...')
+  console.log('[DynamicRoutes] 如需清除缓存，请执行: localStorage.removeItem("DYNAMIC_ROUTES_CACHE")')
   const menuItems = await getRootMenu()
 
   // 3. 构建菜单树
   console.log('[DynamicRoutes] 构建菜单树...')
   const menuTree = getMenuTree(menuItems)
+  console.log('[DynamicRoutes] 菜单树原始数据:', JSON.stringify(menuItems, null, 2))
 
   // 4. 生成路由
   console.log('[DynamicRoutes] 生成路由...')

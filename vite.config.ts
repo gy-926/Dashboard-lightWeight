@@ -17,4 +17,21 @@ export default defineConfig({
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
+  server: {
+    proxy: {
+      // datav.kivii.org API 代理配置
+      "/auth": {
+        target: "https://datav.kivii.org",
+        changeOrigin: true,
+      },
+      "/kivii": {
+        target: "https://datav.kivii.org",
+        changeOrigin: true,
+      },
+      "/Restful": {
+        target: "https://datav.kivii.org",
+        changeOrigin: true,
+      },
+    },
+  },
 });

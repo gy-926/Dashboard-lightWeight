@@ -18,14 +18,14 @@ export function setupRouteGuards(router: Router) {
       document.title = title
     }
 
+    // 跳过登录页、404 等特殊页面，避免循环刷新
+    if (to.path === '/login' || to.path === '/404' || to.path.startsWith('/:pathMatch')) {
+      return next()
+    }
+
     // 延迟导入 store，确保 Pinia 已安装
     const { useMenuStore } = await import('@/layouts/modules/global-menu/store')
     const menuStore = useMenuStore()
-
-    // 初始化菜单（只初始化一次）
-    if (menuStore.menuList.length === 0) {
-      menuStore.setMenuFromRoutes(router.getRoutes())
-    }
 
     // 设置当前选中的菜单
     menuStore.setSelectedKey(to.path)

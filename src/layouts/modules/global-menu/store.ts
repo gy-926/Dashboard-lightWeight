@@ -160,6 +160,21 @@ export const useMenuStore = defineStore('menu', () => {
   // 设置路由转换的菜单
   function setMenuFromRoutes(routes: any[]) {
     menuList.value = transformRouteToMenu(routes)
+
+    // 打印简化版菜单结构
+    function printMenu(items: any[], level = 0) {
+      const indent = '  '.repeat(level)
+      for (const item of items) {
+        console.log(`${indent}${level === 0 ? '├─' : '  '}${item.title} (${item.path})`)
+        if (item.children && item.children.length > 0) {
+          printMenu(item.children, level + 1)
+        }
+      }
+    }
+
+    console.log('\n========== 菜单结构 ==========')
+    printMenu(menuList.value)
+    console.log('==============================\n')
   }
 
   // 设置选中的菜单

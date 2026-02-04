@@ -9,6 +9,7 @@ export const mockMenuData: MenuApiResponse = {
         Kvid: 'system',
         ParentKvid: null,
         Title: '系统管理',
+        DisplayName: '系统管理（DisplayName）',
         Type: 'Folder',
         Icon: 'fa-cog',
         Order: 1,
@@ -18,6 +19,7 @@ export const mockMenuData: MenuApiResponse = {
         Kvid: 'content',
         ParentKvid: null,
         Title: '内容管理',
+        DisplayName: '内容管理（DisplayName）',
         Type: 'Folder',
         Icon: 'fa-book',
         Order: 2,
@@ -27,6 +29,7 @@ export const mockMenuData: MenuApiResponse = {
         Kvid: 'demo',
         ParentKvid: null,
         Title: '功能演示',
+        DisplayName: '功能演示（DisplayName）',
         Type: 'Folder',
         Icon: 'fa-flask',
         Order: 3,
@@ -38,6 +41,7 @@ export const mockMenuData: MenuApiResponse = {
         Kvid: 'user',
         ParentKvid: 'system',
         Title: '用户管理',
+        DisplayName: '用户管理（DisplayName）',
         Type: 'Page',
         Icon: 'fa-users',
         FunctionKvid: 'sys_user_manage',
@@ -47,6 +51,7 @@ export const mockMenuData: MenuApiResponse = {
         Kvid: 'role',
         ParentKvid: 'system',
         Title: '角色管理',
+        DisplayName: '角色管理（DisplayName）',
         Type: 'Page',
         Icon: 'fa-user-tag',
         FunctionKvid: 'sys_role_manage',
@@ -56,6 +61,7 @@ export const mockMenuData: MenuApiResponse = {
         Kvid: 'menu',
         ParentKvid: 'system',
         Title: '菜单管理',
+        DisplayName: '菜单管理（DisplayName）',
         Type: 'Page',
         Icon: 'fa-list',
         FunctionKvid: 'sys_menu_manage',
@@ -67,6 +73,7 @@ export const mockMenuData: MenuApiResponse = {
         Kvid: 'article',
         ParentKvid: 'content',
         Title: '文章管理',
+        DisplayName: '文章管理（DisplayName）',
         Type: 'Page',
         Icon: 'fa-newspaper',
         FunctionKvid: 'content_article',
@@ -76,6 +83,7 @@ export const mockMenuData: MenuApiResponse = {
         Kvid: 'category',
         ParentKvid: 'content',
         Title: '分类管理',
+        DisplayName: '分类管理（DisplayName）',
         Type: 'Page',
         Icon: 'fa-folder',
         FunctionKvid: 'content_category',
@@ -85,6 +93,7 @@ export const mockMenuData: MenuApiResponse = {
         Kvid: 'tag',
         ParentKvid: 'content',
         Title: '标签管理',
+        DisplayName: '标签管理（DisplayName）',
         Type: 'Page',
         Icon: 'fa-tags',
         FunctionKvid: 'content_tag',
@@ -96,6 +105,7 @@ export const mockMenuData: MenuApiResponse = {
         Kvid: 'iframe-demo',
         ParentKvid: 'demo',
         Title: '外部页面',
+        DisplayName: '外部页面（DisplayName）',
         Type: 'Page',
         Icon: 'fa-external-link-alt',
         Remark: 'https://www.baidu.com',
@@ -105,36 +115,52 @@ export const mockMenuData: MenuApiResponse = {
         Kvid: 'vue-demo',
         ParentKvid: 'demo',
         Title: '远程Vue组件',
+        DisplayName: '远程Vue组件（DisplayName）',
         Type: 'Page',
         Icon: 'fa-code',
         FunctionKvid: '/remote-test.vue',
         Order: 2
       },
       {
+        Kvid: 'dashboard-demo',
+        ParentKvid: 'demo',
+        Title: '数据仪表盘',
+        DisplayName: '数据仪表盘（DisplayName）',
+        Type: 'Page',
+        Icon: 'fa-chart-bar',
+        FunctionKvid: '/data-dashboard.vue',
+        Order: 3
+      },
+      {
         Kvid: 'extjs-demo',
         ParentKvid: 'demo',
         Title: 'ExtJS组件',
+        DisplayName: 'ExtJS组件（DisplayName）',
         Type: 'Page',
         Icon: 'fa-puzzle-piece',
         FunctionKvid: 'ExtJS.panel.Demo',
-        Order: 3
+        Order: 4
       }
     ]
   },
   MenuRoot: {
     Kvid: 'root',
-    Title: '根菜单'
+    Title: '根菜单',
+    DisplayName: '根菜单（DisplayName）'
   }
 }
 
-// 模拟 API 请求
+// 模拟 API 请求（开发调试用）
 export async function fetchMenuData(internalCode: string): Promise<MenuApiResponse> {
-  // 模拟网络延迟
-  await new Promise(resolve => setTimeout(resolve, 300))
+  // ==================== 真实 API 调用方式 ====================
+  const response = await fetch(`/Restful/Kivii.Basic.Entities.Menu/Show.json?RootInternalCode=${internalCode}`)
+  if (!response.ok) {
+    throw new Error(`API 请求失败: ${response.statusText}`)
+  }
+  return await response.json()
+  // =========================================================
 
-  // 实际项目中这里会使用 fetch:
-  // const response = await fetch(`/Restful/Kivii.Basic.Entities.Menu/Show.json?RootInternalCode=${internalCode}`)
-  // return await response.json()
-
-  return mockMenuData
+  // 开发调试时使用模拟数据：
+  // await new Promise(resolve => setTimeout(resolve, 300))
+  // return mockMenuData
 }

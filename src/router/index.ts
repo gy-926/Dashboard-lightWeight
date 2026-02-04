@@ -5,6 +5,12 @@ import { generateDynamicRoutes, getStaticRoutes, addRouteWithChildren } from './
 // 初始静态路由（用于首次渲染）
 const initialRoutes: RouteRecordRaw[] = [
   {
+    path: '/login',
+    name: 'login',
+    component: () => import('../views/login/index.vue'),
+    meta: { hidden: true }
+  },
+  {
     path: '/',
     component: () => import('../layouts/base-layout/index.vue'),
     redirect: '/home',
@@ -30,6 +36,7 @@ const router = createRouter({
 // 动态路由状态
 let dynamicRoutesLoaded = false
 let routesLoadPromise: Promise<void> | null = null
+let originalAuthRoutes: RouteRecordRaw[] = [] // 保存原始路由树
 
 // 初始化路由
 async function initRoutes() {
@@ -40,6 +47,10 @@ async function initRoutes() {
     try {
       console.log('[Router] 初始化动态路由...')
       const { constantRoutes, authRoutes } = await generateDynamicRoutes()
+
+      // 保存原始路由树，用于构建菜单
+      originalAuthRoutes = authRoutes
+      console.log('[Router] 保存原始路由树，数量:', authRoutes.length)
 
       // 使用递归方式添加路由，保持父子关系
       addRouteWithChildren(router, authRoutes)
@@ -83,17 +94,34 @@ async function updateMenuFromRoutes() {
     const { useMenuStore } = await import('@/layouts/modules/global-menu/store')
     const menuStore = useMenuStore()
 
-    // 只获取顶级路由（parent 为 undefined 的路由）
-    const routes = router.getRoutes().filter(r => !r.meta?.hidden && !r.parent)
+    // 使用原始路由树来构建菜单，避免 Vue Router 展平 children 导致的问题
+    if (originalAuthRoutes.length === 0) {
+      console.warn('[Router] 原始路由树为空，无法更新菜单')
+      return
+    }
+
+    console.log('[updateMenuFromRoutes] 使用原始路由树构建菜单')
+    console.log('[updateMenuFromRoutes] 原始路由树:')
+    originalAuthRoutes.forEach(r => {
+      const hasChildren = r.children && r.children.length > 0
+      console.log(`  ${r.path} (name:${r.name}) ${hasChildren ? `[${r.children?.length || 0} children]` : ''}`)
+    })
 
     // 过滤掉特殊的路由
-    const validRoutes = routes.filter(r => {
+    const validRoutes = originalAuthRoutes.filter(r => {
       const path = r.path || ''
-      return path !== '/' && path !== '' && !path.startsWith(':') && !path.includes('*')
+      return path !== '/' && path !== '' &&
+             !path.startsWith(':') && !path.includes('*') &&
+             r.meta?.hidden !== true
+    })
+
+    // 调试：打印最终传递给菜单的路由
+    console.log('[updateMenuFromRoutes] 最终路由数量:', validRoutes.length)
+    validRoutes.forEach(r => {
+      console.log(`  -> ${r.path} (${r.name})`)
     })
 
     menuStore.setMenuFromRoutes(validRoutes)
-    console.log('[Router] 菜单已更新，共', validRoutes.length, '个路由')
   } catch (e) {
     console.warn('[Router] 更新菜单失败:', e)
   }

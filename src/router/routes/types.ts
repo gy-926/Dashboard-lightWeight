@@ -5,6 +5,7 @@ export interface MenuItem {
   Kvid: string
   ParentKvid?: string | null
   Title: string
+  DisplayName?: string  // 菜单显示名称
   Type: 'Page' | 'System' | 'Folder' | 'Link' | string
   Remark?: string
   Icon?: string
@@ -23,6 +24,7 @@ export interface MenuApiResponse {
   MenuRoot: {
     Kvid: string
     Title: string
+    DisplayName?: string  // 菜单根节点显示名称
   }
 }
 
