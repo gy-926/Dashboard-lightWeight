@@ -32,6 +32,10 @@ export default defineConfig({
         target: "https://datav.kivii.org",
         changeOrigin: true,
       },
+      "/codet": {
+        target: "https://datav.kivii.org",
+        changeOrigin: true,
+      },
     },
   },
 });

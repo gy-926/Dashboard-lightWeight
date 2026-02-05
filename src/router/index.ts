@@ -45,12 +45,10 @@ async function initRoutes() {
 
   routesLoadPromise = (async () => {
     try {
-      console.log('[Router] 初始化动态路由...')
       const { constantRoutes, authRoutes } = await generateDynamicRoutes()
 
       // 保存原始路由树，用于构建菜单
       originalAuthRoutes = authRoutes
-      console.log('[Router] 保存原始路由树，数量:', authRoutes.length)
 
       // 使用递归方式添加路由，保持父子关系
       addRouteWithChildren(router, authRoutes)
@@ -67,12 +65,10 @@ async function initRoutes() {
       }
 
       dynamicRoutesLoaded = true
-      console.log('[Router] 动态路由加载完成')
 
       // 如果当前在 404 页，刷新页面让路由生效
       const currentPath = router.currentRoute.value.path
       if (currentPath === '/404') {
-        console.log('[Router] 动态路由已加载，刷新页面以应用新路由')
         window.location.reload()
         return
       }
@@ -96,16 +92,8 @@ async function updateMenuFromRoutes() {
 
     // 使用原始路由树来构建菜单，避免 Vue Router 展平 children 导致的问题
     if (originalAuthRoutes.length === 0) {
-      console.warn('[Router] 原始路由树为空，无法更新菜单')
       return
     }
-
-    console.log('[updateMenuFromRoutes] 使用原始路由树构建菜单')
-    console.log('[updateMenuFromRoutes] 原始路由树:')
-    originalAuthRoutes.forEach(r => {
-      const hasChildren = r.children && r.children.length > 0
-      console.log(`  ${r.path} (name:${r.name}) ${hasChildren ? `[${r.children?.length || 0} children]` : ''}`)
-    })
 
     // 过滤掉特殊的路由
     const validRoutes = originalAuthRoutes.filter(r => {
@@ -113,12 +101,6 @@ async function updateMenuFromRoutes() {
       return path !== '/' && path !== '' &&
              !path.startsWith(':') && !path.includes('*') &&
              r.meta?.hidden !== true
-    })
-
-    // 调试：打印最终传递给菜单的路由
-    console.log('[updateMenuFromRoutes] 最终路由数量:', validRoutes.length)
-    validRoutes.forEach(r => {
-      console.log(`  -> ${r.path} (${r.name})`)
     })
 
     menuStore.setMenuFromRoutes(validRoutes)

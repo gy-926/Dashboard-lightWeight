@@ -191,23 +191,9 @@ export function getMenuTree(items: MenuItem[]): MenuItem[] {
     }
   })
 
-  // 调试：打印所有 ParentKvid 引用
-  console.log('[getMenuTree] 所有父级引用:', Array.from(parentKvids))
-
   // 找出根节点（ParentKvid 为空或 undefined 的项）
-  // 注意：不能包含 ParentKvid 指向不存在父节点的项，这些应该被过滤掉
   const rootItems = items.filter(item => {
-    const isRoot = !item.ParentKvid && item.ParentKvid !== ''
-    if (!isRoot) {
-      console.log(`[getMenuTree] 过滤掉: ${item.Title || item.Kvid} (ParentKvid: ${item.ParentKvid})`)
-    }
-    return isRoot
-  })
-
-  // 调试：打印根节点
-  console.log('[getMenuTree] 根节点数量:', rootItems.length)
-  rootItems.forEach(item => {
-    console.log(`[getMenuTree] 根节点: ${item.Title || item.Kvid} (Kvid: ${item.Kvid})`)
+    return !item.ParentKvid && item.ParentKvid !== ''
   })
 
   // 递归构建子树
@@ -355,7 +341,7 @@ function generateChildRoutes(
           component: 'view.iframe-page',
           props: {
             url: item.Type === 'System' ? item.Remark || '' : '',
-            kvid: item.Kvid,
+            kvid: item.Kvid,  // 使用父菜单的 kvid（如果需要访问父菜单的权限）
             functionKvid: item.FunctionKvid,
             type: 'webview'
           },
@@ -543,7 +529,6 @@ export async function generateDynamicRoutes(): Promise<{
   // 1. 尝试从缓存恢复
   const cachedRoutes = restoreDynamicRoutesFromCache()
   if (cachedRoutes) {
-    console.log('[DynamicRoutes] 从缓存恢复路由')
     return {
       constantRoutes: [],
       authRoutes: cachedRoutes
@@ -551,30 +536,19 @@ export async function generateDynamicRoutes(): Promise<{
   }
 
   // 2. 获取菜单数据
-  console.log('[DynamicRoutes] 获取菜单数据...')
-  console.log('[DynamicRoutes] 如需清除缓存，请执行: localStorage.removeItem("DYNAMIC_ROUTES_CACHE")')
   const menuItems = await getRootMenu()
 
   // 3. 构建菜单树
-  console.log('[DynamicRoutes] 构建菜单树...')
   const menuTree = getMenuTree(menuItems)
-  console.log('[DynamicRoutes] 菜单树原始数据:', JSON.stringify(menuItems, null, 2))
 
   // 4. 生成路由
-  console.log('[DynamicRoutes] 生成路由...')
   const elegantRoutes = generateRoutes(menuTree)
 
   // 5. 转换为 Vue 路由
-  console.log('[DynamicRoutes] 转换路由格式...')
   const vueRoutes = transformRoutesToVueRoutes(elegantRoutes)
 
   // 6. 缓存路由
-  console.log('[DynamicRoutes] 缓存路由...')
   cacheDynamicRoutes(vueRoutes)
-
-  // 7. 统计信息
-  const stats = analyzeTree(menuTree)
-  console.log('[DynamicRoutes] 路由生成完成:', stats)
 
   return {
     constantRoutes: getStaticRoutes(),

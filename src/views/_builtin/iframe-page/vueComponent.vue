@@ -31,7 +31,7 @@ const shouldRender = computed(() => shouldShowPage(props.pageId))
 const componentUrl = computed(() => {
   const origin = props.backendOrigin || ''
   // 优先使用 functionKvid（远程组件路径），其次使用 kvid，最后使用 url
-  const url = props.functionKvid || props.kvid || props.url || ''
+  const url = props.url || ''
   if (url.startsWith('http')) {
     return url
   }
@@ -61,14 +61,28 @@ async function loadRemoteComponent() {
     }
 
     // 使用 vue3-sfc-loader 加载远程组件
+    // 提取路径部分用于代理请求（避免 CORS 问题）
+    const getProxyUrl = (fullUrl: string) => {
+      // 如果是绝对 URL，提取路径部分
+      if (fullUrl.startsWith('http')) {
+        const url = new URL(fullUrl)
+        return url.pathname
+      }
+      return fullUrl
+    }
+
     const options = {
       moduleCache: {
         vue: Vue,
       },
       async getFile(url: string) {
-        const response = await fetch(url)
+        // 使用代理路径请求
+        const proxyUrl = getProxyUrl(url)
+        console.log('[VueComponent] 通过代理加载:', proxyUrl)
+            console.log('[VueComponent] 组件加载成功:', dynamicComponent.value)
+        const response = await fetch(proxyUrl)
         if (!response.ok) {
-          throw new Error(`Failed to fetch ${url}: ${response.statusText}`)
+          throw new Error(`Failed to fetch ${proxyUrl}: ${response.statusText}`)
         }
         return response.text()
       },
@@ -107,6 +121,7 @@ function cleanup() {
 }
 
 onMounted(() => {
+  console.log('[VueComponent] 组件 URL:', props)
   updatePageStatus(props.pageId, 'loading')
   loadRemoteComponent()
 })
