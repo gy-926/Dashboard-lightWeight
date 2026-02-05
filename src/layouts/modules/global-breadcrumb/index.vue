@@ -2,10 +2,12 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useMenuStore } from '../global-menu/store'
+import { useKiviiOpenTab } from '@/composables/useKiviiOpenTab'
 
 const menuStore = useMenuStore()
 const route = useRoute()
 const router = useRouter()
+const { openPath } = useKiviiOpenTab()
 
 // 面包屑列表
 const breadcrumbs = computed(() => menuStore.breadcrumbs)
@@ -26,9 +28,9 @@ function handleResize() {
 }
 
 // 跳转到指定路径
-function navigateTo(path: string) {
+async function navigateTo(path: string) {
   showDropdown.value = false
-  router.push(path)
+  await openPath(path)
 }
 
 function toggleDropdown() {
@@ -78,8 +80,8 @@ onUnmounted(() => {
             class="absolute left-0 top-full mt-1 min-w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50"
           >
             <template v-for="(item, index) in breadcrumbs.slice(0, -1)" :key="item.path">
-              <div
-                class="flex items-center gap-2 px-4 py-2 text-sm cursor-pointer transition-colors whitespace-nowrap"
+              <button
+                class="flex items-center gap-2 px-4 py-2 text-sm cursor-pointer transition-colors whitespace-nowrap w-full text-left"
                 :class="[
                   'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
                 ]"
@@ -87,7 +89,7 @@ onUnmounted(() => {
               >
                 <i v-if="item.icon" :class="['fas', item.icon]" />
                 <span>{{ item.title }}</span>
-              </div>
+              </button>
             </template>
           </div>
         </Transition>
@@ -100,13 +102,13 @@ onUnmounted(() => {
       <template v-for="(item, index) in breadcrumbs" :key="item.path">
         <!-- 可点击的面包屑（非最后一项） -->
         <template v-if="index < breadcrumbs.length - 1">
-          <router-link
-            :to="item.path"
+          <button
             class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors truncate max-w-40"
+            @click="navigateTo(item.path)"
           >
             <i v-if="item.icon" :class="['fas', item.icon, 'mr-1']" />
             {{ item.title }}
-          </router-link>
+          </button>
           <i class="fas fa-chevron-right text-gray-300 dark:text-gray-600 text-xs flex-shrink-0" />
         </template>
 

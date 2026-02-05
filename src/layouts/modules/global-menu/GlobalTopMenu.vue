@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useMenuStore } from './store'
 import type { MenuItem } from './types'
+import { useKiviiOpenTab } from '@/composables/useKiviiOpenTab'
 
 defineOptions({
   name: 'GlobalTopMenu'
@@ -16,9 +17,9 @@ const emit = defineEmits<{
   (e: 'select', item: MenuItem): void
 }>()
 
-const router = useRouter()
 const route = useRoute()
 const menuStore = useMenuStore()
+const { openPath } = useKiviiOpenTab()
 
 // 菜单容器引用
 const containerRef = ref<HTMLElement | null>(null)
@@ -107,10 +108,10 @@ function hasChildren(item: MenuItem): boolean {
 }
 
 // 处理菜单选择
-function handleSelect(item: MenuItem) {
+async function handleSelect(item: MenuItem) {
   emit('select', item)
   if (!hasChildren(item)) {
-    router.push(item.path)
+    await openPath(item.path)
   }
 }
 
@@ -182,8 +183,7 @@ onUnmounted(() => {
       <template v-for="item in displayedMenus" :key="item.key">
         <!-- 一级菜单项（无子菜单） -->
         <li v-if="!hasChildren(item)" class="h-full flex-shrink-0">
-          <router-link
-            :to="item.path"
+          <button
             class="h-full flex items-center gap-1.5 px-3 text-sm font-medium transition-all duration-200 border-b-2 -mb-px"
             :class="[
               selectedKey === item.path
@@ -194,7 +194,7 @@ onUnmounted(() => {
           >
             <i v-if="item.icon" :class="['fas', item.icon, 'text-base']" />
             <span class="truncate max-w-[80px]">{{ item.title }}</span>
-          </router-link>
+          </button>
         </li>
 
         <!-- 有子菜单的一级菜单项 -->
@@ -236,9 +236,8 @@ onUnmounted(() => {
                 <ul class="flex flex-col">
                   <template v-for="child in item.children" :key="child.key">
                     <li v-if="!hasChildren(child)">
-                      <router-link
-                        :to="child.path"
-                        class="flex items-center gap-3 px-4 py-2 text-sm transition-colors whitespace-nowrap"
+                      <button
+                        class="flex items-center gap-3 px-4 py-2 text-sm transition-colors whitespace-nowrap w-full text-left"
                         :class="[
                           selectedKey === child.path
                             ? 'bg-primary-bg text-primary dark:text-primary-dark'
@@ -248,7 +247,7 @@ onUnmounted(() => {
                       >
                         <i v-if="child.icon" :class="['fas', child.icon, 'w-5']" />
                         <span>{{ child.title }}</span>
-                      </router-link>
+                      </button>
                     </li>
                     <li
                       v-else
@@ -286,9 +285,8 @@ onUnmounted(() => {
                           <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 min-w-48 ml-1">
                             <ul class="flex flex-col">
                               <li v-for="grandchild in child.children" :key="grandchild.key">
-                                <router-link
-                                  :to="grandchild.path"
-                                  class="flex items-center gap-3 px-4 py-2 text-sm transition-colors whitespace-nowrap"
+                                <button
+                                  class="flex items-center gap-3 px-4 py-2 text-sm transition-colors whitespace-nowrap w-full text-left"
                                   :class="[
                                     selectedKey === grandchild.path
                                       ? 'bg-primary-bg text-primary dark:text-primary-dark'
@@ -298,7 +296,7 @@ onUnmounted(() => {
                                 >
                                   <i v-if="grandchild.icon" :class="['fas', grandchild.icon, 'w-5']" />
                                   <span>{{ grandchild.title }}</span>
-                                </router-link>
+                                </button>
                               </li>
                             </ul>
                           </div>
@@ -351,9 +349,8 @@ onUnmounted(() => {
               <ul class="flex flex-col">
                 <template v-for="item in overflowedMenus" :key="item.key">
                   <li v-if="!hasChildren(item)">
-                    <router-link
-                      :to="item.path"
-                      class="flex items-center gap-3 px-4 py-2 text-sm transition-colors whitespace-nowrap"
+                    <button
+                      class="flex items-center gap-3 px-4 py-2 text-sm transition-colors whitespace-nowrap w-full text-left"
                       :class="[
                         selectedKey === item.path
                           ? 'bg-primary-bg text-primary dark:text-primary-dark'
@@ -363,7 +360,7 @@ onUnmounted(() => {
                     >
                       <i v-if="item.icon" :class="['fas', item.icon, 'w-5']" />
                       <span>{{ item.title }}</span>
-                    </router-link>
+                    </button>
                   </li>
                   <li
                     v-else
@@ -401,9 +398,8 @@ onUnmounted(() => {
                           <ul class="flex flex-col">
                             <template v-for="child in item.children" :key="child.key">
                               <li>
-                                <router-link
-                                  :to="child.path"
-                                  class="flex items-center gap-3 px-4 py-2 text-sm transition-colors whitespace-nowrap"
+                                <button
+                                  class="flex items-center gap-3 px-4 py-2 text-sm transition-colors whitespace-nowrap w-full text-left"
                                   :class="[
                                     selectedKey === child.path
                                       ? 'bg-primary-bg text-primary dark:text-primary-dark'
@@ -413,7 +409,7 @@ onUnmounted(() => {
                                 >
                                   <i v-if="child.icon" :class="['fas', child.icon, 'w-5']" />
                                   <span>{{ child.title }}</span>
-                                </router-link>
+                                </button>
                               </li>
                             </template>
                           </ul>

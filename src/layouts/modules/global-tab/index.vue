@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useMenuStore } from '../global-menu/store'
+import { useKiviiOpenTab } from '@/composables/useKiviiOpenTab'
 
 const menuStore = useMenuStore()
 const route = useRoute()
-const router = useRouter()
+const { openPath } = useKiviiOpenTab()
 
 // 标签页列表 - 按添加顺序从左往右排列
 const tabsList = computed(() => menuStore.tabsList)
@@ -31,7 +32,7 @@ function closeTab(path: string, e: Event) {
   // 如果关闭的是当前激活的标签，跳转到最后一个标签
   if (path === activeTab.value && menuStore.tabsList.length > 0) {
     const lastTab = menuStore.tabsList[menuStore.tabsList.length - 1]
-    router.push(lastTab.path)
+    openPath(lastTab.path)
   }
 }
 
@@ -126,7 +127,7 @@ onUnmounted(() => {
               ? 'bg-primary-bg text-primary border-primary/30 dark:bg-gray-700'
               : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:border-gray-200 dark:hover:border-gray-600'
           ]"
-          @click="router.push(tab.path)"
+          @click="openPath(tab.path)"
         >
           <i v-if="tab.icon" :class="['fas', tab.icon, 'text-xs flex-shrink-0', activeTab === tab.path ? 'text-primary' : 'text-gray-400 dark:text-gray-500']" />
           <span class="truncate max-w-[100px]" :class="activeTab === tab.path ? 'text-primary' : ''">{{ tab.title }}</span>

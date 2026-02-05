@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useMenuStore } from './store'
 import type { MenuItem } from './types'
+import { useKiviiOpenTab } from '@/composables/useKiviiOpenTab'
 
 // 递归组件定义
 defineOptions({
@@ -18,9 +19,9 @@ const emit = defineEmits<{
   (e: 'select', item: MenuItem): void
 }>()
 
-const router = useRouter()
 const route = useRoute()
 const menuStore = useMenuStore()
+const { openPath } = useKiviiOpenTab()
 
 const selectedKey = computed(() => route.path)
 const openKeys = computed(() => menuStore.openKeys)
@@ -48,9 +49,9 @@ function toggleOpen(key: string, e: Event) {
   menuStore.toggleOpenKey(key)
 }
 
-function handleSelect(item: MenuItem) {
+async function handleSelect(item: MenuItem) {
   emit('select', item)
-  router.push(item.path)
+  await openPath(item.path)
 }
 
 // 检查当前路由是否在某个父菜单下
@@ -135,19 +136,19 @@ function resetDropdownPosition() {
     <template v-for="item in menu" :key="item.key">
       <!-- 无子菜单的菜单项 -->
       <li v-if="!hasChildren(item)">
-        <router-link
-          :to="item.path"
-          class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors"
+        <button
+          class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors w-full text-left"
           :class="[
             selectedKey === item.path
               ? 'bg-primary-bg text-primary font-medium'
               : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50'
           ]"
           :title="item.title"
+          @click="handleSelect(item)"
         >
           <i v-if="item.icon" :class="['fas', item.icon, 'w-5 h-5 flex-shrink-0']" />
           <span v-if="!collapsed" class="truncate">{{ item.title }}</span>
-        </router-link>
+        </button>
       </li>
 
       <!-- 有子菜单的菜单项 -->
@@ -204,10 +205,9 @@ function resetDropdownPosition() {
             <div class="py-1">
               <template v-for="child in item.children" :key="child.key">
                 <!-- 无三级子菜单的二级菜单 -->
-                <router-link
+                <button
                   v-if="!hasChildren(child)"
-                  :to="child.path"
-                  class="flex items-center gap-2 px-3 py-2 text-sm transition-colors mx-1 rounded"
+                  class="flex items-center gap-2 px-3 py-2 text-sm transition-colors mx-1 rounded w-full text-left"
                   :class="[
                     selectedKey === child.path
                       ? 'bg-primary-bg text-primary font-medium'
@@ -218,7 +218,7 @@ function resetDropdownPosition() {
                 >
                   <i v-if="child.icon" :class="['fas', child.icon, 'w-4 h-4 flex-shrink-0']" />
                   <span class="truncate">{{ child.title }}</span>
-                </router-link>
+                </button>
                 <!-- 有三级子菜单的二级菜单 -->
                 <div
                   v-else
@@ -260,11 +260,10 @@ function resetDropdownPosition() {
                         <div class="px-3 py-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800">
                           {{ child.title }}
                         </div>
-                        <router-link
+                        <button
                           v-for="subChild in child.children"
                           :key="subChild.key"
-                          :to="subChild.path"
-                          class="flex items-center gap-2 px-3 py-2 text-sm transition-colors mx-1 rounded"
+                          class="flex items-center gap-2 px-3 py-2 text-sm transition-colors mx-1 rounded w-full text-left"
                           :class="[
                             selectedKey === subChild.path
                               ? 'bg-primary-bg text-primary font-medium'
@@ -275,7 +274,7 @@ function resetDropdownPosition() {
                         >
                           <i v-if="subChild.icon" :class="['fas', subChild.icon, 'w-3.5 h-3.5 flex-shrink-0']" />
                           <span class="truncate">{{ subChild.title }}</span>
-                        </router-link>
+                        </button>
                       </div>
                     </div>
                   </Transition>
