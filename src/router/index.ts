@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router'
 import { setupRouteGuards } from './guards'
 import { generateDynamicRoutes, getStaticRoutes, addRouteWithChildren } from './routes'
 
@@ -29,7 +29,7 @@ const initialRoutes: RouteRecordRaw[] = [
 
 // 创建路由实例
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
+  history: createWebHashHistory(import.meta.env.BASE_URL),
   routes: initialRoutes
 })
 
