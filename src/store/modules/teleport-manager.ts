@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 
-export type PageType = 'webview' | 'extjs' | 'vue'
+export type PageType = 'webview' | 'vue'
 
 export interface PageInfo {
   id: string

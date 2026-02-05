@@ -133,22 +133,24 @@ interface OpenTabOptions {
 }
 ```
 
-## IframePage 三种渲染类型的集成
+## IframePage 渲染类型
 
-IframePage 支持三种渲染类型，统一通过 kiviiBridge.openTab 管理：
+IframePage 支持两种渲染类型，统一通过 kiviiBridge.openTab 管理：
 
 | 类型 | 说明 | 渲染组件 |
 |------|------|----------|
 | webview | iframe 渲染外部/内部页面 | `webview.vue` |
-| extjs | ExtJS 组件渲染 | `extJs.vue` |
 | vue | 远程 Vue 组件渲染 | `vueComponent.vue` |
+
+**页面类型判断规则：**
+1. `functionKvid` 以 `.vue` 结尾 → Vue 组件
+2. 其他情况 → WebView（iframe）
 
 **打开方式统一为：**
 ```typescript
 // 所有类型都可以通过这种方式打开
 kivii.openTab.open('/analysis/overview');
 kivii.openTab.openPath('/content/article');
-kivii.openTab.openByKvid('content_article');
 ```
 
 ## 注意事项

@@ -366,8 +366,7 @@ function generateChildRoutes(
         url: item.Type === 'System' ? item.Remark || '' : '',
         kvid: item.Kvid,
         functionKvid: item.FunctionKvid || '',
-        type: (item.FunctionKvid?.startsWith('ExtJS.') ? 'extjs' :
-               item.FunctionKvid?.endsWith('.vue') ? 'vue' : 'webview') as 'webview' | 'extjs' | 'vue'
+        type: (item.FunctionKvid?.endsWith('.vue') ? 'vue' : 'webview') as 'webview' | 'vue'
       },
       meta: {
         title: getMenuDisplayName(item),
