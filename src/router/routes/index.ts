@@ -53,14 +53,14 @@ export function cacheDynamicRoutes(routes: RouteRecordRaw[]): void {
 // 递归将 Vue Router 路由转换为 ElegantRoute 格式
 function routeToElegantRoute(route: RouteRecordRaw): ElegantRoute {
   return {
-    name: route.name,
+    name: typeof route.name === 'string' ? route.name : undefined,
     path: route.path,
     component: typeof route.component === 'function'
       ? extractComponentName(route.component.toString())
       : undefined,
-    redirect: route.redirect,
+    redirect: typeof route.redirect === 'string' ? route.redirect : undefined,
     meta: route.meta,
-    props: route.props,
+    props: typeof route.props === 'object' ? (route.props as Record<string, any>) : undefined,
     children: route.children ? route.children.map(child => routeToElegantRoute(child)) : []
   }
 }
@@ -494,7 +494,8 @@ export function addRouteWithChildren(router: any, routes: RouteRecordRaw[], pare
         console.warn('[Router] 父路由缺少 name 属性，无法添加子路由:', route.path)
         return
       }
-      addRouteWithChildren(router, route.children, route.name)
+      const parent = typeof route.name === 'string' ? route.name : undefined
+      addRouteWithChildren(router, route.children, parent)
     }
   })
 }

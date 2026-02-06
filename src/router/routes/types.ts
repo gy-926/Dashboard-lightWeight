@@ -50,7 +50,7 @@ export interface GlobalConfig {
 
 // 缓存的路由数据
 export interface CachedRoutes {
-  routes: RouteRecordRaw[]
+  routes: ElegantRoute[]
   timestamp: number
   userCode: string
   internalCode: string
@@ -60,7 +60,7 @@ export interface CachedRoutes {
 export interface ElegantRoute {
   name?: string
   path: string
-  component: string
+  component?: string
   redirect?: string
   meta?: Record<string, any>
   props?: Record<string, any>

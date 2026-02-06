@@ -152,15 +152,26 @@ export const mockMenuData: MenuApiResponse = {
 
 // 模拟 API 请求（开发调试用）
 export async function fetchMenuData(internalCode: string): Promise<MenuApiResponse> {
-  // ==================== 真实 API 调用方式 ====================
-  const response = await fetch(`/Restful/Kivii.Basic.Entities.Menu/Show.json?RootInternalCode=${internalCode}`)
-  if (!response.ok) {
-    throw new Error(`API 请求失败: ${response.statusText}`)
-  }
-  return await response.json()
-  // =========================================================
+  try {
+    // 尝试调用真实 API
+    const response = await fetch(`/Restful/Kivii.Basic.Entities.Menu/Show.json?RootInternalCode=${internalCode}`)
+    if (!response.ok) {
+      throw new Error(`API 请求失败: ${response.statusText}`)
+    }
+    const data = await response.json()
 
-  // 开发调试时使用模拟数据：
-  // await new Promise(resolve => setTimeout(resolve, 300))
-  // return mockMenuData
+    // 如果返回的菜单数据为空，使用模拟数据
+    if (data.MenusMain && data.MenusMain.Total === 0) {
+      console.log('[MockData] API 返回空数据，使用模拟菜单数据')
+      await new Promise(resolve => setTimeout(resolve, 100))
+      return mockMenuData
+    }
+
+    return data
+  } catch (error) {
+    console.warn('[MockData] API 请求失败，使用模拟数据:', error)
+    // 开发调试时使用模拟数据
+    await new Promise(resolve => setTimeout(resolve, 100))
+    return mockMenuData
+  }
 }
