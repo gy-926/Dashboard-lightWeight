@@ -1,27 +1,40 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { onMounted, onUnmounted,ref } from 'vue'
+import { useRoute } from 'vue-router'
 
-const router = useRouter()
 const route = useRoute()
 const countdown = ref(5)
+let countTimer: ReturnType<typeof setInterval> | null = null
 
 onMounted(() => {
   // 获取原始请求路径
   const originalPath = route.path
 
+  // 如果是 /404 本身，停止倒计时
   if (originalPath === '/404') {
     return
   }
 
-  // 倒计时后刷新页面
-  const countTimer = setInterval(() => {
+  // 倒计时后刷新页面（只执行一次）
+  countTimer = setInterval(() => {
     countdown.value--
     if (countdown.value <= 0) {
-      clearInterval(countTimer)
+      if (countTimer) {
+        clearInterval(countTimer)
+        countTimer = null
+      }
+      // 使用 location.reload() 刷新
       window.location.reload()
     }
   }, 1000)
+})
+
+// 组件卸载时清理
+onUnmounted(() => {
+  if (countTimer) {
+    clearInterval(countTimer)
+    countTimer = null
+  }
 })
 </script>
 

@@ -37,6 +37,34 @@ const router = createRouter({
 let dynamicRoutesLoaded = false
 let routesLoadPromise: Promise<void> | null = null
 let originalAuthRoutes: RouteRecordRaw[] = [] // 保存原始路由树
+let targetNavigation: string | null = null // 目标导航路径（用于刷新时保存原路径）
+
+// 获取动态路由加载状态
+function isDynamicRoutesReady() {
+  return dynamicRoutesLoaded
+}
+
+// 设置目标导航路径（供 guards 使用）
+function setTargetNavigation(path: string) {
+  if (!dynamicRoutesLoaded && !targetNavigation) {
+    // 过滤掉 404 和 通配符路径
+    if (path !== '/404' && !path.startsWith('/:pathMatch')) {
+      targetNavigation = path
+      console.log(`[Router] 保存目标导航路径: ${path}`)
+    }
+  }
+}
+
+// 等待动态路由加载
+function waitForRoutesReady(): Promise<void> {
+  if (dynamicRoutesLoaded) {
+    return Promise.resolve()
+  }
+  if (!routesLoadPromise) {
+    initRoutes()
+  }
+  return routesLoadPromise || Promise.resolve()
+}
 
 // 初始化路由
 async function initRoutes() {
@@ -45,6 +73,10 @@ async function initRoutes() {
 
   routesLoadPromise = (async () => {
     try {
+      // 优先使用 targetNavigation（来自 guards），否则使用当前路由
+      const restorePath = targetNavigation || router.currentRoute.value.path
+      console.log(`[Router] 动态路由加载中，restorePath: ${restorePath}`)
+
       const { constantRoutes, authRoutes } = await generateDynamicRoutes()
 
       // 保存原始路由树，用于构建菜单
@@ -66,14 +98,30 @@ async function initRoutes() {
 
       dynamicRoutesLoaded = true
 
-      // 如果当前在 404 页，刷新页面让路由生效
-      const currentPath = router.currentRoute.value.path
-      if (currentPath === '/404') {
-        window.location.reload()
+      // 如果有待恢复的导航路径，先更新菜单，再恢复导航
+      if (restorePath && restorePath !== '/' && restorePath !== '/login' && restorePath !== '/404') {
+        console.log(`[Router] 动态路由已加载，恢复导航到: ${restorePath}`)
+        // 先更新菜单，再恢复导航
+        targetNavigation = null
+        updateMenuFromRoutes().finally(() => {
+          router.replace(restorePath).catch(() => {})
+        })
         return
       }
 
-      // 通知菜单 store 更新菜单
+      // 如果当前在 404 页，尝试回到主页
+      const currentPath = router.currentRoute.value.path
+      if (currentPath === '/404' || currentPath === '/:pathMatch(.*)*') {
+        console.log('[Router] 动态路由已加载，404页面上使用 replace 回到主页')
+        targetNavigation = null
+        updateMenuFromRoutes().finally(() => {
+          router.replace('/').catch(() => {})
+        })
+        return
+      }
+
+      // 正常情况，更新菜单
+      targetNavigation = null
       updateMenuFromRoutes()
     } catch (error) {
       console.error('[Router] 动态路由加载失败:', error)
@@ -119,5 +167,6 @@ setupRouteGuards(router)
 
 export default router
 
-// 导出路由类型
+// 导出路由类型和状态函数
 export type { RouteRecordRaw }
+export { isDynamicRoutesReady, waitForRoutesReady, setTargetNavigation }
