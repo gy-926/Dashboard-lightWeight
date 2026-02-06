@@ -240,7 +240,6 @@
       :page-id="pageId"
       :route-query="routeQuery"
       :backend-origin="backendOrigin"
-      :render-type="renderType"
       @ready="handleComponentReady"
       @cleanup="handleComponentCleanup"
     />

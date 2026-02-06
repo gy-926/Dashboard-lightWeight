@@ -1,4 +1,5 @@
 <script setup lang="ts">
+defineOptions({ inheritAttrs: false })
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useTeleportManager } from '@/store/modules/teleport-manager'
 
