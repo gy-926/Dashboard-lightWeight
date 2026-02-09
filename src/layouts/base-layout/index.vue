@@ -61,8 +61,5 @@ onMounted(() => {
 
     <!-- 主题抽屉 -->
     <ThemeDrawer v-model="themeDrawerVisible" />
-
-    <!-- ExtJS/Iframe 挂载点 -->
-    <div id="extjs-root" style="width: 100%; height: 100%; position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1000;"></div>
   </div>
 </template>

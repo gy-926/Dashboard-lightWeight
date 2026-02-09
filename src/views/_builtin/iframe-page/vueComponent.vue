@@ -1,10 +1,7 @@
 <script setup lang="ts">
   import { ref, shallowRef, computed, onMounted, watch } from 'vue';
   import * as Vue from 'vue';
-  import {
-    useTeleportManager,
-    generateComponentCacheKey,
-  } from '@/store/modules/teleport-manager';
+  import { useTeleportManager, generateComponentCacheKey } from '@/store/modules/teleport-manager';
   import { loadModule } from 'vue3-sfc-loader';
 
   const props = defineProps<{
@@ -177,7 +174,7 @@
 </script>
 
 <template>
-  <Teleport to="#global-content-teleport-target">
+  <Teleport to="#extjs-root">
     <div
       v-show="shouldRender"
       class="vue-component-container"
@@ -220,11 +217,13 @@
 
 <style scoped>
   .vue-component-container {
+    pointer-events: auto;
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
+    background-color: transparent;
     overflow: auto;
   }
 

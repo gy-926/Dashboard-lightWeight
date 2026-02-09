@@ -1,6 +1,6 @@
 <script setup lang="ts">
-  defineOptions({ name: 'IframePage' })
-  import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
+  defineOptions({ name: 'IframePage' });
+  import { ref, onMounted, onUnmounted, onActivated, computed, watch } from 'vue';
   import { useRoute } from 'vue-router';
   import { useEventBus } from '@vueuse/core';
   import {
@@ -22,7 +22,7 @@
   }>();
 
   const route = useRoute();
-  const { registerPage, unregisterPage, updatePageStatus, requestActivation } =
+  const { registerPage, unregisterPage, updatePageStatus, requestActivation, forceActivate } =
     useTeleportManager();
 
   const pageId = ref<string>('');
@@ -195,6 +195,13 @@
         cleanupAll();
       }
     });
+  });
+
+  // 激活时更新状态
+  onActivated(() => {
+    if (pageId.value) {
+      forceActivate(pageId.value);
+    }
   });
 
   onUnmounted(() => {

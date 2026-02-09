@@ -132,7 +132,7 @@ defineExpose({
 </script>
 
 <template>
-  <Teleport to="#global-content-teleport-target">
+  <Teleport to="#extjs-root">
     <!-- v-if 控制首次渲染，v-show 控制显示切换 -->
     <div
       v-if="isRendered"
@@ -193,6 +193,7 @@ defineExpose({
 
 <style scoped>
 .webview-container {
+  pointer-events: auto;
   position: absolute;
   top: 0;
   left: 0;
