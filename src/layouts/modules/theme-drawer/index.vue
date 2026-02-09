@@ -91,7 +91,7 @@ function toggleCustomColor() {
     >
       <div
         v-if="modelValue"
-        class="fixed inset-0 bg-black/50 z-40"
+        class="fixed inset-0 bg-black/50 z-[200]"
         @click="closeDrawer"
       />
     </Transition>
@@ -107,7 +107,7 @@ function toggleCustomColor() {
     >
       <div
         v-if="modelValue"
-        class="fixed right-0 top-0 h-full w-80 bg-white dark:bg-gray-800 shadow-2xl z-50 flex flex-col"
+        class="fixed right-0 top-0 h-full w-80 bg-white dark:bg-gray-800 shadow-2xl z-[201] flex flex-col"
       >
         <!-- 头部 -->
         <div class="flex items-center justify-between h-16 px-6 border-b border-gray-200 dark:border-gray-700">

@@ -1,49 +1,51 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useMenuStore } from '../global-menu/store'
-import GlobalTopMenu from '../global-menu/GlobalTopMenu.vue'
-import type { MenuItem } from '../global-menu/types'
+  import { ref, computed } from 'vue';
+  import { useMenuStore } from '../global-menu/store';
+  import GlobalTopMenu from '../global-menu/GlobalTopMenu.vue';
+  import type { MenuItem } from '../global-menu/types';
 
-defineProps<{
-  showSiderToggle?: boolean
-}>()
+  defineProps<{
+    showSiderToggle?: boolean;
+  }>();
 
-const menuStore = useMenuStore()
+  const menuStore = useMenuStore();
 
-// 菜单列表
-const menuList = ref(menuStore.menuList)
+  // 菜单列表
+  const menuList = ref(menuStore.menuList);
 
-function handleMenuSelect(item: MenuItem) {
-  menuStore.addTab(item)
-}
+  function handleMenuSelect(item: MenuItem) {
+    menuStore.addTab(item);
+  }
 
-const userDropdownVisible = ref(false)
-function toggleUserDropdown() {
-  userDropdownVisible.value = !userDropdownVisible.value
-}
+  const userDropdownVisible = ref(false);
+  function toggleUserDropdown() {
+    userDropdownVisible.value = !userDropdownVisible.value;
+  }
 
-const notificationVisible = ref(false)
-function toggleNotification() {
-  notificationVisible.value = !notificationVisible.value
-}
+  const notificationVisible = ref(false);
+  function toggleNotification() {
+    notificationVisible.value = !notificationVisible.value;
+  }
 
-// 是否为顶部菜单布局
-const isTopLayout = computed(() => menuStore.theme.layout === 'top')
+  // 是否为顶部菜单布局
+  const isTopLayout = computed(() => menuStore.theme.layout === 'top');
 
-// 顶部菜单列表（只显示一级菜单）
-const topMenuList = computed(() => {
-  return menuStore.menuList.filter(item => !item.hidden)
-})
+  // 顶部菜单列表（只显示一级菜单）
+  const topMenuList = computed(() => {
+    return menuStore.menuList.filter(item => !item.hidden);
+  });
 </script>
 
 <template>
   <!-- 顶部菜单布局 -->
   <header
     v-if="isTopLayout"
-    class="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between"
+    class="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between relative z-[101]"
   >
     <!-- 左侧：Logo（固定宽度） -->
-    <div class="flex items-center px-6 border-r border-gray-200 dark:border-gray-700 h-full w-auto flex-shrink-0">
+    <div
+      class="flex items-center px-6 border-r border-gray-200 dark:border-gray-700 h-full w-auto flex-shrink-0"
+    >
       <div class="flex items-center gap-2 cursor-pointer">
         <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
           <i class="fas fa-bolt text-white" />
@@ -119,7 +121,9 @@ const topMenuList = computed(() => {
           class="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
           @click="toggleUserDropdown()"
         >
-          <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+          <div
+            class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center"
+          >
             <i class="fas fa-user text-blue-600 dark:text-blue-400" />
           </div>
           <span class="text-sm text-gray-600 dark:text-gray-400">Admin</span>
@@ -138,16 +142,25 @@ const topMenuList = computed(() => {
             v-if="userDropdownVisible"
             class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50"
           >
-            <a href="#" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50">
+            <a
+              href="#"
+              class="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50"
+            >
               <i class="fas fa-user-circle w-4" />
               <span>个人中心</span>
             </a>
-            <a href="#" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50">
+            <a
+              href="#"
+              class="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50"
+            >
               <i class="fas fa-cog w-4" />
               <span>设置</span>
             </a>
             <hr class="my-1 border-gray-200 dark:border-gray-700" />
-            <a href="#" class="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700/50">
+            <a
+              href="#"
+              class="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700/50"
+            >
               <i class="fas fa-sign-out-alt w-4" />
               <span>退出登录</span>
             </a>
@@ -169,7 +182,7 @@ const topMenuList = computed(() => {
   <!-- 侧边栏/混合布局 -->
   <header
     v-else
-    class="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4"
+    class="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 relative z-[101]"
   >
     <!-- 左侧：侧边栏折叠按钮 -->
     <div class="flex items-center gap-4">
@@ -244,7 +257,9 @@ const topMenuList = computed(() => {
           class="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
           @click="toggleUserDropdown()"
         >
-          <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+          <div
+            class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center"
+          >
             <i class="fas fa-user text-blue-600 dark:text-blue-400" />
           </div>
           <span class="text-sm text-gray-600 dark:text-gray-400">Admin</span>
@@ -263,16 +278,25 @@ const topMenuList = computed(() => {
             v-if="userDropdownVisible"
             class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50"
           >
-            <a href="#" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50">
+            <a
+              href="#"
+              class="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50"
+            >
               <i class="fas fa-user-circle w-4" />
               <span>个人中心</span>
             </a>
-            <a href="#" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50">
+            <a
+              href="#"
+              class="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50"
+            >
               <i class="fas fa-cog w-4" />
               <span>设置</span>
             </a>
             <hr class="my-1 border-gray-200 dark:border-gray-700" />
-            <a href="#" class="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700/50">
+            <a
+              href="#"
+              class="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700/50"
+            >
               <i class="fas fa-sign-out-alt w-4" />
               <span>退出登录</span>
             </a>
