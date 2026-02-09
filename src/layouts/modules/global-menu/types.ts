@@ -22,6 +22,8 @@ export interface MenuItem {
   meta?: Record<string, unknown>
   /** 重定向地址 */
   redirect?: string
+  /** 功能KvID（用于动态路由） */
+  kvid?: string
 }
 
 /** 菜单配置 */

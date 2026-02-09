@@ -18,6 +18,8 @@ export interface TeleportManagerState {
   activePageId: string | null
   activationQueue: Map<string, number>
   activationLock: boolean
+  vueComponentCache: Map<string, any>
+  vueComponentLoading: Map<string, Promise<any>>
 }
 
 // 生成唯一页面实例 ID
@@ -28,11 +30,22 @@ export function generatePageId(url: string, kvid: string, type: PageType): strin
   return `${type}_${encodedUrl}_${kvid || 'default'}_${timestamp}_${random}`
 }
 
+// 生成 Vue 组件缓存键（用于 keep-alive 保持组件状态）
+export function generateComponentCacheKey(url: string, kvid: string, backendOrigin?: string): string {
+  const origin = backendOrigin || ''
+  const fullUrl = url.startsWith('http') ? url : `${origin}${url}`
+  return `vue_component::${fullUrl}::${kvid || ''}`
+}
+
 export const useTeleportManager = defineStore('teleport-manager', () => {
   const pages = ref<Map<string, PageInfo>>(new Map())
   const activePageId = ref<string | null>(null)
   const activationQueue = ref<Map<string, number>>(new Map())
   const activationLock = ref(false)
+
+  // Vue 组件全局缓存（用于 keep-alive 保持组件状态）
+  const vueComponentCache = ref<Map<string, any>>(new Map())
+  const vueComponentLoading = ref<Map<string, Promise<any>>>(new Map())
 
   // 防抖激活请求
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
@@ -48,6 +61,56 @@ export const useTeleportManager = defineStore('teleport-manager', () => {
     if (!activePageId.value) return []
     return allPages.value.filter(p => p.status === 'active' || p.id === activePageId.value)
   })
+
+  // Vue 组件缓存操作
+  function getVueComponent(cacheKey: string): any | undefined {
+    return vueComponentCache.value.get(cacheKey)
+  }
+
+  function setVueComponent(cacheKey: string, component: any): void {
+    vueComponentCache.value.set(cacheKey, component)
+  }
+
+  function hasVueComponent(cacheKey: string): boolean {
+    return vueComponentCache.value.has(cacheKey)
+  }
+
+  function getVueComponentLoading(cacheKey: string): Promise<any> | undefined {
+    return vueComponentLoading.value.get(cacheKey)
+  }
+
+  function setVueComponentLoading(cacheKey: string, promise: Promise<any>): void {
+    vueComponentLoading.value.set(cacheKey, promise)
+  }
+
+  function deleteVueComponentLoading(cacheKey: string): void {
+    vueComponentLoading.value.delete(cacheKey)
+  }
+
+  function clearVueComponentCache(): void {
+    vueComponentCache.value.clear()
+    vueComponentLoading.value.clear()
+  }
+
+  // 根据路径和 kvid 移除组件缓存
+  function removeComponentCacheByPath(path: string, kvid?: string): void {
+    // 遍历缓存，找到匹配的项并删除
+    const keysToDelete: string[] = []
+    vueComponentCache.value.forEach((_, key) => {
+      // 缓存键格式: vue_component::${fullUrl}::${kvid || ''}
+      // 需要匹配路径部分
+      if (key.startsWith('vue_component::')) {
+        const urlPart = key.replace('vue_component::', '')
+        // 如果 kvid 匹配或者路径匹配
+        if (urlPart.includes(path) || (kvid && urlPart.endsWith(`::${kvid}`))) {
+          keysToDelete.push(key)
+        }
+      }
+    })
+    keysToDelete.forEach(key => {
+      vueComponentCache.value.delete(key)
+    })
+  }
 
   function registerPage(id: string, type: PageType, url: string, kvid?: string): void {
     const page: PageInfo = {
@@ -160,6 +223,7 @@ export const useTeleportManager = defineStore('teleport-manager', () => {
     activationQueue.value.clear()
     activePageId.value = null
     activationLock.value = false
+    // 不清除组件缓存（保持状态）
     if (debounceTimer) {
       clearTimeout(debounceTimer)
       debounceTimer = null
@@ -173,6 +237,8 @@ export const useTeleportManager = defineStore('teleport-manager', () => {
     activePage,
     visiblePages,
     activationLock,
+    vueComponentCache,
+    vueComponentLoading,
     registerPage,
     unregisterPage,
     getPage,
@@ -181,6 +247,14 @@ export const useTeleportManager = defineStore('teleport-manager', () => {
     debouncedRequestActivation,
     shouldShowPage,
     getActivePage,
+    getVueComponent,
+    setVueComponent,
+    hasVueComponent,
+    getVueComponentLoading,
+    setVueComponentLoading,
+    deleteVueComponentLoading,
+    clearVueComponentCache,
+    removeComponentCacheByPath,
     cleanup,
   }
 })

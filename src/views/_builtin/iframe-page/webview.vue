@@ -1,6 +1,6 @@
 <script setup lang="ts">
 defineOptions({ inheritAttrs: false })
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useTeleportManager } from '@/store/modules/teleport-manager'
 
 const props = defineProps<{
@@ -17,11 +17,17 @@ const emit = defineEmits<{
   (e: 'cleanup'): void
 }>()
 
-const { shouldShowPage, updatePageStatus } = useTeleportManager()
+const { shouldShowPage, updatePageStatus, requestActivation } = useTeleportManager()
 
 const iframeRef = ref<HTMLIFrameElement | null>(null)
-const isReady = ref(false)
 const error = ref<string | null>(null)
+
+// 两个布尔状态
+const isRendered = ref(false); // 是否已完成首次渲染
+const isActive = ref(false);   // 是否当前活动页面
+
+// 定时器引用
+let renderTimer: ReturnType<typeof setTimeout> | null = null;
 
 // 完整 URL（处理路由参数拼接）
 const fullUrl = computed(() => {
@@ -39,14 +45,33 @@ const hasValidUrl = computed(() => {
   return fullUrl.value && (fullUrl.value.startsWith('http') || fullUrl.value.startsWith('/'))
 })
 
-// 是否显示
-const shouldRender = computed(() => shouldShowPage(props.pageId))
+// 延迟渲染：300ms 后设置 isRendered=true，再设置 isActive
+function delayedRender() {
+  // 清除之前的定时器
+  if (renderTimer) {
+    clearTimeout(renderTimer);
+    renderTimer = null;
+  }
+
+  renderTimer = setTimeout(() => {
+    if (!isRendered.value) {
+      isRendered.value = true;
+      // 首次渲染完成后，根据是否应该显示来决定 isActive
+      isActive.value = shouldShowPage(props.pageId);
+      if (isActive.value) {
+        updatePageStatus(props.pageId, 'active');
+        requestActivation(props.pageId);
+      } else {
+        updatePageStatus(props.pageId, 'hidden');
+      }
+      emit('ready');
+    }
+  }, 300);
+}
 
 // iframe 加载完成
 function handleIframeLoad() {
-  isReady.value = true
   updatePageStatus(props.pageId, 'ready')
-  emit('ready')
 }
 
 function handleIframeError() {
@@ -54,82 +79,113 @@ function handleIframeError() {
   updatePageStatus(props.pageId, 'ready')
 }
 
-// 清理函数
+// 清理函数：彻底销毁组件
 function cleanup() {
+  // 清除定时器
+  if (renderTimer) {
+    clearTimeout(renderTimer);
+    renderTimer = null;
+  }
+
+  // 先设 src 为 about:blank，避免网络活动残留
   if (iframeRef.value) {
     iframeRef.value.src = 'about:blank'
   }
-  emit('cleanup')
+
+  isRendered.value = false;
+  isActive.value = false;
+  emit('cleanup');
 }
 
+// 监听显示状态变化
+watch(
+  () => shouldShowPage(props.pageId),
+  show => {
+    // 如果还没渲染，等渲染完成后再处理
+    if (!isRendered.value) {
+      return;
+    }
+    isActive.value = show;
+    if (show) {
+      updatePageStatus(props.pageId, 'active');
+      requestActivation(props.pageId);
+    } else {
+      updatePageStatus(props.pageId, 'hidden');
+    }
+  },
+  { immediate: true }
+);
+
 onMounted(() => {
-  updatePageStatus(props.pageId, 'active')
-})
+  updatePageStatus(props.pageId, 'loading');
+  // 延迟渲染，确保 DOM 就绪
+  delayedRender();
+});
 
 onUnmounted(() => {
-  cleanup()
-  updatePageStatus(props.pageId, 'hidden')
-})
+  cleanup();
+});
 
 defineExpose({
   cleanup,
-})
+});
 </script>
 
 <template>
   <Teleport to="#global-content-teleport-target">
-    <!-- 有效 URL 的 iframe 渲染 -->
+    <!-- v-if 控制首次渲染，v-show 控制显示切换 -->
     <div
-      v-if="hasValidUrl && shouldRender"
+      v-if="isRendered"
+      v-show="isActive"
       class="webview-container"
       :data-page-id="pageId"
     >
+      <!-- 有效 URL 的 iframe 渲染 -->
       <iframe
-        v-if="!error"
+        v-if="hasValidUrl && !error"
         ref="iframeRef"
         :src="fullUrl"
         class="webview-iframe"
         @load="handleIframeLoad"
         @error="handleIframeError"
       />
-      <div v-else class="webview-error">
+      <div v-else-if="error" class="webview-error">
         <p>{{ error }}</p>
         <p>URL: {{ fullUrl }}</p>
       </div>
-    </div>
 
-    <!-- 无有效 URL 时的占位内容（直接显示在页面中） -->
-    <div
-      v-else-if="shouldRender"
-      class="webview-placeholder"
-      :data-page-id="pageId"
-    >
-      <div class="placeholder-content">
-        <div class="placeholder-icon">
-          <i class="fas fa-puzzle-piece" />
-        </div>
-        <h3 class="placeholder-title">{{ kvid || functionKvid || '页面' }}</h3>
-        <p class="placeholder-desc">
-          <template v-if="functionKvid">
-            <template v-if="functionKvid.startsWith('http')">
-              外部链接页面
-            </template>
-            <template v-else-if="functionKvid.endsWith('.vue')">
-              远程 Vue 组件
-            </template>
-            <template v-else-if="functionKvid.startsWith('ExtJS.')">
-              ExtJS 组件
+      <!-- 无有效 URL 时的占位内容 -->
+      <div
+        v-else-if="!hasValidUrl"
+        class="webview-placeholder"
+      >
+        <div class="placeholder-content">
+          <div class="placeholder-icon">
+            <i class="fas fa-puzzle-piece" />
+          </div>
+          <h3 class="placeholder-title">{{ kvid || functionKvid || '页面' }}</h3>
+          <p class="placeholder-desc">
+            <template v-if="functionKvid">
+              <template v-if="functionKvid.startsWith('http')">
+                外部链接页面
+              </template>
+              <template v-else-if="functionKvid.endsWith('.vue')">
+                远程 Vue 组件
+              </template>
+              <template v-else-if="functionKvid.startsWith('ExtJS.')">
+                ExtJS 组件
+              </template>
+              <template v-else>
+                功能模块
+              </template>
             </template>
             <template v-else>
-              功能模块
+              占位页面（未配置 URL）
             </template>
-          </template>
-          <template v-else>
-            占位页面（未配置 URL）
-          </template>
-        </p>
-        <p v-if="url" class="placeholder-url">URL: {{ url }}</p>
-        <p v-else class="placeholder-hint">请在菜单配置中设置页面地址</p>
+          </p>
+          <p v-if="url" class="placeholder-url">URL: {{ url }}</p>
+          <p v-else class="placeholder-hint">请在菜单配置中设置页面地址</p>
+        </div>
       </div>
     </div>
   </Teleport>

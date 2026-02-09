@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { useMenuStore } from '../global-menu/store'
 
 const props = withDefaults(defineProps<{
@@ -11,9 +12,25 @@ const props = withDefaults(defineProps<{
 })
 
 const menuStore = useMenuStore()
+const route = useRoute()
 
+// 检查是否为动态路由（需要禁用 keep-alive）
+const isDynamicRoute = computed(() => {
+  const path = route.path
+  // 动态路由通常以 /custom_ 或 /bridge_ 开头
+  return path.startsWith('/custom_') || path.startsWith('/bridge_')
+})
+
+// 是否应该使用 keep-alive（动态路由不使用）
+const shouldKeepAlive = computed(() => {
+  return props.keepAlive && !isDynamicRoute.value
+})
+
+// 缓存的组件列表（使用路由路径作为缓存 key）
 const cachedViews = computed(() => {
-  return menuStore.tabsList.map(tab => tab.path)
+  return menuStore.tabsList
+    .map(tab => tab.path)
+    .filter((path): path is string => !!path)
 })
 
 const showTabs = computed(() => props.showTabs && menuStore.theme.showTabs)
@@ -41,8 +58,8 @@ const showTabs = computed(() => props.showTabs && menuStore.theme.showTabs)
       />
 
       <div class="mx-auto max-w-7xl min-h-full relative z-0">
-        <template v-if="keepAlive">
-          <router-view v-slot="{ Component, route: r }">
+        <template v-if="shouldKeepAlive">
+          <router-view v-slot="{ Component }">
             <transition
               enter-active-class="transition duration-200 ease-out"
               enter-from-class="opacity-0 translate-y-2"
@@ -52,14 +69,14 @@ const showTabs = computed(() => props.showTabs && menuStore.theme.showTabs)
               leave-to-class="opacity-0 -translate-y-2"
             >
               <keep-alive :include="cachedViews">
-                <component :is="Component" :key="r.path" />
+                <component :is="Component" />
               </keep-alive>
             </transition>
           </router-view>
         </template>
 
         <template v-else>
-          <router-view v-slot="{ Component, route: r }">
+          <router-view v-slot="{ Component }">
             <transition
               enter-active-class="transition duration-200 ease-out"
               enter-from-class="opacity-0 translate-y-2"
@@ -68,7 +85,7 @@ const showTabs = computed(() => props.showTabs && menuStore.theme.showTabs)
               leave-from-class="opacity-100 translate-y-0"
               leave-to-class="opacity-0 -translate-y-2"
             >
-              <component :is="Component" :key="r.path" />
+              <component :is="Component" />
             </transition>
           </router-view>
         </template>

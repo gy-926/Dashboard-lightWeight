@@ -179,10 +179,18 @@ export const useMenuStore = defineStore('menu', () => {
   }
 
   // 移除标签页
-  function removeTab(path: string) {
+  async function removeTab(path: string) {
     const index = tabsList.value.findIndex(t => t.path === path)
     if (index > -1) {
+      const tab = tabsList.value[index]
       tabsList.value.splice(index, 1)
+      // 清理对应的组件缓存
+      try {
+        const { removeComponentCacheByPath } = await import('@/store/modules/teleport-manager')
+        removeComponentCacheByPath(path, tab.kvid)
+      } catch (e) {
+        // 忽略导入错误
+      }
     }
   }
 

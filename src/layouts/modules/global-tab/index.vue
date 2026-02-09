@@ -23,16 +23,18 @@ function canClose(path: string): boolean {
 }
 
 // 关闭标签
-function closeTab(path: string, e: Event) {
+async function closeTab(path: string, e: Event) {
   e.stopPropagation()
   const index = menuStore.tabsList.findIndex(t => t.path === path)
   if (index > -1) {
-    menuStore.removeTab(path)
-  }
-  // 如果关闭的是当前激活的标签，跳转到最后一个标签
-  if (path === activeTab.value && menuStore.tabsList.length > 0) {
-    const lastTab = menuStore.tabsList[menuStore.tabsList.length - 1]
-    openPath(lastTab.path)
+    const wasActive = path === activeTab.value
+    const wasLast = index === menuStore.tabsList.length - 1
+    await menuStore.removeTab(path)
+    // 如果关闭的是当前激活的标签，跳转到最后一个标签
+    if (wasActive && menuStore.tabsList.length > 0) {
+      const lastTab = menuStore.tabsList[menuStore.tabsList.length - 1]
+      openPath(lastTab.path)
+    }
   }
 }
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  defineOptions({ name: 'IframePage' })
   import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
   import { useRoute } from 'vue-router';
   import { useEventBus } from '@vueuse/core';
