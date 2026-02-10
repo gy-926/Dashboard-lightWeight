@@ -205,6 +205,9 @@ export const useMenuStore = defineStore('menu', () => {
 
   // 添加标签页
   function addTab(menu: MenuItem) {
+    // 过滤掉空白页
+    if (menu.path === '/blank' || menu.key === 'blank') return;
+
     const exists = tabsList.value.find(t => t.path === menu.path);
     if (!exists) {
       tabsList.value.push({ ...menu });

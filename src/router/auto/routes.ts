@@ -58,6 +58,15 @@ export const autoRoutes: RouteRecordRaw[] = [
         ],
       },
       {
+        path: 'blank',
+        name: 'blank',
+        component: () => import('../../views/blank.vue'),
+        meta: {
+          title: '暂无内容',
+          hidden: true,
+        },
+      },
+      {
         path: 'iframe-page',
         name: 'iframe-page',
         component: () => import('../../views/_builtin/iframe-page/index.vue'),
