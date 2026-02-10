@@ -49,6 +49,19 @@ function loadThemeFromStorage(): Partial<ThemeConfig> {
   return {};
 }
 
+// 从本地存储读取标签页
+function loadTabsFromStorage(): MenuItem[] {
+  try {
+    const saved = localStorage.getItem('kivii-tabs');
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (e) {
+    console.warn('Failed to load tabs from storage:', e);
+  }
+  return [];
+}
+
 // 应用暗色模式到 DOM
 function applyDarkMode(darkMode: boolean) {
   if (darkMode) {
@@ -98,7 +111,7 @@ export const useMenuStore = defineStore('menu', () => {
   // 选中的菜单 key
   const selectedKey = ref<string>('');
   // 标签页列表
-  const tabsList = ref<MenuItem[]>([]);
+  const tabsList = ref<MenuItem[]>(loadTabsFromStorage());
   // 主题配置
   const theme = ref<ThemeConfig>({
     layout: 'side', // 强制使用顶部菜单布局
@@ -142,6 +155,19 @@ export const useMenuStore = defineStore('menu', () => {
         );
       } catch (e) {
         console.warn('Failed to save theme:', e);
+      }
+    },
+    { deep: true }
+  );
+
+  // 监听标签页变化并保存到本地存储
+  watch(
+    tabsList,
+    val => {
+      try {
+        localStorage.setItem('kivii-tabs', JSON.stringify(val));
+      } catch (e) {
+        console.warn('Failed to save tabs:', e);
       }
     },
     { deep: true }
