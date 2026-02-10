@@ -1,7 +1,8 @@
 <script setup lang="ts">
-  import { computed, h } from 'vue';
+  import { computed, h, watch } from 'vue';
   import { useRoute } from 'vue-router';
   import { useMenuStore } from '../global-menu/store';
+  import { useTeleportManager } from '@/store/modules/teleport-manager';
 
   const props = withDefaults(
     defineProps<{
@@ -15,7 +16,21 @@
   );
 
   const menuStore = useMenuStore();
+  const teleportManager = useTeleportManager();
   const route = useRoute();
+
+  // 监听路由变化，非动态组件路由时隐藏所有动态组件
+  watch(
+    () => route.name,
+    newName => {
+      const name = String(newName || '');
+      // 如果不是 iframe-page 相关路由，隐藏所有动态组件
+      if (!name.startsWith('iframe-page')) {
+        teleportManager.hideAllPages();
+      }
+    },
+    { immediate: true }
+  );
 
   // 检查是否为动态路由（需要禁用 keep-alive）
   const isDynamicRoute = computed(() => {
@@ -41,6 +56,11 @@
   });
 
   const showTabs = computed(() => props.showTabs && menuStore.theme.showTabs);
+
+  // 判断是否需要全宽布局（如 Dashboard 页面）
+  const isFullWidthLayout = computed(() => {
+    return route.name === 'dashboard';
+  });
 
   // 缓存包装组件定义，避免重复创建导致组件重置
   const wrapperMap = new Map<string, any>();
@@ -91,7 +111,12 @@
 
     <!-- 内容区域 -->
     <div class="flex-1 overflow-y-auto p-0 relative">
-      <div class="mx-auto max-w-7xl min-h-full relative z-0">
+      <div
+        :class="[
+          'min-h-full relative z-0',
+          isFullWidthLayout ? 'w-full px-4 md:px-6' : 'mx-auto max-w-7xl',
+        ]"
+      >
         <template v-if="shouldKeepAlive">
           <router-view v-slot="{ Component, route }">
             <transition

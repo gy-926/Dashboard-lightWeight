@@ -265,6 +265,20 @@ export const useTeleportManager = defineStore('teleport-manager', () => {
     }
   }
 
+  // 隐藏所有页面（用于切换到非动态路由时）
+  function hideAllPages(): void {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+      debounceTimer = null;
+    }
+    activationQueue.value.clear();
+
+    pages.value.forEach(page => {
+      page.status = 'hidden';
+    });
+    activePageId.value = null;
+  }
+
   function shouldShowPage(id: string): boolean {
     const page = pages.value.get(id);
     if (!page) return false; // 未注册的页面默认不显示（防止残留组件显示）
@@ -305,6 +319,7 @@ export const useTeleportManager = defineStore('teleport-manager', () => {
     requestActivation,
     debouncedRequestActivation,
     forceActivate,
+    hideAllPages,
     shouldShowPage,
     getActivePage,
     getVueComponent,

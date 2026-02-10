@@ -1,5 +1,22 @@
 import type { App } from 'vue';
 import * as Vue from 'vue';
+import { ref } from 'vue';
+
+// 远程库状态定义
+export interface RemoteLibraryInfo {
+  name: string;
+  url: string;
+  status: 'pending' | 'loading' | 'success' | 'error';
+  error?: string;
+  manifest?: any;
+  componentsMap?: Record<string, any>;
+  componentsDetailed?: any[];
+  componentKeys?: string[];
+  registeredCount?: number;
+}
+
+// 响应式状态：存储所有加载的远程库信息
+export const remoteLibraries = ref<RemoteLibraryInfo[]>([]);
 
 // 组件配置接口定义
 export interface ComponentConfig {
@@ -96,6 +113,21 @@ const registerComponent = async (app: App, componentConfig: ComponentConfig) => 
     // 使用通用组件加载器
     const remoteComponent = await loadComponent(componentConfig);
 
+    // 更新库信息状态
+    const libIndex = remoteLibraries.value.findIndex(l => l.name === componentConfig.name);
+    if (libIndex !== -1) {
+      const lib = remoteLibraries.value[libIndex];
+      lib.status = 'success';
+
+      if (typeof remoteComponent === 'object' && remoteComponent !== null) {
+        lib.componentKeys = Object.keys(remoteComponent);
+        if (remoteComponent.manifest) lib.manifest = remoteComponent.manifest;
+        if (remoteComponent.componentsMap) lib.componentsMap = remoteComponent.componentsMap;
+        if (remoteComponent.componentsDetailed)
+          lib.componentsDetailed = remoteComponent.componentsDetailed;
+      }
+    }
+
     // 打印加载到的组件对象
     console.group(`[Remote Component Loaded]: ${componentConfig.name}`);
     try {
@@ -148,6 +180,11 @@ const registerComponent = async (app: App, componentConfig: ComponentConfig) => 
           console.log(
             `Successfully auto-registered ${registeredCount} components from ${componentConfig.name}`
           );
+          // 更新注册数量
+          const libIndex = remoteLibraries.value.findIndex(l => l.name === componentConfig.name);
+          if (libIndex !== -1) {
+            remoteLibraries.value[libIndex].registeredCount = registeredCount;
+          }
         }
         return; // 自动注册模式下，不再执行后续的单一注册逻辑
       }
@@ -196,11 +233,30 @@ export const registerRemoteComponents = async (
     // 记录加载结果
     const loadResults: Array<{ name: string; success: boolean; error?: string }> = [];
 
+    // 初始化 remoteLibraries
+    remoteLibraries.value = config.components.map(c => ({
+      name: c.name,
+      url: c.path,
+      status: 'pending',
+    }));
+
     // 并行加载所有组件
     const loadPromises = config.components.map(async componentConfig => {
+      // 查找并更新状态为 loading
+      const libIndex = remoteLibraries.value.findIndex(l => l.name === componentConfig.name);
+      if (libIndex !== -1) {
+        remoteLibraries.value[libIndex].status = 'loading';
+      }
+
       try {
         await registerComponent(app, componentConfig);
         loadResults.push({ name: componentConfig.name, success: true });
+
+        // 成功后在 registerComponent 内部逻辑已经（或即将）处理详细信息的提取，
+        // 这里主要更新最终状态，防止在 registerComponent 中漏掉
+        if (libIndex !== -1 && remoteLibraries.value[libIndex].status !== 'success') {
+          remoteLibraries.value[libIndex].status = 'success';
+        }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         loadResults.push({
@@ -208,6 +264,12 @@ export const registerRemoteComponents = async (
           success: false,
           error: errorMessage,
         });
+
+        // 更新错误状态
+        if (libIndex !== -1) {
+          remoteLibraries.value[libIndex].status = 'error';
+          remoteLibraries.value[libIndex].error = errorMessage;
+        }
       }
     });
 

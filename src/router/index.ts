@@ -142,12 +142,29 @@ async function updateMenuFromRoutes() {
       return
     }
 
-    // 过滤掉特殊的路由
-    const validRoutes = originalAuthRoutes.filter(r => {
+    // 过滤掉特殊的路由，并处理根路径下的子路由
+    const validRoutes = originalAuthRoutes.flatMap(r => {
+      // 1. 如果是根布局路由（path: '/'），且有 children，尝试提取 children 作为一级菜单
+      if (r.path === '/' && r.children && r.children.length > 0) {
+        // 过滤出未隐藏的子路由
+        return r.children.filter(child => !child.meta?.hidden).map(child => {
+          // 确保 path 是绝对路径，以便菜单正确跳转
+          const childPath = child.path.startsWith('/') ? child.path : `/${child.path}`
+          return {
+            ...child,
+            path: childPath
+          }
+        })
+      }
+
+      // 2. 正常的顶层路由过滤
       const path = r.path || ''
-      return path !== '/' && path !== '' &&
+      if (path !== '/' && path !== '' &&
              !path.startsWith(':') && !path.includes('*') &&
-             r.meta?.hidden !== true
+             r.meta?.hidden !== true) {
+        return [r]
+      }
+      return []
     })
 
     menuStore.setMenuFromRoutes(validRoutes)
