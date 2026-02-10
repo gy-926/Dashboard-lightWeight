@@ -88,7 +88,6 @@
     }
 
     try {
-      console.log('[IframePage] 获取功能权限:', props.kvid);
       const response = await fetch(
         `/Restful/Kivii.Basic.Entities.Function/Access.json?MenuKvids=${props.kvid}`
       );

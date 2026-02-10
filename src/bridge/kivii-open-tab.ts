@@ -80,7 +80,7 @@ export class KiviiOpenTab {
    */
   async open(url: string, options?: OpenTabOptions): Promise<boolean> {
     try {
-      console.log('[KiviiOpenTab] 打开 URL:', url, options);
+
 
       // 判断是否为外部 URL（http/https 开头）
       if (this.isExternalUrl(url)) {
@@ -104,7 +104,7 @@ export class KiviiOpenTab {
    */
   async openPath(path: string, options?: OpenTabOptions): Promise<boolean> {
     try {
-      console.log('[KiviiOpenTab] 打开路径:', path, options);
+
 
       if (!path) {
         console.warn('[KiviiOpenTab] 路径为空');
@@ -154,7 +154,7 @@ export class KiviiOpenTab {
    */
   async openByKvid(kvid: string, options?: OpenTabOptions): Promise<boolean> {
     try {
-      console.log('[KiviiOpenTab] 通过 Kvid 打开:', kvid);
+
 
       // 查找 kvid 对应的路径信息
       const pathInfo = this.findPathInfoByKvid(kvid);

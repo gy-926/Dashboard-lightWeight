@@ -32,13 +32,13 @@ import { IOpenTab } from '@kivii.com/bridge';
 class CustomOpenTab extends IOpenTab {
   open(url, options) {
     // 自定义打开逻辑
-    console.log('自定义打开:', url);
+    // console.log('自定义打开:', url);
     return true;
   }
 
   openPath(path) {
     // 自定义路径打开逻辑
-    console.log('自定义路径:', path);
+    // console.log('自定义路径:', path);
     return true;
   }
 }

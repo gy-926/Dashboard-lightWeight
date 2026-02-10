@@ -60,4 +60,4 @@ function sortBySections(obj) {
  * -------------------------------------------------*/
 const sorted = sortBySections(pkg);
 fs.writeFileSync(pkgPath, JSON.stringify(sorted, null, 2) + '\n', 'utf8');
-console.log('✅ package.json 整理完成');
+

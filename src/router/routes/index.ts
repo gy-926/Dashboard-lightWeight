@@ -44,7 +44,7 @@ export function cacheDynamicRoutes(routes: RouteRecordRaw[]): void {
       version: CACHE_VERSION
     }
     localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData))
-    console.log('[DynamicRoutes] 路由已缓存')
+
   } catch (e) {
     console.warn('缓存路由失败:', e)
   }
@@ -87,7 +87,7 @@ export function restoreDynamicRoutesFromCache(): RouteRecordRaw[] | null {
 
     // 检查缓存版本
     if (cacheData.version !== CACHE_VERSION) {
-      console.log('[DynamicRoutes] 缓存版本不一致，清除旧缓存')
+
       clearDynamicRoutesCache()
       return null
     }
@@ -152,7 +152,7 @@ export function restoreDynamicRoutesFromCache(): RouteRecordRaw[] | null {
     }
 
     // 转换为 Vue Router 格式
-    console.log('[DynamicRoutes] 从缓存恢复路由，转换格式...')
+
     const vueRoutes = transformRoutesToVueRoutes(validRoutes)
     return vueRoutes
   } catch (e) {
@@ -573,7 +573,6 @@ export function getLastGeneratedTime(): number | null {
 // 异步生成路由（不阻塞）
 export async function asyncGenerateRoutes(): Promise<RouteRecordRaw[]> {
   if (isGenerating.value) {
-    console.log('[DynamicRoutes] 路由正在生成中，跳过')
     return []
   }
 

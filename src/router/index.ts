@@ -50,7 +50,7 @@ function setTargetNavigation(path: string) {
     // 过滤掉 404 和 通配符路径
     if (path !== '/404' && !path.startsWith('/:pathMatch')) {
       targetNavigation = path
-      console.log(`[Router] 保存目标导航路径: ${path}`)
+
     }
   }
 }
@@ -75,7 +75,7 @@ async function initRoutes() {
     try {
       // 优先使用 targetNavigation（来自 guards），否则使用当前路由
       const restorePath = targetNavigation || router.currentRoute.value.path
-      console.log(`[Router] 动态路由加载中，restorePath: ${restorePath}`)
+
 
       const { constantRoutes, authRoutes } = await generateDynamicRoutes()
 
@@ -100,7 +100,7 @@ async function initRoutes() {
 
       // 如果有待恢复的导航路径，先更新菜单，再恢复导航
       if (restorePath && restorePath !== '/' && restorePath !== '/login' && restorePath !== '/404') {
-        console.log(`[Router] 动态路由已加载，恢复导航到: ${restorePath}`)
+
         // 先更新菜单，再恢复导航
         targetNavigation = null
         updateMenuFromRoutes().finally(() => {
@@ -112,7 +112,6 @@ async function initRoutes() {
       // 如果当前在 404 页，尝试回到主页
       const currentPath = router.currentRoute.value.path
       if (currentPath === '/404' || currentPath === '/:pathMatch(.*)*') {
-        console.log('[Router] 动态路由已加载，404页面上使用 replace 回到主页')
         targetNavigation = null
         updateMenuFromRoutes().finally(() => {
           router.replace('/').catch(() => {})
