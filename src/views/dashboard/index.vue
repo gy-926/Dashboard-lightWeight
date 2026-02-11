@@ -164,5 +164,49 @@
         </div>
       </div>
     </div>
+
+    <!-- Loading Mechanism Explanation -->
+    <div
+      class="bg-blue-50 dark:bg-blue-900/10 rounded-xl p-6 border border-blue-100 dark:border-blue-900/30"
+    >
+      <h3 class="font-bold text-blue-800 dark:text-blue-300 mb-4 flex items-center gap-2">
+        <i class="fas fa-info-circle"></i> 关于远程组件加载机制
+      </h3>
+      <div class="space-y-4 text-sm text-blue-900/80 dark:text-blue-200/80">
+        <p>
+          本系统通过
+          <code
+            class="bg-white dark:bg-black/20 px-1.5 py-0.5 rounded text-blue-700 dark:text-blue-300 font-mono"
+            >public/remote-component-config.json</code
+          >
+          配置文件定义远程组件库。
+        </p>
+        <ul class="list-disc pl-5 space-y-2">
+          <li>
+            <strong>配置加载：</strong> 系统启动时读取 JSON 配置，获取组件库的 URL
+            和加载方式（UMD/ESM）。
+          </li>
+          <li>
+            <strong>动态加载：</strong> 通过动态创建 <code>&lt;script&gt;</code> 标签加载 UMD 文件。
+          </li>
+          <li>
+            <strong>元数据提取：</strong>
+            加载完成后，系统会自动扫描组件库导出的全局对象，提取以下信息：
+            <ul class="list-circle pl-5 mt-1 space-y-1 opacity-90">
+              <li><code>manifest</code>: 包含版本、作者、描述等基础信息。</li>
+              <li>
+                <code>componentsDetailed</code>:
+                包含组件名称、显示名称、详细描述等结构化数据（支持直接导出或在 manifest 中包含）。
+              </li>
+              <li><code>componentsMap</code>: 简单的组件名到描述的映射。</li>
+            </ul>
+          </li>
+        </ul>
+        <p class="mt-2 text-xs opacity-70">
+          * 如果您的组件库未显示详细信息，请确保在构建时正确导出了
+          <code>componentsDetailed</code> 或 <code>manifest</code> 对象。
+        </p>
+      </div>
+    </div>
   </div>
 </template>

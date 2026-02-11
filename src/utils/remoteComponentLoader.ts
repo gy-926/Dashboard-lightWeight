@@ -121,7 +121,17 @@ const registerComponent = async (app: App, componentConfig: ComponentConfig) => 
 
       if (typeof remoteComponent === 'object' && remoteComponent !== null) {
         lib.componentKeys = Object.keys(remoteComponent);
-        if (remoteComponent.manifest) lib.manifest = remoteComponent.manifest;
+        if (remoteComponent.manifest) {
+          lib.manifest = remoteComponent.manifest;
+          // 尝试从 manifest 中获取详细信息
+          if (!remoteComponent.componentsDetailed && remoteComponent.manifest.componentsDetailed) {
+            lib.componentsDetailed = remoteComponent.manifest.componentsDetailed;
+          }
+          if (!remoteComponent.componentsMap && remoteComponent.manifest.componentsMap) {
+            lib.componentsMap = remoteComponent.manifest.componentsMap;
+          }
+        }
+        
         if (remoteComponent.componentsMap) lib.componentsMap = remoteComponent.componentsMap;
         if (remoteComponent.componentsDetailed)
           lib.componentsDetailed = remoteComponent.componentsDetailed;
