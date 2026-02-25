@@ -1,6 +1,12 @@
 import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router'
 import { setupRouteGuards } from './guards'
-import { generateDynamicRoutes, getStaticRoutes, addRouteWithChildren } from './routes'
+import {
+  generateDynamicRoutes,
+  getStaticRoutes,
+  addRouteWithChildren,
+  clearDynamicRoutesCache,
+} from './routes'
+import { UnauthorizedError } from './routes/mockData'
 
 // 初始静态路由（用于首次渲染）
 const initialRoutes: RouteRecordRaw[] = [
@@ -37,7 +43,16 @@ const router = createRouter({
 let dynamicRoutesLoaded = false
 let routesLoadPromise: Promise<void> | null = null
 let originalAuthRoutes: RouteRecordRaw[] = [] // 保存原始路由树
-let targetNavigation: string | null = null // 目标导航路径（用于刷新时保存原路径）
+let targetNavigation: string | null = null    // 目标导航路径（用于刷新时保存原路径）
+let dynamicRouteNames: string[] = []          // 记录动态添加的路由名，用于重置时清理
+
+// 递归收集所有路由的 name
+function collectRouteNames(routes: RouteRecordRaw[]): string[] {
+  return routes.flatMap(r => [
+    ...(r.name ? [r.name as string] : []),
+    ...(r.children ? collectRouteNames(r.children) : [])
+  ])
+}
 
 // 获取动态路由加载状态
 function isDynamicRoutesReady() {
@@ -47,10 +62,9 @@ function isDynamicRoutesReady() {
 // 设置目标导航路径（供 guards 使用）
 function setTargetNavigation(path: string) {
   if (!dynamicRoutesLoaded && !targetNavigation) {
-    // 过滤掉 404 和 通配符路径
+    // 过滤掉 404 和通配符路径
     if (path !== '/404' && !path.startsWith('/:pathMatch')) {
       targetNavigation = path
-
     }
   }
 }
@@ -76,7 +90,6 @@ async function initRoutes() {
       // 优先使用 targetNavigation（来自 guards），否则使用当前路由
       const restorePath = targetNavigation || router.currentRoute.value.path
 
-
       const { constantRoutes, authRoutes } = await generateDynamicRoutes()
 
       // 保存原始路由树，用于构建菜单
@@ -84,6 +97,9 @@ async function initRoutes() {
 
       // 使用递归方式添加路由，保持父子关系
       addRouteWithChildren(router, authRoutes)
+
+      // 记录本次动态添加的路由名，用于后续重置
+      dynamicRouteNames = collectRouteNames(authRoutes)
 
       // 添加常量路由
       constantRoutes.forEach(route => {
@@ -100,8 +116,6 @@ async function initRoutes() {
 
       // 如果有待恢复的导航路径，先更新菜单，再恢复导航
       if (restorePath && restorePath !== '/' && restorePath !== '/login' && restorePath !== '/404') {
-
-        // 先更新菜单，再恢复导航
         targetNavigation = null
         updateMenuFromRoutes().finally(() => {
           router.replace(restorePath).catch(() => {})
@@ -123,6 +137,18 @@ async function initRoutes() {
       targetNavigation = null
       updateMenuFromRoutes()
     } catch (error) {
+      // 401：权限不足，跳转到登录页
+      if (error instanceof UnauthorizedError) {
+        const currentPath = router.currentRoute.value.path
+        const redirect =
+          currentPath && currentPath !== '/login' && currentPath !== '/'
+            ? `?redirect=${encodeURIComponent(currentPath)}`
+            : ''
+        dynamicRoutesLoaded = true
+        router.replace(`/login${redirect}`).catch(() => {})
+        return
+      }
+
       console.error('[Router] 动态路由加载失败:', error)
       dynamicRoutesLoaded = true // 标记为已完成，避免无限等待
     }
@@ -171,6 +197,28 @@ async function updateMenuFromRoutes() {
   } catch (e) {
     console.warn('[Router] 更新菜单失败:', e)
   }
+}
+
+// 重置并重新加载动态路由（登录成功后调用）
+export async function reloadDynamicRoutes(): Promise<void> {
+  // 1. 清除本地缓存
+  clearDynamicRoutesCache()
+
+  // 2. 移除已动态添加的路由，还原为初始状态
+  dynamicRouteNames.forEach(name => {
+    if (router.hasRoute(name)) {
+      router.removeRoute(name)
+    }
+  })
+  dynamicRouteNames = []
+  originalAuthRoutes = []
+
+  // 3. 重置标志，允许重新加载
+  dynamicRoutesLoaded = false
+  routesLoadPromise = null
+
+  // 4. 重新初始化
+  await initRoutes()
 }
 
 // 延迟初始化（等待全局配置）

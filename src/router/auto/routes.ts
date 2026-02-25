@@ -30,34 +30,6 @@ export const autoRoutes: RouteRecordRaw[] = [
         },
       },
       {
-        path: 'sample',
-        name: 'sample',
-        meta: {
-          title: '示例页面',
-          icon: 'fa-flask',
-        },
-        children: [
-          {
-            path: 'form',
-            name: 'sample-form',
-            component: () => import('../../views/sample/form/index.vue'),
-            meta: {
-              title: '表单示例',
-              icon: 'fa-edit',
-            },
-          },
-          {
-            path: 'table',
-            name: 'sample-table',
-            component: () => import('../../views/sample/table/index.vue'),
-            meta: {
-              title: '表格示例',
-              icon: 'fa-table',
-            },
-          },
-        ],
-      },
-      {
         path: 'blank',
         name: 'blank',
         component: () => import('../../views/blank.vue'),

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { reloadDynamicRoutes } from '@/router'
 
 const router = useRouter()
 const route = useRoute()
@@ -44,9 +45,12 @@ async function handleLogin() {
     const data = await response.json()
     console.log('登录成功:', data)
 
-    // 登录成功后跳转到首页或来源页
+    // 重新加载动态路由（会清除缓存并重新请求菜单接口）
+    await reloadDynamicRoutes()
+
+    // 跳转到来源页或首页
     const redirect = route.query.redirect as string || '/'
-    router.push(redirect)
+    router.replace(redirect)
   } catch (e: any) {
     errorMsg.value = e.message || '登录失败，请稍后重试'
   } finally {
