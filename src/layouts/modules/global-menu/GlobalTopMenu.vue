@@ -48,8 +48,8 @@ const displayedMenus = computed(() => {
   // 如果还没获取到宽度，显示大部分菜单
   if (currentWidth <= 0) return visibleMenus.value.slice(0, totalItems - 1)
 
-  const itemMinWidth = 110 // 每个菜单项最小宽度
-  const moreButtonWidth = 60 // 更多按钮宽度
+  const itemMinWidth = 130 // 每个菜单项最小宽度
+  const moreButtonWidth = 40 // 更多按钮宽度
 
   // 计算能显示多少个菜单项（留出更多按钮的空间）
   const availableWidth = currentWidth - moreButtonWidth
@@ -326,8 +326,8 @@ onUnmounted(() => {
               : 'text-gray-600 dark:text-gray-400 border-transparent hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-gray-600'
           ]"
         >
-          <span>更多</span>
-          <i class="fas fa-chevron-down text-xs transition-transform duration-200" :class="{ 'rotate-180': moreMenuVisible }" />
+          <span>⋯</span>
+          <!-- <i class="fas fa-chevron-down text-xs transition-transform duration-200" :class="{ 'rotate-180': moreMenuVisible }" /> -->
         </button>
 
         <!-- 更多菜单下拉列表 -->

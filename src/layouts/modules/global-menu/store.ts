@@ -116,7 +116,7 @@ export const useMenuStore = defineStore('menu', () => {
   const theme = ref<ThemeConfig>({
     layout: 'side', // 强制使用顶部菜单布局
     primaryColor: savedTheme.primaryColor || '#3b82f6',
-    darkMode: savedTheme.darkMode !== undefined ? savedTheme.darkMode : true,
+    darkMode: savedTheme.darkMode !== undefined ? savedTheme.darkMode : false,
     siderWidth: 220,
     showTabs: true,
     showBreadcrumb: true,
@@ -132,6 +132,44 @@ export const useMenuStore = defineStore('menu', () => {
   });
   // 侧边栏折叠状态
   const siderCollapsed = ref(false);
+
+  // 混合模式下激活的一级菜单 Key
+  const mixActiveRootKey = ref<string>('');
+
+  // 辅助函数：查找菜单根节点
+  function findMenuRoot(list: MenuItem[], path: string): MenuItem | null {
+    for (const item of list) {
+      if (item.path === path) return item;
+      if (item.children) {
+        if (findMenuInTree(item.children, path)) return item;
+      }
+    }
+    return null;
+  }
+
+  function findMenuInTree(list: MenuItem[], path: string): boolean {
+    for (const item of list) {
+      if (item.path === path) return true;
+      if (item.children && findMenuInTree(item.children, path)) return true;
+    }
+    return false;
+  }
+
+  // 混合模式下的顶部菜单（二级菜单）
+  const mixHeaderMenuList = computed(() => {
+    if (theme.value.layout !== 'mix') return [];
+    const root = menuList.value.find(item => item.key === mixActiveRootKey.value);
+    return root?.children || [];
+  });
+
+  // 混合模式下的侧边菜单（一级菜单，不带子菜单）
+  const mixSiderMenuList = computed(() => {
+    if (theme.value.layout !== 'mix') return [];
+    return menuList.value.map(item => ({
+      ...item,
+      children: undefined, // 移除子菜单，使其表现为普通点击项
+    }));
+  });
 
   // 初始化时应用主题
   applyDarkMode(theme.value.darkMode);
@@ -198,6 +236,15 @@ export const useMenuStore = defineStore('menu', () => {
   // 设置选中的菜单
   function setSelectedKey(path: string) {
     selectedKey.value = path;
+
+    // 如果是混合布局，更新 mixActiveRootKey
+    if (theme.value.layout === 'mix') {
+      const root = findMenuRoot(menuList.value, path);
+      if (root) {
+        mixActiveRootKey.value = root.key;
+      }
+    }
+
     // 自动展开父级
     const parents = findAllParents(menuList.value, path);
     openKeys.value = parents.map(p => p.key);
@@ -360,6 +407,9 @@ export const useMenuStore = defineStore('menu', () => {
     theme,
     menuConfig,
     siderCollapsed,
+    mixActiveRootKey,
+    mixHeaderMenuList,
+    mixSiderMenuList,
     breadcrumbs,
     setMenuFromRoutes,
     setSelectedKey,

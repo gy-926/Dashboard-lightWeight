@@ -13,6 +13,7 @@ defineOptions({
 const props = defineProps<{
   menu: MenuItem[]
   collapsed?: boolean
+  activePath?: string
 }>()
 
 const emit = defineEmits<{
@@ -23,7 +24,7 @@ const route = useRoute()
 const menuStore = useMenuStore()
 const { openPath } = useKiviiOpenTab()
 
-const selectedKey = computed(() => route.path)
+const selectedKey = computed(() => props.activePath || route.path)
 const openKeys = computed(() => menuStore.openKeys)
 
 // 当前 hover 的一级菜单

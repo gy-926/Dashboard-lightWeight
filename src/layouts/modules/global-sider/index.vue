@@ -1,22 +1,39 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useMenuStore } from '../global-menu/store'
+  import { computed } from 'vue';
+  import { useMenuStore } from '../global-menu/store';
 
-const menuStore = useMenuStore()
+  const menuStore = useMenuStore();
 
-// 菜单列表
-const menuList = computed(() => menuStore.menuList)
+  // 是否混合布局
+  const isMixLayout = computed(() => menuStore.theme.layout === 'mix');
 
-// 折叠状态
-const collapsed = computed(() => menuStore.siderCollapsed)
+  // 菜单列表
+  const menuList = computed(() => {
+    if (isMixLayout.value) {
+      return menuStore.mixSiderMenuList;
+    }
+    return menuStore.menuList;
+  });
 
-// 侧边栏宽度样式
-const siderWidth = computed(() => collapsed.value ? '72px' : '220px')
+  // 混合布局下的激活路径
+  const activePath = computed(() => {
+    if (isMixLayout.value && menuStore.mixActiveRootKey) {
+      const root = menuStore.menuList.find(item => item.key === menuStore.mixActiveRootKey);
+      return root?.path;
+    }
+    return undefined;
+  });
 
-// Logo 区域点击事件
-function handleLogoClick() {
-  // 可以添加 Logo 点击逻辑
-}
+  // 折叠状态
+  const collapsed = computed(() => menuStore.siderCollapsed);
+
+  // 侧边栏宽度样式
+  const siderWidth = computed(() => (collapsed.value ? '72px' : '220px'));
+
+  // Logo 区域点击事件
+  function handleLogoClick() {
+    // 可以添加 Logo 点击逻辑
+  }
 </script>
 
 <template>
@@ -49,6 +66,7 @@ function handleLogoClick() {
       <GlobalMenu
         :menu="menuList"
         :collapsed="collapsed"
+        :active-path="activePath"
         @select="menuStore.addTab"
       />
     </div>
@@ -59,8 +77,17 @@ function handleLogoClick() {
         class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors duration-200"
         @click="menuStore.toggleSider()"
       >
-        <i :class="['fas transition-transform duration-200', collapsed ? 'fa-angle-right' : 'fa-angle-left']" />
-        <span v-if="!collapsed" class="text-sm">收起</span>
+        <i
+          :class="[
+            'fas transition-transform duration-200',
+            collapsed ? 'fa-angle-right' : 'fa-angle-left',
+          ]"
+        />
+        <span
+          v-if="!collapsed"
+          class="text-sm"
+          >收起</span
+        >
       </button>
     </div>
   </aside>

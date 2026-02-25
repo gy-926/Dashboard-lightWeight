@@ -34,6 +34,12 @@
   const topMenuList = computed(() => {
     return menuStore.menuList.filter(item => !item.hidden);
   });
+
+  // 是否为混合布局
+  const isMixLayout = computed(() => menuStore.theme.layout === 'mix');
+
+  // 混合布局下的顶部菜单
+  const mixHeaderMenuList = computed(() => menuStore.mixHeaderMenuList);
 </script>
 
 <template>
@@ -185,7 +191,7 @@
     class="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 relative z-[101]"
   >
     <!-- 左侧：侧边栏折叠按钮 -->
-    <div class="flex items-center gap-4">
+    <div class="flex items-center gap-4 flex-shrink-0">
       <button
         v-if="showSiderToggle !== false"
         class="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
@@ -196,6 +202,17 @@
       <span class="text-sm text-gray-500 dark:text-gray-400 hidden md:block">
         {{ new Date().toLocaleDateString('zh-CN') }}
       </span>
+    </div>
+
+    <!-- 混合布局下的二级菜单 -->
+    <div
+      v-if="isMixLayout"
+      class="flex-1 h-full overflow-visible ml-4"
+    >
+      <GlobalTopMenu
+        :menu="mixHeaderMenuList"
+        @select="handleMenuSelect"
+      />
     </div>
 
     <!-- 右侧：通知、用户 -->
