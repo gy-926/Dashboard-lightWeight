@@ -211,6 +211,7 @@
     >
       <GlobalTopMenu
         :menu="mixHeaderMenuList"
+        layout-mode="mix"
         @select="handleMenuSelect"
       />
     </div>

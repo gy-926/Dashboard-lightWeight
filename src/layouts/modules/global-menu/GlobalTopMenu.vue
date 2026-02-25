@@ -1,198 +1,227 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
-import { useRoute } from 'vue-router'
-import { useMenuStore } from './store'
-import type { MenuItem } from './types'
-import { useKiviiOpenTab } from '@/composables/useKiviiOpenTab'
+  import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
+  import { useRoute } from 'vue-router';
+  import { useMenuStore } from './store';
+  import type { MenuItem } from './types';
+  import { useKiviiOpenTab } from '@/composables/useKiviiOpenTab';
 
-defineOptions({
-  name: 'GlobalTopMenu'
-})
+  defineOptions({
+    name: 'GlobalTopMenu',
+  });
 
-const props = defineProps<{
-  menu: MenuItem[]
-}>()
+  const props = defineProps<{
+    menu: MenuItem[];
+    layoutMode?: 'top' | 'mix';
+  }>();
 
-const emit = defineEmits<{
-  (e: 'select', item: MenuItem): void
-}>()
+  const emit = defineEmits<{
+    (e: 'select', item: MenuItem): void;
+  }>();
 
-const route = useRoute()
-const menuStore = useMenuStore()
-const { openPath } = useKiviiOpenTab()
+  const route = useRoute();
+  const menuStore = useMenuStore();
+  const { openPath } = useKiviiOpenTab();
 
-// 菜单容器引用
-const containerRef = ref<HTMLElement | null>(null)
+  // 菜单容器引用
+  const containerRef = ref<HTMLElement | null>(null);
 
-// 容器宽度（响应式）
-const containerWidth = ref(0)
+  // 容器宽度（响应式）
+  const containerWidth = ref(0);
 
-// 更多菜单状态
-const moreMenuVisible = ref(false)
-const moreMenuOpenKeys = ref<string[]>([])
+  // 更多菜单状态
+  const moreMenuVisible = ref(false);
+  const moreMenuOpenKeys = ref<string[]>([]);
 
-const selectedKey = computed(() => route.path)
-const openKeys = computed(() => menuStore.openKeys)
+  const selectedKey = computed(() => route.path);
+  const openKeys = computed(() => menuStore.openKeys);
 
-// 可见菜单（未隐藏的）
-const visibleMenus = computed(() => {
-  return props.menu.filter(item => !item.hidden)
-})
+  // 可见菜单（未隐藏的）
+  const visibleMenus = computed(() => {
+    return props.menu.filter(item => !item.hidden);
+  });
 
-// 主菜单区域显示的菜单项（不包括最后一个"更多"项）
-const displayedMenus = computed(() => {
-  const totalItems = visibleMenus.value.length
-  if (totalItems <= 1) return visibleMenus.value
+  // 主菜单区域显示的菜单项（不包括最后一个"更多"项）
+  const displayedMenus = computed(() => {
+    const totalItems = visibleMenus.value.length;
+    if (totalItems === 0) return [];
 
-  const currentWidth = containerWidth.value
-  // 如果还没获取到宽度，显示大部分菜单
-  if (currentWidth <= 0) return visibleMenus.value.slice(0, totalItems - 1)
+    const currentWidth = containerWidth.value;
+    // 如果还没获取到宽度，显示所有菜单
+    if (currentWidth <= 0) return visibleMenus.value;
 
-  const itemMinWidth = 130 // 每个菜单项最小宽度
-  const moreButtonWidth = 40 // 更多按钮宽度
+    const itemMinWidth = 130; // 每个菜单项最小估算宽度
+    const moreButtonWidth = 40; // 更多按钮宽度
 
-  // 计算能显示多少个菜单项（留出更多按钮的空间）
-  const availableWidth = currentWidth - moreButtonWidth
-  const maxCount = Math.floor(availableWidth / itemMinWidth)
-  // 确保显示完整的菜单项，不会显示一半
-  const count = Math.min(totalItems - 1, Math.max(1, maxCount))
+    // 混合模式逻辑：激进全显示
+    if (props.layoutMode === 'mix') {
+      const estimatedTotalWidth = totalItems * itemMinWidth;
+      if (estimatedTotalWidth <= currentWidth) {
+        return visibleMenus.value;
+      }
+    }
 
-  return visibleMenus.value.slice(0, count)
-})
+    // 顶部模式逻辑：保守折叠（总是预留更多按钮空间，避免布局错乱）
+    // 或者当空间不足时才折叠
+    const availableWidth = currentWidth - moreButtonWidth;
+    const maxCount = Math.floor(availableWidth / itemMinWidth);
 
-// 溢出的菜单项（放入更多下拉菜单）
-const overflowedMenus = computed(() => {
-  const totalItems = visibleMenus.value.length
-  const displayed = displayedMenus.value.length
-  return visibleMenus.value.slice(displayed)
-})
+    // 至少显示一个
+    const count = Math.max(1, maxCount);
 
-// 更多按钮始终显示（当有菜单溢出时）
-const showMoreButton = computed(() => {
-  return visibleMenus.value.length > 1
-})
+    // 如果计算出的数量比总数小，则截断
+    if (count < totalItems) {
+      return visibleMenus.value.slice(0, count);
+    }
 
-// 更新容器宽度
-function updateWidth() {
-  if (containerRef.value) {
-    containerWidth.value = containerRef.value.clientWidth
+    return visibleMenus.value;
+  });
+
+  // 溢出的菜单项（放入更多下拉菜单）
+  const overflowedMenus = computed(() => {
+    const totalItems = visibleMenus.value.length;
+    const displayed = displayedMenus.value.length;
+    if (displayed >= totalItems) return [];
+    return visibleMenus.value.slice(displayed);
+  });
+
+  // 更多按钮显示条件
+  const showMoreButton = computed(() => {
+    return overflowedMenus.value.length > 0;
+  });
+
+  // 更新容器宽度
+  function updateWidth() {
+    if (containerRef.value) {
+      containerWidth.value = containerRef.value.clientWidth;
+    }
   }
-}
 
-// 监听容器尺寸变化
-let resizeObserver: ResizeObserver | null = null
+  // 监听容器尺寸变化
+  let resizeObserver: ResizeObserver | null = null;
 
-onMounted(async () => {
-  // 等待DOM渲染完成后获取宽度
-  await nextTick()
-  updateWidth()
+  onMounted(async () => {
+    // 等待DOM渲染完成后获取宽度
+    await nextTick();
+    updateWidth();
 
-  // 使用 ResizeObserver 监听容器宽度变化
-  resizeObserver = new ResizeObserver(() => {
-    updateWidth()
-  })
-  if (containerRef.value) {
-    resizeObserver.observe(containerRef.value)
+    // 使用 ResizeObserver 监听容器宽度变化
+    resizeObserver = new ResizeObserver(() => {
+      updateWidth();
+    });
+    if (containerRef.value) {
+      resizeObserver.observe(containerRef.value);
+    }
+  });
+
+  onUnmounted(() => {
+    if (resizeObserver) {
+      resizeObserver.disconnect();
+    }
+  });
+
+  // 判断是否应该显示下拉箭头
+  function hasChildren(item: MenuItem): boolean {
+    return !!(item.children && item.children.length > 0);
   }
-})
 
-onUnmounted(() => {
-  if (resizeObserver) {
-    resizeObserver.disconnect()
+  // 处理菜单选择
+  async function handleSelect(item: MenuItem) {
+    emit('select', item);
+    if (!hasChildren(item)) {
+      await openPath(item.path);
+    }
   }
-})
 
-// 判断是否应该显示下拉箭头
-function hasChildren(item: MenuItem): boolean {
-  return !!(item.children && item.children.length > 0)
-}
-
-// 处理菜单选择
-async function handleSelect(item: MenuItem) {
-  emit('select', item)
-  if (!hasChildren(item)) {
-    await openPath(item.path)
+  // 鼠标进入菜单项（主菜单）
+  function handleMouseEnter(key: string) {
+    menuStore.openKey(key);
   }
-}
 
-// 鼠标进入菜单项（主菜单）
-function handleMouseEnter(key: string) {
-  menuStore.openKey(key)
-}
-
-// 鼠标离开菜单项（主菜单）
-function handleMouseLeave() {
-  menuStore.closeAllKeys()
-}
-
-// 判断菜单项是否激活
-function isActive(item: MenuItem): boolean {
-  if (!hasChildren(item)) {
-    return selectedKey.value === item.path
+  // 鼠标离开菜单项（主菜单）
+  function handleMouseLeave() {
+    menuStore.closeAllKeys();
   }
-  return selectedKey.value.startsWith(item.path)
-}
 
-// 显示更多菜单
-function showMoreMenu() {
-  moreMenuVisible.value = true
-}
-
-// 隐藏更多菜单
-function hideMoreMenu() {
-  moreMenuVisible.value = false
-  moreMenuOpenKeys.value = [] // 重置更多菜单的展开状态
-}
-
-// 鼠标进入更多菜单中的项
-function handleMoreMenuEnter(key: string) {
-  if (!moreMenuOpenKeys.value.includes(key)) {
-    moreMenuOpenKeys.value.push(key)
+  // 判断菜单项是否激活
+  function isActive(item: MenuItem): boolean {
+    if (!hasChildren(item)) {
+      return selectedKey.value === item.path;
+    }
+    return selectedKey.value.startsWith(item.path);
   }
-}
 
-// 鼠标离开更多菜单中的项
-function handleMoreMenuLeave() {
-  moreMenuOpenKeys.value = []
-}
+  // 显示更多菜单
+  function showMoreMenu() {
+    moreMenuVisible.value = true;
+  }
 
-// 检查更多菜单中某个 key 是否展开
-function isMoreMenuOpen(key: string): boolean {
-  return moreMenuOpenKeys.value.includes(key)
-}
+  // 隐藏更多菜单
+  function hideMoreMenu() {
+    moreMenuVisible.value = false;
+    moreMenuOpenKeys.value = []; // 重置更多菜单的展开状态
+  }
 
-// 监听窗口大小变化，重置更多菜单状态
-function handleResize() {
-  moreMenuVisible.value = false
-  moreMenuOpenKeys.value = []
-}
+  // 鼠标进入更多菜单中的项
+  function handleMoreMenuEnter(key: string) {
+    if (!moreMenuOpenKeys.value.includes(key)) {
+      moreMenuOpenKeys.value.push(key);
+    }
+  }
 
-onMounted(() => {
-  window.addEventListener('resize', handleResize)
-})
+  // 鼠标离开更多菜单中的项
+  function handleMoreMenuLeave() {
+    moreMenuOpenKeys.value = [];
+  }
 
-onUnmounted(() => {
-  window.removeEventListener('resize', handleResize)
-})
+  // 检查更多菜单中某个 key 是否展开
+  function isMoreMenuOpen(key: string): boolean {
+    return moreMenuOpenKeys.value.includes(key);
+  }
+
+  // 监听窗口大小变化，重置更多菜单状态
+  function handleResize() {
+    moreMenuVisible.value = false;
+    moreMenuOpenKeys.value = [];
+  }
+
+  onMounted(() => {
+    window.addEventListener('resize', handleResize);
+  });
+
+  onUnmounted(() => {
+    window.removeEventListener('resize', handleResize);
+  });
 </script>
 
 <template>
-  <nav ref="containerRef" class="h-full w-full flex-shrink-0 relative">
+  <nav
+    ref="containerRef"
+    class="h-full w-full flex-shrink-0 relative"
+  >
     <ul class="flex items-center h-full w-full">
       <!-- 主菜单项 -->
-      <template v-for="item in displayedMenus" :key="item.key">
+      <template
+        v-for="item in displayedMenus"
+        :key="item.key"
+      >
         <!-- 一级菜单项（无子菜单） -->
-        <li v-if="!hasChildren(item)" class="h-full flex-shrink-0">
+        <li
+          v-if="!hasChildren(item)"
+          class="h-full flex-shrink-0"
+        >
           <button
             class="h-full flex items-center gap-1.5 px-3 text-sm font-medium transition-all duration-200 border-b-2 -mb-px"
             :class="[
               selectedKey === item.path
                 ? 'text-primary border-primary dark:text-primary-dark dark:border-primary-dark'
-                : 'text-gray-600 dark:text-gray-400 border-transparent hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-gray-600'
+                : 'text-gray-600 dark:text-gray-400 border-transparent hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-gray-600',
             ]"
             @click="handleSelect(item)"
           >
-            <i v-if="item.icon" :class="['fas', item.icon, 'text-base']" />
+            <i
+              v-if="item.icon"
+              :class="['fas', item.icon, 'text-base']"
+            />
             <span class="truncate max-w-[80px]">{{ item.title }}</span>
           </button>
         </li>
@@ -209,12 +238,18 @@ onUnmounted(() => {
             :class="[
               openKeys.includes(item.key) || isActive(item)
                 ? 'text-primary border-primary dark:text-primary-dark dark:border-primary-dark'
-                : 'text-gray-600 dark:text-gray-400 border-transparent hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-gray-600'
+                : 'text-gray-600 dark:text-gray-400 border-transparent hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-gray-600',
             ]"
           >
-            <i v-if="item.icon" :class="['fas', item.icon, 'text-base']" />
+            <i
+              v-if="item.icon"
+              :class="['fas', item.icon, 'text-base']"
+            />
             <span class="truncate max-w-[80px]">{{ item.title }}</span>
-            <i class="fas fa-chevron-down text-xs transition-transform duration-200 flex-shrink-0" :class="{ 'rotate-180': openKeys.includes(item.key) }" />
+            <i
+              class="fas fa-chevron-down text-xs transition-transform duration-200 flex-shrink-0"
+              :class="{ 'rotate-180': openKeys.includes(item.key) }"
+            />
           </button>
 
           <!-- 子菜单 -->
@@ -232,20 +267,28 @@ onUnmounted(() => {
               @mouseenter="handleMouseEnter(item.key)"
               @mouseleave="handleMouseLeave"
             >
-              <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 min-w-48">
+              <div
+                class="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 min-w-48"
+              >
                 <ul class="flex flex-col">
-                  <template v-for="child in item.children" :key="child.key">
+                  <template
+                    v-for="child in item.children"
+                    :key="child.key"
+                  >
                     <li v-if="!hasChildren(child)">
                       <button
                         class="flex items-center gap-3 px-4 py-2 text-sm transition-colors whitespace-nowrap w-full text-left"
                         :class="[
                           selectedKey === child.path
                             ? 'bg-primary-bg text-primary dark:text-primary-dark'
-                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white'
+                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white',
                         ]"
                         @click="handleSelect(child)"
                       >
-                        <i v-if="child.icon" :class="['fas', child.icon, 'w-5']" />
+                        <i
+                          v-if="child.icon"
+                          :class="['fas', child.icon, 'w-5']"
+                        />
                         <span>{{ child.title }}</span>
                       </button>
                     </li>
@@ -260,12 +303,18 @@ onUnmounted(() => {
                         :class="[
                           selectedKey.startsWith(child.path)
                             ? 'bg-primary-bg text-primary dark:text-primary-dark'
-                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white'
+                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white',
                         ]"
                       >
-                        <i v-if="child.icon" :class="['fas', child.icon, 'w-5']" />
+                        <i
+                          v-if="child.icon"
+                          :class="['fas', child.icon, 'w-5']"
+                        />
                         <span>{{ child.title }}</span>
-                        <i class="fas fa-chevron-right text-xs ml-auto transition-transform" :class="{ 'rotate-90': openKeys.includes(child.key) }" />
+                        <i
+                          class="fas fa-chevron-right text-xs ml-auto transition-transform"
+                          :class="{ 'rotate-90': openKeys.includes(child.key) }"
+                        />
                       </button>
                       <!-- 三级菜单 -->
                       <Transition
@@ -282,19 +331,27 @@ onUnmounted(() => {
                           @mouseenter="handleMouseEnter(child.key)"
                           @mouseleave="handleMouseLeave"
                         >
-                          <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 min-w-48 ml-1">
+                          <div
+                            class="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 min-w-48 ml-1"
+                          >
                             <ul class="flex flex-col">
-                              <li v-for="grandchild in child.children" :key="grandchild.key">
+                              <li
+                                v-for="grandchild in child.children"
+                                :key="grandchild.key"
+                              >
                                 <button
                                   class="flex items-center gap-3 px-4 py-2 text-sm transition-colors whitespace-nowrap w-full text-left"
                                   :class="[
                                     selectedKey === grandchild.path
                                       ? 'bg-primary-bg text-primary dark:text-primary-dark'
-                                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white'
+                                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white',
                                   ]"
                                   @click="handleSelect(grandchild)"
                                 >
-                                  <i v-if="grandchild.icon" :class="['fas', grandchild.icon, 'w-5']" />
+                                  <i
+                                    v-if="grandchild.icon"
+                                    :class="['fas', grandchild.icon, 'w-5']"
+                                  />
                                   <span>{{ grandchild.title }}</span>
                                 </button>
                               </li>
@@ -323,7 +380,7 @@ onUnmounted(() => {
           :class="[
             moreMenuVisible
               ? 'text-primary border-primary dark:text-primary-dark dark:border-primary-dark'
-              : 'text-gray-600 dark:text-gray-400 border-transparent hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-gray-600'
+              : 'text-gray-600 dark:text-gray-400 border-transparent hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-gray-600',
           ]"
         >
           <span>⋯</span>
@@ -345,20 +402,28 @@ onUnmounted(() => {
             @mouseenter="showMoreMenu"
             @mouseleave="hideMoreMenu"
           >
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 min-w-48">
+            <div
+              class="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 min-w-48"
+            >
               <ul class="flex flex-col">
-                <template v-for="item in overflowedMenus" :key="item.key">
+                <template
+                  v-for="item in overflowedMenus"
+                  :key="item.key"
+                >
                   <li v-if="!hasChildren(item)">
                     <button
                       class="flex items-center gap-3 px-4 py-2 text-sm transition-colors whitespace-nowrap w-full text-left"
                       :class="[
                         selectedKey === item.path
                           ? 'bg-primary-bg text-primary dark:text-primary-dark'
-                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white'
+                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white',
                       ]"
                       @click="handleSelect(item)"
                     >
-                      <i v-if="item.icon" :class="['fas', item.icon, 'w-5']" />
+                      <i
+                        v-if="item.icon"
+                        :class="['fas', item.icon, 'w-5']"
+                      />
                       <span>{{ item.title }}</span>
                     </button>
                   </li>
@@ -373,12 +438,18 @@ onUnmounted(() => {
                       :class="[
                         isMoreMenuOpen(item.key) || isActive(item)
                           ? 'bg-primary-bg text-primary dark:text-primary-dark'
-                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white'
+                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white',
                       ]"
                     >
-                      <i v-if="item.icon" :class="['fas', item.icon, 'w-5']" />
+                      <i
+                        v-if="item.icon"
+                        :class="['fas', item.icon, 'w-5']"
+                      />
                       <span>{{ item.title }}</span>
-                      <i class="fas fa-chevron-down text-xs ml-auto transition-transform duration-200" :class="{ 'rotate-180': isMoreMenuOpen(item.key) }" />
+                      <i
+                        class="fas fa-chevron-down text-xs ml-auto transition-transform duration-200"
+                        :class="{ 'rotate-180': isMoreMenuOpen(item.key) }"
+                      />
                     </button>
                     <Transition
                       enter-active-class="transition-all duration-200 ease-out"
@@ -394,20 +465,28 @@ onUnmounted(() => {
                         @mouseenter="handleMoreMenuEnter(item.key)"
                         @mouseleave="handleMoreMenuLeave"
                       >
-                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 min-w-48">
+                        <div
+                          class="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 min-w-48"
+                        >
                           <ul class="flex flex-col">
-                            <template v-for="child in item.children" :key="child.key">
+                            <template
+                              v-for="child in item.children"
+                              :key="child.key"
+                            >
                               <li>
                                 <button
                                   class="flex items-center gap-3 px-4 py-2 text-sm transition-colors whitespace-nowrap w-full text-left"
                                   :class="[
                                     selectedKey === child.path
                                       ? 'bg-primary-bg text-primary dark:text-primary-dark'
-                                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white'
+                                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white',
                                   ]"
                                   @click="handleSelect(child)"
                                 >
-                                  <i v-if="child.icon" :class="['fas', child.icon, 'w-5']" />
+                                  <i
+                                    v-if="child.icon"
+                                    :class="['fas', child.icon, 'w-5']"
+                                  />
                                   <span>{{ child.title }}</span>
                                 </button>
                               </li>
