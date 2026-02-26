@@ -35,8 +35,7 @@ kivii-vue3-template/
 │   ├── router/            # 路由配置
 │   │   └── auto/          # 自动生成的路由
 │   ├── styles/            # 样式文件
-│   │   ├── tailwind.css   # Tailwind CSS
-│   │   └── fontawesome.css # FontAwesome 样式
+│   │   └── tailwind.css   # Tailwind CSS
 │   ├── types/             # TypeScript 类型定义
 │   ├── utils/             # 工具函数
 │   ├── views/             # 页面组件

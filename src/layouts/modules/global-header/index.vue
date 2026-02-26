@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { ref, computed } from 'vue';
+  import { useRouter } from 'vue-router';
   import { useMenuStore } from '../global-menu/store';
   import GlobalTopMenu from '../global-menu/GlobalTopMenu.vue';
   import type { MenuItem } from '../global-menu/types';
@@ -8,6 +9,7 @@
     showSiderToggle?: boolean;
   }>();
 
+  const router = useRouter();
   const menuStore = useMenuStore();
 
   // 菜单列表
@@ -20,6 +22,29 @@
   const userDropdownVisible = ref(false);
   function toggleUserDropdown() {
     userDropdownVisible.value = !userDropdownVisible.value;
+  }
+
+  // 退出登录
+  async function handleLogout() {
+    try {
+      await fetch('/auth/logout.json', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    } catch (error) {
+      console.error('Logout failed:', error);
+    } finally {
+      // Clear store state (tabs, etc.)
+      menuStore.resetState();
+
+      // Clear all caches
+      localStorage.clear();
+      sessionStorage.clear();
+      // Redirect to login
+      router.replace('/login');
+    }
   }
 
   const notificationVisible = ref(false);
@@ -122,10 +147,13 @@
       </div>
 
       <!-- 用户下拉菜单 -->
-      <div class="relative ml-2">
+      <div
+        class="relative ml-2"
+        @mouseenter="userDropdownVisible = true"
+        @mouseleave="userDropdownVisible = false"
+      >
         <button
           class="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
-          @click="toggleUserDropdown()"
         >
           <div
             class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center"
@@ -166,6 +194,7 @@
             <a
               href="#"
               class="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700/50"
+              @click.prevent="handleLogout"
             >
               <i class="fas fa-sign-out-alt w-4" />
               <span>退出登录</span>
@@ -270,10 +299,13 @@
       </div>
 
       <!-- 用户下拉菜单 -->
-      <div class="relative ml-2">
+      <div
+        class="relative ml-2"
+        @mouseenter="userDropdownVisible = true"
+        @mouseleave="userDropdownVisible = false"
+      >
         <button
           class="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
-          @click="toggleUserDropdown()"
         >
           <div
             class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center"
@@ -314,6 +346,7 @@
             <a
               href="#"
               class="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700/50"
+              @click.prevent="handleLogout"
             >
               <i class="fas fa-sign-out-alt w-4" />
               <span>退出登录</span>
