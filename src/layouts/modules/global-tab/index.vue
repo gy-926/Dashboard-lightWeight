@@ -18,7 +18,7 @@
   // 容器引用
   const containerRef = ref<HTMLElement | null>(null);
 
-  // 是否可以关闭（至少保留一个标签）
+  // 保持当前行为（允许关闭所有标签，空时跳 `/blank`）
   function canClose(path: string): boolean {
     return true;
   }

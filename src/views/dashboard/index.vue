@@ -1,14 +1,78 @@
 <script setup lang="ts">
+  import { ref } from 'vue';
   import { remoteLibraries } from '@/utils/remoteComponentLoader';
+
+  const fileInput = ref<HTMLInputElement | null>(null);
+  const isUploading = ref(false);
+
+  const triggerFileInput = () => {
+    fileInput.value?.click();
+  };
+
+  const handleFileUpload = async (event: Event) => {
+    const target = event.target as HTMLInputElement;
+    if (!target.files || target.files.length === 0) return;
+
+    const file = target.files[0];
+    const formData = new FormData();
+    formData.append('file', file);
+
+    isUploading.value = true;
+    try {
+      const response = await fetch('/storages.json?FolderPath=/Umd/File', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.statusText}`);
+      }
+
+      alert('文件上传成功！');
+      // Optional: Refresh list or perform other actions
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('文件上传失败，请重试。');
+    } finally {
+      isUploading.value = false;
+      // Reset input value to allow uploading the same file again
+      if (fileInput.value) {
+        fileInput.value.value = '';
+      }
+    }
+  };
 </script>
 
 <template>
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <h1 class="text-2xl font-bold text-gray-800 dark:text-white">UMD文件配置读取</h1>
-      <span class="text-sm text-gray-500 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">
-        共 {{ remoteLibraries.length }} 个库
-      </span>
+      <div class="flex items-center gap-3">
+        <!-- Hidden File Input -->
+        <input
+          type="file"
+          ref="fileInput"
+          class="hidden"
+          @change="handleFileUpload"
+        />
+
+        <!-- Upload Button -->
+        <button
+          @click="triggerFileInput"
+          class="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          :disabled="isUploading"
+        >
+          <i
+            class="fas fa-cloud-upload-alt"
+            :class="{ 'animate-bounce': isUploading }"
+          ></i>
+          {{ isUploading ? '上传中...' : '上传文件' }}
+        </button>
+
+        <span class="text-sm text-gray-500 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">
+          共 {{ remoteLibraries.length }} 个库
+        </span>
+      </div>
     </div>
 
     <div

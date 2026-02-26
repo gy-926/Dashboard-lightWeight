@@ -11,18 +11,6 @@ import { useMenuStore } from '@/layouts/modules/global-menu/store';
 import type { MenuItem } from '@/layouts/modules/global-menu/types';
 
 /**
- * 路径信息
- */
-interface PathInfo {
-  path: string;
-  title?: string;
-  icon?: string;
-  kvid?: string;
-  url?: string;
-  type?: 'webview' | 'extjs' | 'vue';
-}
-
-/**
  * 内部菜单项接口（包含额外属性）
  */
 interface InternalMenuItem extends MenuItem {
