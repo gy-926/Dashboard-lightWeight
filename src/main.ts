@@ -38,7 +38,11 @@ const initApp = async () => {
   // 动态加载远程组件
   try {
     console.log('Start loading remote components...');
-    await registerRemoteComponents(app, '/codes/umdComponents.json');
+    // await registerRemoteComponents(app, '/codes/umdComponents.json');
+    await registerRemoteComponents(
+      app,
+      '/Restful/Kivii.Storages.Entities.DbFile/Query.json?FolderPath=/Umd/File'
+    );
   } catch (e) {
     console.error('Remote components loading error (non-fatal):', e);
   }

@@ -241,7 +241,7 @@
           本系统通过
           <code
             class="bg-white dark:bg-black/20 px-1.5 py-0.5 rounded text-blue-700 dark:text-blue-300 font-mono"
-            >public/remote-component-config.json</code
+            >/Restful/Kivii.Storages.Entities.DbFile/Query.json?FolderPath=/Umd/File</code
           >
           配置文件定义远程组件库。
         </p>
