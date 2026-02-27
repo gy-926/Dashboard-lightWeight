@@ -64,7 +64,6 @@ export function setupRouteGuards(router: Router) {
 
   router.afterEach((to, from) => {
     // 路由切换完成后的处理
-
   });
 }
 

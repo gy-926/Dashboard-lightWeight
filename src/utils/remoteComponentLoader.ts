@@ -1,6 +1,7 @@
 import type { App } from 'vue';
 import * as Vue from 'vue';
 import { ref } from 'vue';
+import type { ElegantRoute } from '@/router/routes/types';
 
 // 远程库状态定义
 export interface RemoteLibraryInfo {
@@ -17,6 +18,12 @@ export interface RemoteLibraryInfo {
 
 // 响应式状态：存储所有加载的远程库信息
 export const remoteLibraries = ref<RemoteLibraryInfo[]>([]);
+
+// UMD 组件加载完成信号：供路由模块感知加载时机，避免刷新时 race condition
+let _resolveUmdReady: () => void = () => {};
+export const umdComponentsReady: Promise<void> = new Promise(resolve => {
+  _resolveUmdReady = resolve;
+});
 
 // 组件配置接口定义
 export interface ComponentConfig {
@@ -222,6 +229,17 @@ const registerComponent = async (app: App, componentConfig: ComponentConfig) => 
         }
 
         // 遍历属性并注册
+        // 若库无 install 但有 injectStyles / __inject_styles 等 CSS 注入函数，先执行
+        for (const cssKey of ['injectStyles', '__inject_styles', 'injectCss']) {
+          if (typeof remoteComponent[cssKey] === 'function') {
+            try {
+              remoteComponent[cssKey]();
+            } catch (_) {
+              /* ignore */
+            }
+          }
+        }
+
         let registeredCount = 0;
         for (const key in remoteComponent) {
           const component = remoteComponent[key];
@@ -269,6 +287,66 @@ const registerComponent = async (app: App, componentConfig: ComponentConfig) => 
     throw error; // 重新抛出错误以便上层处理
   }
 };
+
+// 将库名/组件名转为路由名称安全字符串（只保留字母数字，其余替换为 _）
+function toRouteSafeName(name: string): string {
+  return name.replace(/[^a-zA-Z0-9]/g, '_');
+}
+
+// 根据已加载的 remoteLibraries 生成 UMD 组件路由树
+// 每个成功加载的库生成一个 layout.base 的 folder 节点，
+// 库内每个导出组件生成一个 view.umd-component 的叶子路由。
+export function generateUmdRoutes(): ElegantRoute[] {
+  const routes: ElegantRoute[] = [];
+
+  for (const lib of remoteLibraries.value) {
+    if (lib.status !== 'success') continue;
+
+    const keys = lib.componentKeys ?? [];
+    if (keys.length === 0) continue;
+
+    const safeName = toRouteSafeName(lib.name);
+    const libPath = `/umd/${lib.name}`;
+    const libRouteName = `umd_${safeName}`;
+
+    const children: ElegantRoute[] = keys.map(compName => {
+      // 尝试从 componentsDetailed 获取友好显示名
+      const detail = lib.componentsDetailed?.find(
+        (d: any) => d.name === compName || d.tag === compName
+      );
+      const title: string = detail?.displayName ?? detail?.title ?? compName;
+
+      return {
+        name: `${libRouteName}_${toRouteSafeName(compName)}`,
+        path: `${libPath}/${compName}`,
+        component: 'view.umd-component',
+        props: { componentName: compName },
+        meta: {
+          title,
+          keepAlive: true,
+          umdLibrary: lib.name,
+          umdComponent: compName,
+        },
+      };
+    });
+
+    routes.push({
+      name: libRouteName,
+      path: libPath,
+      component: 'layout.base',
+      // 访问 folder 路径时重定向到第一个子组件
+      redirect: children[0]?.path,
+      meta: {
+        title: lib.name,
+        icon: 'fa-cube',
+        umdLibrary: lib.name,
+      },
+      children,
+    });
+  }
+
+  return routes;
+}
 
 // 注册所有远程组件
 export const registerRemoteComponents = async (
@@ -348,5 +426,8 @@ export const registerRemoteComponents = async (
     }
   } catch (error) {
     console.error('Failed to register remote components:', error);
+  } finally {
+    // 无论成功或失败，通知等待方 UMD 加载阶段已结束
+    _resolveUmdReady();
   }
 };

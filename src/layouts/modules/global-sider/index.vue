@@ -1,19 +1,14 @@
 <script setup lang="ts">
   import { computed } from 'vue';
   import { useMenuStore } from '../global-menu/store';
+  import type { MenuItem } from '../global-menu/types';
+  import { useUmdMenuConfigStore } from '@/store/modules/umd-menu-config';
 
   const menuStore = useMenuStore();
+  const umdConfig = useUmdMenuConfigStore();
 
   // 是否混合布局
   const isMixLayout = computed(() => menuStore.theme.layout === 'mix');
-
-  // 菜单列表
-  const menuList = computed(() => {
-    if (isMixLayout.value) {
-      return menuStore.mixSiderMenuList;
-    }
-    return menuStore.menuList;
-  });
 
   // 混合布局下的激活路径
   const activePath = computed(() => {
@@ -29,6 +24,58 @@
 
   // 侧边栏宽度样式
   const siderWidth = computed(() => (collapsed.value ? '72px' : '220px'));
+
+  /**
+   * 对 UMD 菜单项做响应式过滤：
+   * - 非 UMD 项直接保留
+   * - UMD 组件叶子：按 isComponentVisible 过滤
+   * - UMD 库 folder：按 isLibVisible + 子项是否为空过滤（递归）
+   */
+  function filterUmdItems(items: MenuItem[]): MenuItem[] {
+    const result: MenuItem[] = [];
+
+    for (const item of items) {
+      const libName = item.meta?.umdLibrary as string | undefined;
+
+      // 非 UMD 菜单项，直接保留（递归处理子项）
+      if (!libName) {
+        if (item.children?.length) {
+          result.push({ ...item, children: filterUmdItems(item.children) });
+        } else {
+          result.push(item);
+        }
+        continue;
+      }
+
+      const compName = item.meta?.umdComponent as string | undefined;
+
+      if (compName) {
+        // 叶子节点：按组件可见性过滤
+        if (umdConfig.isComponentVisible(libName, compName)) {
+          result.push(item);
+        }
+      } else {
+        // 库 folder 节点：先过滤子项，再判断是否保留 folder
+        if (!umdConfig.isLibVisible(libName)) continue;
+
+        const filteredChildren = item.children?.length
+          ? filterUmdItems(item.children)
+          : [];
+
+        if (filteredChildren.length > 0) {
+          result.push({ ...item, children: filteredChildren });
+        }
+      }
+    }
+
+    return result;
+  }
+
+  // 最终菜单列表（经过 UMD 可见性过滤）
+  const menuList = computed(() => {
+    const raw = isMixLayout.value ? menuStore.mixSiderMenuList : menuStore.menuList;
+    return filterUmdItems(raw);
+  });
 
   // Logo 区域点击事件
   function handleLogoClick() {

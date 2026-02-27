@@ -3,6 +3,7 @@ import type { RouteRecordRaw } from 'vue-router';
 import { autoRoutes } from '../auto/routes';
 import type { MenuItem, GlobalConfig, CachedRoutes, ElegantRoute } from './types';
 import { fetchMenuData } from './mockData';
+import { generateUmdRoutes } from '@/utils/remoteComponentLoader';
 
 // ==================== 全局配置 ====================
 
@@ -402,6 +403,7 @@ const layouts: Record<string, () => Promise<any>> = {
 
 const views: Record<string, () => Promise<any>> = {
   'view.iframe-page': () => import('../../views/_builtin/iframe-page/index.vue'),
+  'view.umd-component': () => import('../../views/_builtin/umd-component/index.vue'),
 };
 
 // ==================== 路由转换 ====================
@@ -449,10 +451,15 @@ function transformElegantRouteToVueRoute(
       transformElegantRouteToVueRoute(child, route.name)
     );
 
-    // 如果有默认子路由，添加 redirect
+    // 如果有默认子路由（空路径），添加 redirect
     if (route.children[0]?.path === '') {
       vueRoute.redirect = route.redirect || '';
     }
+  }
+
+  // 若 elegant 路由声明了 redirect（且尚未通过上面逻辑设置），直接应用
+  if (route.redirect && !vueRoute.redirect) {
+    vueRoute.redirect = route.redirect;
   }
 
   return vueRoute as RouteRecordRaw;
@@ -528,12 +535,15 @@ export async function generateDynamicRoutes(): Promise<{
   constantRoutes: RouteRecordRaw[];
   authRoutes: RouteRecordRaw[];
 }> {
-  // 1. 尝试从缓存恢复
+  // 始终生成 UMD 路由（组件在 main.ts 中已加载完毕，此处直接读取）
+  const umdVueRoutes = transformRoutesToVueRoutes(generateUmdRoutes());
+
+  // 1. 尝试从缓存恢复（后端菜单路由）
   const cachedRoutes = restoreDynamicRoutesFromCache();
   if (cachedRoutes) {
     return {
       constantRoutes: getStaticRoutes(),
-      authRoutes: [...autoRoutes, ...cachedRoutes],
+      authRoutes: [...autoRoutes, ...cachedRoutes, ...umdVueRoutes],
     };
   }
 
@@ -549,15 +559,13 @@ export async function generateDynamicRoutes(): Promise<{
   // 5. 转换为 Vue 路由
   const vueRoutes = transformRoutesToVueRoutes(elegantRoutes);
 
-  // 6. 缓存动态路由（只缓存远程生成的路由，本地路由不需要缓存）
+  // 6. 缓存动态路由（只缓存后端菜单路由，UMD 路由每次从已注册组件实时生成）
   cacheDynamicRoutes(vueRoutes);
 
-  // 7. 合并本地自动路由和动态路由
-  const allAuthRoutes = [...autoRoutes, ...vueRoutes];
-
+  // 7. 合并本地自动路由、后端动态路由、UMD 组件路由
   return {
     constantRoutes: getStaticRoutes(),
-    authRoutes: allAuthRoutes,
+    authRoutes: [...autoRoutes, ...vueRoutes, ...umdVueRoutes],
   };
 }
 
