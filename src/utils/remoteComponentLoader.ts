@@ -103,6 +103,29 @@ const loadConfig = async (configPath: string): Promise<Config> => {
   }
 };
 
+// 将 UMD IIFE 注入的 <style> 移到 dashboard 自身 CSS 之前，
+// 避免 UMD 的主题变量/dark 选择器因级联位置靠后而覆盖项目样式
+const relocateUmdStyles = (existingStyleSet: Set<Element>): void => {
+  // 找到 IIFE 新增的 <style> 元素
+  const newStyles = Array.from(document.head.querySelectorAll('style'))
+    .filter(s => !existingStyleSet.has(s));
+
+  if (newStyles.length === 0) return;
+
+  // 定位项目自身的第一个 CSS 资源（<link rel="stylesheet"> 或已有 <style>）
+  const firstAppCss =
+    document.head.querySelector('link[rel="stylesheet"]') ??
+    Array.from(existingStyleSet).find(s => s.parentNode === document.head) ??
+    null;
+
+  if (firstAppCss) {
+    // 插到项目 CSS 之前 → 项目 CSS 优先级更高，UMD 样式不会覆盖项目主题
+    for (const style of newStyles) {
+      document.head.insertBefore(style, firstAppCss);
+    }
+  }
+};
+
 // 动态加载远程UMD组件的函数
 const loadUMDComponent = (url: string, globalName?: string): Promise<any> => {
   return new Promise((resolve, reject) => {
@@ -117,9 +140,16 @@ const loadUMDComponent = (url: string, globalName?: string): Promise<any> => {
       }
     }
 
+    // 记录脚本加载前已存在的 <style> 元素，用于后续定位 IIFE 新增的样式
+    const existingStyles = new Set<Element>(document.head.querySelectorAll('style'));
+
     const script = document.createElement('script');
     script.src = url;
     script.onload = () => {
+      // IIFE 已执行完毕，将其注入的 <style> 移到项目 CSS 之前
+      // 确保项目的主题/dark 配置优先级始终高于 UMD 组件样式
+      relocateUmdStyles(existingStyles);
+
       // UMD组件加载完成后，从全局对象中获取组件
       // 默认全局变量名为 VueComponent，可通过配置覆盖
       const component = (window as any)[globalName || 'VueComponent'];
@@ -229,13 +259,21 @@ const registerComponent = async (app: App, componentConfig: ComponentConfig) => 
         }
 
         // 遍历属性并注册
-        // 若库无 install 但有 injectStyles / __inject_styles 等 CSS 注入函数，先执行
-        for (const cssKey of ['injectStyles', '__inject_styles', 'injectCss']) {
+        // 若库无 install 但有 CSS 注入函数，先执行（兼容多种打包器的命名约定）
+        const cssInjectors = ['injectStyles', '__inject_styles', 'injectCss', '_injectStyles', 'applyStyles', 'install_styles'];
+        for (const cssKey of cssInjectors) {
           if (typeof remoteComponent[cssKey] === 'function') {
-            try {
-              remoteComponent[cssKey]();
-            } catch (_) {
-              /* ignore */
+            try { remoteComponent[cssKey](); } catch (_) { /* ignore */ }
+          }
+        }
+        // 递归检查每个导出组件对象内部的样式注入函数
+        for (const key in remoteComponent) {
+          const item = remoteComponent[key];
+          if (item && typeof item === 'object' && !Array.isArray(item)) {
+            for (const cssKey of cssInjectors) {
+              if (typeof item[cssKey] === 'function') {
+                try { item[cssKey](); } catch (_) { /* ignore */ }
+              }
             }
           }
         }
@@ -302,7 +340,9 @@ export function generateUmdRoutes(): ElegantRoute[] {
   for (const lib of remoteLibraries.value) {
     if (lib.status !== 'success') continue;
 
-    const keys = lib.componentKeys ?? [];
+    // 过滤掉非组件的导出 key（插件元数据、模块规范字段等）
+    const EXCLUDED_KEYS = new Set(['default', 'install', 'manifest', 'componentsMap', 'componentsDetailed', 'version', '__esModule', 'VueDemoComponent']);
+    const keys = (lib.componentKeys ?? []).filter(k => !EXCLUDED_KEYS.has(k));
     if (keys.length === 0) continue;
 
     const safeName = toRouteSafeName(lib.name);
@@ -310,11 +350,14 @@ export function generateUmdRoutes(): ElegantRoute[] {
     const libRouteName = `umd_${safeName}`;
 
     const children: ElegantRoute[] = keys.map(compName => {
-      // 尝试从 componentsDetailed 获取友好显示名
+      // 尝试从 componentsDetailed 获取友好显示名、中文名和图标
       const detail = lib.componentsDetailed?.find(
         (d: any) => d.name === compName || d.tag === compName
       );
-      const title: string = detail?.displayName ?? detail?.title ?? compName;
+      const title: string = detail?.zhName ?? detail?.displayName ?? detail?.title ?? compName;
+      // 图标去掉前缀 (e.g. "fas fa-cube" → "fa-cube")，菜单渲染时会自动加 "fas"
+      const rawIcon: string | undefined = detail?.icon;
+      const icon: string | undefined = rawIcon?.replace(/^(fas|far|fab|fal|fad)\s+/, '');
 
       return {
         name: `${libRouteName}_${toRouteSafeName(compName)}`,
@@ -323,6 +366,7 @@ export function generateUmdRoutes(): ElegantRoute[] {
         props: { componentName: compName },
         meta: {
           title,
+          ...(icon ? { icon } : {}),
           keepAlive: true,
           umdLibrary: lib.name,
           umdComponent: compName,
@@ -337,7 +381,7 @@ export function generateUmdRoutes(): ElegantRoute[] {
       // 访问 folder 路径时重定向到第一个子组件
       redirect: children[0]?.path,
       meta: {
-        title: lib.name,
+        title: lib.manifest?.zhName ?? lib.name,
         icon: 'fa-cube',
         umdLibrary: lib.name,
       },
