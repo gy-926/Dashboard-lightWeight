@@ -114,7 +114,7 @@
       <div
         :class="[
           'min-h-full relative z-0',
-          isFullWidthLayout ? 'w-full px-4 md:px-6' : 'mx-auto max-w-7xl',
+          isFullWidthLayout ? 'w-full px-4 md:px-6' : 'mx-auto',
         ]"
       >
         <template v-if="shouldKeepAlive">
