@@ -72,9 +72,14 @@
   }
 
   // 最终菜单列表（经过 UMD 可见性过滤）
+  // 注意：必须先对完整菜单（含 children）做 UMD 过滤，
+  // 再为 mix 模式剥除 children，否则 UMD folder 节点因无 children 而被误删。
   const menuList = computed(() => {
-    const raw = isMixLayout.value ? menuStore.mixSiderMenuList : menuStore.menuList;
-    return filterUmdItems(raw);
+    const filtered = filterUmdItems(menuStore.menuList);
+    if (isMixLayout.value) {
+      return filtered.map(item => ({ ...item, children: undefined }));
+    }
+    return filtered;
   });
 
   // Logo 区域点击事件
