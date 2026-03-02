@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { ref } from 'vue';
   import { remoteLibraries } from '@/utils/remoteComponentLoader';
+  import { kivii } from '@kivii.com/bridge';
 
   const fileInput = ref<HTMLInputElement | null>(null);
   const isUploading = ref(false);
@@ -19,14 +20,12 @@
 
     isUploading.value = true;
     try {
-      const response = await fetch('/storages.json?FolderPath=/Umd/File', {
-        method: 'POST',
-        body: formData,
+      await kivii.request.post('/storages.json?FolderPath=/Umd/File', formData, {
+        header: {
+          // 'Content-Type': 'multipart/form-data' // 通常 fetch/axios 会自动设置 boundary，这里可能需要根据 request 封装的具体实现调整
+          // 如果是 axios，不设置 Content-Type 会自动处理 FormData
+        },
       });
-
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.statusText}`);
-      }
 
       alert('文件上传成功！');
       // Optional: Refresh list or perform other actions

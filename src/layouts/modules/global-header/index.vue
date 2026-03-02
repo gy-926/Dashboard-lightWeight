@@ -4,6 +4,7 @@
   import { useMenuStore } from '../global-menu/store';
   import GlobalTopMenu from '../global-menu/GlobalTopMenu.vue';
   import type { MenuItem } from '../global-menu/types';
+  import { kivii } from '@kivii.com/bridge';
 
   defineProps<{
     showSiderToggle?: boolean;
@@ -27,9 +28,8 @@
   // 退出登录
   async function handleLogout() {
     try {
-      await fetch('/auth/logout.json', {
-        method: 'POST',
-        headers: {
+      await kivii.request.post('/auth/logout.json', undefined, {
+        header: {
           'Content-Type': 'application/json',
         },
       });

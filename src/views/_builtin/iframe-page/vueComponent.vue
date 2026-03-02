@@ -3,6 +3,7 @@
   import * as Vue from 'vue';
   import { useTeleportManager, generateComponentCacheKey } from '@/store/modules/teleport-manager';
   import { loadModule } from 'vue3-sfc-loader';
+  import { kivii } from '@kivii.com/bridge';
 
   const props = defineProps<{
     url: string;
@@ -111,11 +112,9 @@
           moduleCache: { vue: Vue },
           async getFile(url: string) {
             const proxyUrl = getProxyUrl(url);
-            const response = await fetch(proxyUrl);
-            if (!response.ok) {
-              throw new Error(`Failed to fetch ${proxyUrl}: ${response.statusText}`);
-            }
-            return response.text();
+            // 使用封装的 request 获取文本内容
+            const response = await kivii.request.get<string>(proxyUrl, { responseType: 'text' });
+            return response.data;
           },
           addStyle(textContent: string) {
             const style = Object.assign(document.createElement('style'), { textContent });

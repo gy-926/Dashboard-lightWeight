@@ -40,14 +40,14 @@ export interface Config {
   components: ComponentConfig[];
 }
 
+import { kivii } from '@kivii.com/bridge';
+
 // 加载配置文件
 const loadConfig = async (configPath: string): Promise<Config> => {
   try {
-    const response = await fetch(configPath);
-    if (!response.ok) {
-      throw new Error(`配置文件加载失败: ${response.status}`);
-    }
-    const data = await response.json();
+    const response = await kivii.request.get<any>(configPath);
+    const data = response.data;
+
 
     // 检查是否为旧配置格式 (包含 components 数组)
     if (data.components && Array.isArray(data.components)) {

@@ -6,7 +6,7 @@ import {
   addRouteWithChildren,
   clearDynamicRoutesCache,
 } from './routes';
-import { UnauthorizedError } from './routes/mockData';
+import { UnauthorizedError } from './routes/menu-service';
 
 // 初始静态路由（用于首次渲染）
 const initialRoutes: RouteRecordRaw[] = [

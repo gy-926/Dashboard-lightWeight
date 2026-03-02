@@ -2,7 +2,7 @@ import { ref, computed } from 'vue';
 import type { RouteRecordRaw } from 'vue-router';
 import { autoRoutes } from '../auto/routes';
 import type { MenuItem, GlobalConfig, CachedRoutes, ElegantRoute } from './types';
-import { fetchMenuData } from './mockData';
+import { fetchMenuData } from './menu-service';
 import { generateUmdRoutes } from '@/utils/remoteComponentLoader';
 
 // ==================== 全局配置 ====================

@@ -10,6 +10,7 @@
   } from '@/store/modules/teleport-manager';
   import WebviewComponent from './webview.vue';
   import VueComponent from './vueComponent.vue';
+  import { kivii } from '@kivii.com/bridge';
 
   // 路由 props
   const props = defineProps<{
@@ -88,10 +89,10 @@
     }
 
     try {
-      const response = await fetch(
+      const response = await kivii.request.get<any>(
         `/Restful/Kivii.Basic.Entities.Function/Access.json?MenuKvids=${props.kvid}`
       );
-      const data = await response.json();
+      const data = response.data;
       const origin = 'https://datav.kivii.org';
 
       if (data?.Results && data.Results.length > 0) {
