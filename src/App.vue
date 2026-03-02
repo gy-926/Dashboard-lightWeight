@@ -1,6 +1,6 @@
 <template>
-  <!-- 加载遮罩层：动态路由加载完成前显示 -->
-  <div v-if="!isReady" class="app-loading-overlay">
+  <!-- 加载遮罩层：动态路由加载完成前显示，但登录页除外 -->
+  <div v-if="!isReady && $route.path !== '/login'" class="app-loading-overlay">
     <div class="app-loading-content">
       <div class="app-loading-spinner"></div>
       <p class="app-loading-text">加载中...</p>

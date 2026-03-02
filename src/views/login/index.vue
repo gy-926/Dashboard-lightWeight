@@ -3,6 +3,7 @@
   import { useRouter, useRoute } from 'vue-router';
   import { reloadDynamicRoutes } from '@/router';
   import { kivii } from '@kivii.com/bridge';
+  import { setGlobalConfig } from '@/router/routes';
 
   const router = useRouter();
   const route = useRoute();
@@ -35,6 +36,13 @@
       const data = response.data;
 
       console.log('登录成功:', data);
+
+      // 登录成功后更新全局配置
+      setGlobalConfig({ IsAuthenticated: true });
+      if (!(window as any).uiGlobalConfig) {
+        (window as any).uiGlobalConfig = {};
+      }
+      (window as any).uiGlobalConfig.IsAuthenticated = true;
 
       // 重新加载动态路由（会清除缓存并重新请求菜单接口）
       await reloadDynamicRoutes();

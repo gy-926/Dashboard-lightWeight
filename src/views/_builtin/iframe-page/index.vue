@@ -11,6 +11,7 @@
   import WebviewComponent from './webview.vue';
   import VueComponent from './vueComponent.vue';
   import { kivii } from '@kivii.com/bridge';
+  import { getGlobalConfig } from '@/router/routes';
 
   // 路由 props
   const props = defineProps<{
@@ -93,7 +94,13 @@
         `/Restful/Kivii.Basic.Entities.Function/Access.json?MenuKvids=${props.kvid}`
       );
       const data = response.data;
-      const origin = 'https://datav.kivii.org';
+
+      const config = getGlobalConfig();
+      // 优先使用配置的 Origin，如果未配置则根据 UseWindowOrigin 决定是否使用 window.location.origin
+      let origin = config.Origin || '';
+      if (!origin && config.UseWindowOrigin) {
+        origin = window.location.origin;
+      }
 
       if (data?.Results && data.Results.length > 0) {
         const handler = data.Results[0].Handler;

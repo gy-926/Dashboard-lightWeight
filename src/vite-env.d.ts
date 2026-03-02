@@ -38,4 +38,25 @@ interface Window {
   $pdfjsPreview?: {
     quickPreview: (el: HTMLElement, url: string) => void
   }
+  uiGlobalConfig?: {
+    InternalCode?: string
+    UserCode?: string
+    UserName?: string
+    UseWindowOrigin?: boolean
+    Origin?: string
+    DisplayName?: string
+    Icon?: string
+    Scope?: string
+    Parameters?: Record<string, any>
+    IsAuthenticated?: boolean
+    [key: string]: any
+  }
+}
+
+interface ImportMetaEnv {
+  readonly VITE_BACKEND_ORIGIN: string
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv
 }

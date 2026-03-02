@@ -17,6 +17,15 @@ export default defineConfig({
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        inlineDynamicImports: true,
+        entryFileNames: "Content/UmdDashboard/assets/index.[hash].js",
+        assetFileNames: "Content/UmdDashboard/assets/[name].[hash].[ext]",
+      },
+    },
+  },
   server: {
     proxy: {
       // datav.kivii.org API 代理配置

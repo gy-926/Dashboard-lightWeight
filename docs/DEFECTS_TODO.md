@@ -72,7 +72,7 @@
 
 ---
 
-### [ ] 5. 硬编码后端 origin 导致多环境部署失败
+### [x] 5. 硬编码后端 origin 导致多环境部署失败
 
 **文件：** `src/views/_builtin/iframe-page/index.vue`，第 95 行
 

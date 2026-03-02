@@ -1,5 +1,6 @@
 import type { Router } from 'vue-router';
 import { waitForRoutesReady, isDynamicRoutesReady, setTargetNavigation } from './index';
+import { getGlobalConfig } from '@/router/routes';
 
 // 路由守卫配置
 const guardsConfig = {
@@ -13,6 +14,13 @@ export function setupRouteGuards(router: Router) {
   }
 
   router.beforeEach(async (to, from, next) => {
+    // 检查是否已登录
+    const config = getGlobalConfig();
+    if (!config.IsAuthenticated && to.path !== '/login') {
+      next('/login');
+      return;
+    }
+
     if (!isDynamicRoutesReady()) {
       let targetPath = to.path;
       const hash = window.location.hash;

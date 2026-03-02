@@ -8,10 +8,27 @@ import { generateUmdRoutes } from '@/utils/remoteComponentLoader';
 // ==================== 全局配置 ====================
 
 // 默认全局配置
+if (!(window as any).uiGlobalConfig) {
+  (window as any).uiGlobalConfig = {};
+}
+const uiConfig = (window as any).uiGlobalConfig;
+
 const defaultGlobalConfig: GlobalConfig = {
-  InternalCode: 'vueDashboard',
-  UserCode: 'admin',
-  UserName: '管理员',
+  InternalCode: uiConfig.InternalCode || 'vueDashboard',
+  UserCode: uiConfig.UserCode || 'admin',
+  UserName: uiConfig.UserName || '管理员',
+  UseWindowOrigin: uiConfig.UseWindowOrigin !== undefined ? uiConfig.UseWindowOrigin : true,
+  Origin:
+    uiConfig.Origin ||
+    (uiConfig.UseWindowOrigin !== false
+      ? window.location.origin
+      : import.meta.env.VITE_BACKEND_ORIGIN) ||
+    '',
+  DisplayName: uiConfig.DisplayName || '',
+  Icon: uiConfig.Icon || '',
+  Scope: uiConfig.Scope || '',
+  Parameters: uiConfig.Parameters || {},
+  IsAuthenticated: uiConfig.IsAuthenticated !== undefined ? uiConfig.IsAuthenticated : false,
 };
 
 // 当前全局配置
