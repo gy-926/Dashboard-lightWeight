@@ -47,16 +47,14 @@ export function getGlobalConfig(): GlobalConfig {
 // ==================== 缓存策略 ====================
 
 const CACHE_KEY = 'DYNAMIC_ROUTES_CACHE';
-const CACHE_VERSION = 'v3'; // 缓存版本，用于强制刷新
+const CACHE_VERSION = 'v4'; // 缓存版本，用于强制刷新
 const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24小时
 
-// 缓存路由（存储 ElegantRoute 格式，避免函数序列化丢失）
-export function cacheDynamicRoutes(routes: RouteRecordRaw[]): void {
+// 缓存路由（直接存储 ElegantRoute 格式，避免反向序列化在生产构建中因代码压缩而丢失组件映射）
+export function cacheDynamicRoutes(routes: ElegantRoute[]): void {
   try {
-    // 将 Vue Router 路由转换回 ElegantRoute 格式用于缓存
-    const elegantRoutes = routes.map(route => routeToElegantRoute(route));
     const cacheData: CachedRoutes & { version?: string } = {
-      routes: elegantRoutes,
+      routes,
       timestamp: Date.now(),
       userCode: globalConfig.value.UserCode || '',
       internalCode: globalConfig.value.InternalCode,
@@ -66,29 +64,6 @@ export function cacheDynamicRoutes(routes: RouteRecordRaw[]): void {
   } catch (e) {
     console.warn('缓存路由失败:', e);
   }
-}
-
-// 递归将 Vue Router 路由转换为 ElegantRoute 格式
-function routeToElegantRoute(route: RouteRecordRaw): ElegantRoute {
-  return {
-    name: typeof route.name === 'string' ? route.name : undefined,
-    path: route.path,
-    component:
-      typeof route.component === 'function'
-        ? extractComponentName(route.component.toString())
-        : undefined,
-    redirect: typeof route.redirect === 'string' ? route.redirect : undefined,
-    meta: route.meta,
-    props: typeof route.props === 'object' ? (route.props as Record<string, any>) : undefined,
-    children: route.children ? route.children.map(child => routeToElegantRoute(child)) : [],
-  };
-}
-
-// 从组件函数中提取组件名称
-function extractComponentName(fnStr: string): string | undefined {
-  if (fnStr.includes('iframe-page')) return 'view.iframe-page';
-  if (fnStr.includes('base-layout')) return 'layout.base';
-  return undefined;
 }
 
 // 清除缓存
@@ -577,7 +552,8 @@ export async function generateDynamicRoutes(): Promise<{
   const vueRoutes = transformRoutesToVueRoutes(elegantRoutes);
 
   // 6. 缓存动态路由（只缓存后端菜单路由，UMD 路由每次从已注册组件实时生成）
-  cacheDynamicRoutes(vueRoutes);
+  // 注意：缓存 elegantRoutes（转换前），避免生产构建压缩代码导致反向序列化失败
+  cacheDynamicRoutes(elegantRoutes);
 
   // 7. 合并本地自动路由、后端动态路由、UMD 组件路由
   return {

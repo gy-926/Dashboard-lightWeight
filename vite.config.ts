@@ -20,8 +20,8 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        inlineDynamicImports: true,
         entryFileNames: "Content/UmdDashboard/assets/index.[hash].js",
+        chunkFileNames: "Content/UmdDashboard/assets/[name].[hash].js",
         assetFileNames: "Content/UmdDashboard/assets/[name].[hash].[ext]",
       },
     },
