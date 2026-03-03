@@ -90,7 +90,7 @@
 
 <template>
   <aside
-    class="h-screen flex flex-col bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300"
+    class="h-screen flex flex-col bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 overflow-hidden"
     :style="{ width: siderWidth }"
   >
     <!-- Logo 区域 -->
@@ -114,7 +114,7 @@
     </div>
 
     <!-- 菜单滚动区域 -->
-    <div class="flex-1 py-4 px-3 scrollbar-hide overflow-y-auto overflow-x-hidden">
+    <div :class="['flex-1 py-4 scrollbar-hide overflow-y-auto overflow-x-hidden', !collapsed && 'px-3']">
       <GlobalMenu
         :menu="menuList"
         :collapsed="collapsed"

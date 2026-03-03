@@ -116,13 +116,15 @@ function cancelCloseTimer() {
 // 下拉菜单位置状态
 const dropdownPosition = ref<{ top: string; left: string } | null>(null)
 
-// 获取下拉菜单位置
+// 获取下拉菜单位置（left 对齐 aside 右边线）
 function updateDropdownPosition(event: MouseEvent) {
   const target = event.currentTarget as HTMLElement
   const rect = target.getBoundingClientRect()
+  const aside = target.closest('aside')
+  const left = aside ? aside.getBoundingClientRect().right : rect.right
   dropdownPosition.value = {
     top: `${rect.top}px`,
-    left: `${rect.right}px`
+    left: `${left}px`
   }
 }
 
@@ -136,28 +138,49 @@ function resetDropdownPosition() {
   <ul class="space-y-1">
     <template v-for="item in menu" :key="item.key">
       <!-- 无子菜单的菜单项 -->
-      <li v-if="!hasChildren(item)">
+      <li v-if="!hasChildren(item)" class="relative">
         <button
-          class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors w-full text-left"
+          class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors w-full"
           :class="[
+            collapsed ? 'justify-center' : 'text-left',
             selectedKey === item.path
               ? 'bg-primary-bg text-primary font-medium'
               : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50'
           ]"
-          :title="item.title"
           @click="handleSelect(item)"
+          @mouseenter="handleMouseEnter(item.key); updateDropdownPosition($event)"
+          @mouseleave="handleMouseLeave"
         >
           <i v-if="item.icon" :class="['fas', item.icon, 'w-5 h-5 flex-shrink-0']" />
           <span v-if="!collapsed" class="truncate">{{ item.title }}</span>
         </button>
+
+        <!-- 折叠状态下的菜单名称 tooltip -->
+        <Transition
+          enter-active-class="transition-[opacity,transform] duration-150 ease-out"
+          enter-from-class="opacity-0 -translate-x-2"
+          enter-to-class="opacity-100 translate-x-0"
+          leave-active-class="transition-[opacity,transform] duration-100 ease-in"
+          leave-from-class="opacity-100 translate-x-0"
+          leave-to-class="opacity-0 -translate-x-2"
+        >
+          <div
+            v-if="collapsed && isHovered(item.key)"
+            class="fixed z-[999] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 whitespace-nowrap pointer-events-none"
+            :style="dropdownPosition ? { top: dropdownPosition.top, left: dropdownPosition.left } : {}"
+          >
+            {{ item.title }}
+          </div>
+        </Transition>
       </li>
 
       <!-- 有子菜单的菜单项 -->
       <li v-else class="relative">
         <!-- 父级菜单 - 折叠时不可点击，展开时点击展开/收起 -->
         <button
-          class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors text-left"
+          class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors"
           :class="[
+            collapsed ? 'justify-center' : 'text-left',
             selectedKey.startsWith(item.path)
               ? 'bg-primary-bg text-primary font-medium'
               : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50'
@@ -193,7 +216,7 @@ function resetDropdownPosition() {
         >
           <div
             v-if="collapsed && isHovered(item.key)"
-            class="fixed z-[999] w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 max-h-[calc(100vh-64px)] overflow-y-auto"
+            class="fixed z-[999] w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 max-h-[calc(100vh-64px)] overflow-y-auto overflow-x-hidden"
             :style="dropdownPosition ? { top: dropdownPosition.top, left: dropdownPosition.left } : {}"
             @mouseenter="cancelCloseTimer"
             @mouseleave="handleMouseLeave"
@@ -208,7 +231,7 @@ function resetDropdownPosition() {
                 <!-- 无三级子菜单的二级菜单 -->
                 <button
                   v-if="!hasChildren(child)"
-                  class="flex items-center gap-2 px-3 py-2 text-sm transition-colors mx-1 rounded w-full text-left"
+                  class="flex items-center gap-2 px-3 py-2 text-sm transition-colors mx-1 rounded w-[calc(100%-0.5rem)] text-left"
                   :class="[
                     selectedKey === child.path
                       ? 'bg-primary-bg text-primary font-medium'
@@ -228,7 +251,7 @@ function resetDropdownPosition() {
                   @mouseleave="handleMouseLeave"
                 >
                   <button
-                    class="w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors mx-1 rounded text-left"
+                    class="w-[calc(100%-0.5rem)] flex items-center gap-2 px-3 py-2 text-sm transition-colors mx-1 rounded text-left"
                     :class="[
                       selectedKey.startsWith(child.path)
                         ? 'bg-primary-bg text-primary font-medium'
@@ -251,7 +274,7 @@ function resetDropdownPosition() {
                   >
                     <div
                       v-if="isSubHovered(child.key)"
-                      class="fixed z-[999] w-44 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 max-h-[calc(100vh-64px)] overflow-y-auto"
+                      class="fixed z-[999] w-44 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 max-h-[calc(100vh-64px)] overflow-y-auto overflow-x-hidden"
                       :style="dropdownPosition ? { top: dropdownPosition.top, left: dropdownPosition.left } : {}"
                       @mouseenter="cancelCloseTimer"
                       @mouseleave="handleMouseLeave"
@@ -264,7 +287,7 @@ function resetDropdownPosition() {
                         <button
                           v-for="subChild in child.children"
                           :key="subChild.key"
-                          class="flex items-center gap-2 px-3 py-2 text-sm transition-colors mx-1 rounded w-full text-left"
+                          class="flex items-center gap-2 px-3 py-2 text-sm transition-colors mx-1 rounded w-[calc(100%-0.5rem)] text-left"
                           :class="[
                             selectedKey === subChild.path
                               ? 'bg-primary-bg text-primary font-medium'
@@ -287,10 +310,10 @@ function resetDropdownPosition() {
 
         <!-- 展开状态下的子菜单 -->
         <Transition
-          enter-active-class="transition-all duration-200 ease-out"
+          enter-active-class="transition-[opacity,transform] duration-200 ease-out"
           enter-from-class="opacity-0 -translate-y-2"
           enter-to-class="opacity-100 translate-y-0"
-          leave-active-class="transition-all duration-150 ease-in"
+          leave-active-class="transition-[opacity,transform] duration-150 ease-in"
           leave-from-class="opacity-100 translate-y-0"
           leave-to-class="opacity-0 -translate-y-2"
         >
