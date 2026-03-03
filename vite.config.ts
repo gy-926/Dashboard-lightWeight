@@ -20,6 +20,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
+        inlineDynamicImports: true, // 内联动态导入，将所有动态导入的模块都打包到主文件中
         entryFileNames: "Content/UmdDashboard/assets/index.[hash].js",
         chunkFileNames: "Content/UmdDashboard/assets/[name].[hash].js",
         assetFileNames: "Content/UmdDashboard/assets/[name].[hash].[ext]",
