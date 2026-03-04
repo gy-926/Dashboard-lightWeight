@@ -151,20 +151,19 @@ export const useMenuStore = defineStore('menu', () => {
     return false;
   }
 
-  // 混合模式下的顶部菜单（二级菜单）
+  // 混合模式下的顶部菜单（根目录 - 一级菜单，不带子菜单下拉）
   const mixHeaderMenuList = computed(() => {
+    if (theme.value.layout !== 'mix') return [];
+    return menuList.value
+      .filter(item => !item.hidden)
+      .map(item => ({ ...item, children: undefined }));
+  });
+
+  // 混合模式下的侧边菜单（激活根节点的子菜单）
+  const mixSiderMenuList = computed(() => {
     if (theme.value.layout !== 'mix') return [];
     const root = menuList.value.find(item => item.key === mixActiveRootKey.value);
     return root?.children || [];
-  });
-
-  // 混合模式下的侧边菜单（一级菜单，不带子菜单）
-  const mixSiderMenuList = computed(() => {
-    if (theme.value.layout !== 'mix') return [];
-    return menuList.value.map(item => ({
-      ...item,
-      children: undefined, // 移除子菜单，使其表现为普通点击项
-    }));
   });
 
   // 初始化时应用主题
@@ -227,6 +226,14 @@ export const useMenuStore = defineStore('menu', () => {
   // 设置路由转换的菜单
   function setMenuFromRoutes(routes: any[]) {
     menuList.value = transformRouteToMenu(routes);
+    // 菜单加载完成后，用已保存的 selectedKey 重新推导 mixActiveRootKey
+    // 解决：路由守卫设置菜单前 setSelectedKey 已被调用，导致 mix 模式侧边为空的问题
+    if (theme.value.layout === 'mix' && selectedKey.value) {
+      const root = findMenuRoot(menuList.value, selectedKey.value);
+      if (root) {
+        mixActiveRootKey.value = root.key;
+      }
+    }
   }
 
   // 设置选中的菜单
@@ -284,6 +291,11 @@ export const useMenuStore = defineStore('menu', () => {
     siderCollapsed.value = !siderCollapsed.value;
   }
 
+  // 直接设置混合模式激活的根节点 key（顶部菜单点击时立即更新侧边）
+  function setMixActiveRoot(key: string) {
+    mixActiveRootKey.value = key;
+  }
+
   // 切换主题
   function toggleDarkMode() {
     theme.value.darkMode = !theme.value.darkMode;
@@ -293,6 +305,14 @@ export const useMenuStore = defineStore('menu', () => {
   // 更新主题配置
   function setTheme(config: Partial<ThemeConfig>) {
     theme.value = { ...theme.value, ...config };
+
+    // 切换为混合布局时，立即从当前路由推导 mixActiveRootKey
+    if (config.layout === 'mix' && selectedKey.value) {
+      const root = findMenuRoot(menuList.value, selectedKey.value);
+      if (root) {
+        mixActiveRootKey.value = root.key;
+      }
+    }
 
     // 处理暗色模式
     if (config.darkMode !== undefined) {
@@ -413,6 +433,7 @@ export const useMenuStore = defineStore('menu', () => {
     removeTab,
     setSiderCollapsed,
     toggleSider,
+    setMixActiveRoot,
     toggleDarkMode,
     setTheme,
     updateColorVariables,

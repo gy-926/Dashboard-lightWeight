@@ -18,6 +18,10 @@
 
   function handleMenuSelect(item: MenuItem) {
     menuStore.addTab(item);
+    // mix 模式：点击顶部根节点时立即更新侧边子菜单，无需等待路由完成
+    if (isMixLayout.value) {
+      menuStore.setMixActiveRoot(item.key);
+    }
   }
 
   const userDropdownVisible = ref(false);
@@ -228,9 +232,6 @@
       >
         <i class="fas fa-bars" />
       </button>
-      <span class="text-sm text-gray-500 dark:text-gray-400 hidden md:block">
-        {{ new Date().toLocaleDateString('zh-CN') }}
-      </span>
     </div>
 
     <!-- 混合布局下的二级菜单 -->

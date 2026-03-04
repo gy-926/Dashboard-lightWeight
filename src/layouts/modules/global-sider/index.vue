@@ -10,14 +10,8 @@
   // 是否混合布局
   const isMixLayout = computed(() => menuStore.theme.layout === 'mix');
 
-  // 混合布局下的激活路径
-  const activePath = computed(() => {
-    if (isMixLayout.value && menuStore.mixActiveRootKey) {
-      const root = menuStore.menuList.find(item => item.key === menuStore.mixActiveRootKey);
-      return root?.path;
-    }
-    return undefined;
-  });
+  // 激活路径：始终使用当前路由，让 GlobalMenuItem 自动高亮
+  const activePath = computed(() => undefined);
 
   // 折叠状态
   const collapsed = computed(() => menuStore.siderCollapsed);
@@ -72,12 +66,12 @@
   }
 
   // 最终菜单列表（经过 UMD 可见性过滤）
-  // 注意：必须先对完整菜单（含 children）做 UMD 过滤，
-  // 再为 mix 模式剥除 children，否则 UMD folder 节点因无 children 而被误删。
   const menuList = computed(() => {
     const filtered = filterUmdItems(menuStore.menuList);
     if (isMixLayout.value) {
-      return filtered.map(item => ({ ...item, children: undefined }));
+      // 混合模式：侧边显示激活根节点的子菜单（子级菜单）
+      const activeRoot = filtered.find(item => item.key === menuStore.mixActiveRootKey);
+      return activeRoot?.children || [];
     }
     return filtered;
   });

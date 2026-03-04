@@ -144,6 +144,10 @@
 
   // 判断菜单项是否激活
   function isActive(item: MenuItem): boolean {
+    // mix 模式下顶部显示根节点（children 已被剥除），用 startsWith 匹配子路由
+    if (props.layoutMode === 'mix') {
+      return selectedKey.value.startsWith(item.path);
+    }
     if (!hasChildren(item)) {
       return selectedKey.value === item.path;
     }
@@ -212,7 +216,7 @@
           <button
             class="h-full flex items-center gap-1.5 px-3 text-sm font-medium transition-all duration-200 border-b-2 -mb-px"
             :class="[
-              selectedKey === item.path
+              isActive(item)
                 ? 'text-primary border-primary dark:text-primary-dark dark:border-primary-dark'
                 : 'text-gray-600 dark:text-gray-400 border-transparent hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-gray-600',
             ]"
