@@ -39,10 +39,6 @@ function loadThemeFromStorage(): Partial<ThemeConfig> {
     if (saved) {
       return JSON.parse(saved);
     }
-    // 检查系统偏好
-    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      return { darkMode: true };
-    }
   } catch (e) {
     console.warn('Failed to load theme from storage:', e);
   }

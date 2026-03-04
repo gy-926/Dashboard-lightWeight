@@ -57,9 +57,9 @@
 
   const showTabs = computed(() => props.showTabs && menuStore.theme.showTabs);
 
-  // 判断是否需要全宽布局（如 Dashboard 页面）
+  // 判断是否需要全宽布局（带内边距的页面）
   const isFullWidthLayout = computed(() => {
-    return route.name === 'dashboard';
+    return ['dashboard', 'umd-menu-config'].includes(String(route.name));
   });
 
   // 缓存包装组件定义，避免重复创建导致组件重置
@@ -114,7 +114,7 @@
       <div
         :class="[
           'min-h-full relative z-0',
-          isFullWidthLayout ? 'w-full px-4 md:px-6' : 'mx-auto',
+          isFullWidthLayout ? 'w-full px-4 md:px-6 py-6' : 'mx-auto',
         ]"
       >
         <template v-if="shouldKeepAlive">

@@ -25,8 +25,17 @@ export const autoRoutes: RouteRecordRaw[] = [
         name: 'dashboard',
         component: () => import('../../views/dashboard/index.vue'),
         meta: {
-          title: 'umd文件配置页面',
+          title: 'UMD文件配置页面',
           icon: 'fa-chart-line',
+        },
+      },
+      {
+        path: 'umd-menu-config',
+        name: 'umd-menu-config',
+        component: () => import('../../views/umd-menu-config/index.vue'),
+        meta: {
+          title: 'UMD组件菜单配置',
+          icon: 'fa-sliders-h',
         },
       },
       {

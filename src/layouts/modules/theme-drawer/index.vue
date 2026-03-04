@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, watch } from 'vue'
 import { useMenuStore } from '../global-menu/store'
-import { remoteLibraries } from '@/utils/remoteComponentLoader'
-import { useUmdMenuConfigStore } from '@/store/modules/umd-menu-config'
 
 const props = withDefaults(defineProps<{
   modelValue: boolean
@@ -15,17 +13,6 @@ const emit = defineEmits<{
 }>()
 
 const menuStore = useMenuStore()
-const umdConfig = useUmdMenuConfigStore()
-
-// 已成功加载且有组件的 UMD 库
-const umdLibraries = computed(() =>
-  remoteLibraries.value.filter(
-    lib => lib.status === 'success' && (lib.componentKeys?.length ?? 0) > 0
-  )
-)
-
-// 展开状态：每个库默认收起
-const expandedLibs = ref<Record<string, boolean>>({})
 
 // 布局模式选项
 const layoutOptions = [
@@ -269,93 +256,6 @@ function toggleCustomColor() {
             </div>
           </div>
 
-          <!-- 组件菜单配置 -->
-          <div v-if="umdLibraries.length > 0">
-            <div class="flex items-center justify-between mb-3">
-              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
-                组件菜单配置
-              </label>
-              <button
-                class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                @click="umdConfig.resetAll()"
-              >
-                重置全部
-              </button>
-            </div>
-
-            <div class="space-y-2">
-              <div
-                v-for="lib in umdLibraries"
-                :key="lib.name"
-                class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
-              >
-                <!-- 库标题行：库开关 + 展开/收起 -->
-                <div class="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-700/50">
-                  <!-- 库级开关 -->
-                  <div
-                    class="relative w-9 h-5 rounded-full transition-colors cursor-pointer flex-shrink-0"
-                    :class="umdConfig.isLibVisible(lib.name) ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'"
-                    @click.stop="umdConfig.toggleLib(lib.name)"
-                  >
-                    <div
-                      class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform"
-                      :class="umdConfig.isLibVisible(lib.name) ? 'translate-x-4' : 'translate-x-0'"
-                    />
-                  </div>
-
-                  <!-- 库名 + 展开按钮 -->
-                  <button
-                    class="flex-1 flex items-center gap-1.5 text-left min-w-0"
-                    @click="expandedLibs[lib.name] = !expandedLibs[lib.name]"
-                  >
-                    <i class="fas fa-cube text-xs text-gray-400 flex-shrink-0" />
-                    <span
-                      class="text-sm font-medium truncate"
-                      :class="umdConfig.isLibVisible(lib.name) ? 'text-gray-700 dark:text-gray-200' : 'text-gray-400 dark:text-gray-500'"
-                    >{{ lib.name }}</span>
-                    <span class="text-xs text-gray-400 flex-shrink-0">({{ lib.componentKeys?.length }})</span>
-                    <i
-                      class="fas text-xs text-gray-400 ml-auto flex-shrink-0 transition-transform duration-200"
-                      :class="expandedLibs[lib.name] ? 'fa-chevron-up' : 'fa-chevron-down'"
-                    />
-                  </button>
-                </div>
-
-                <!-- 组件列表（展开时显示） -->
-                <Transition
-                  enter-active-class="transition-all duration-200 ease-out"
-                  enter-from-class="opacity-0 -translate-y-1"
-                  enter-to-class="opacity-100 translate-y-0"
-                  leave-active-class="transition-all duration-150 ease-in"
-                  leave-from-class="opacity-100 translate-y-0"
-                  leave-to-class="opacity-0 -translate-y-1"
-                >
-                  <div
-                    v-if="expandedLibs[lib.name]"
-                    class="px-3 py-2 space-y-1.5"
-                  >
-                    <label
-                      v-for="compName in lib.componentKeys"
-                      :key="compName"
-                      class="flex items-center gap-2 cursor-pointer group"
-                      :class="{ 'opacity-50 cursor-not-allowed': !umdConfig.isLibVisible(lib.name) }"
-                    >
-                      <input
-                        type="checkbox"
-                        class="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary focus:ring-offset-0 cursor-pointer"
-                        :checked="umdConfig.isComponentVisible(lib.name, compName)"
-                        :disabled="!umdConfig.isLibVisible(lib.name)"
-                        @change="umdConfig.toggleComponent(lib.name, compName)"
-                      />
-                      <span
-                        class="text-xs text-gray-600 dark:text-gray-400 group-hover:text-gray-800 dark:group-hover:text-gray-200 transition-colors truncate"
-                      >{{ compName }}</span>
-                    </label>
-                  </div>
-                </Transition>
-              </div>
-            </div>
-          </div>
         </div>
 
         <!-- 底部 -->
