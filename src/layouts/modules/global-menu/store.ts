@@ -108,15 +108,15 @@ export const useMenuStore = defineStore('menu', () => {
   const selectedKey = ref<string>('');
   // 标签页列表
   const tabsList = ref<MenuItem[]>(loadTabsFromStorage());
-  // 主题配置
+  // 主题配置（优先读取本地缓存）
   const theme = ref<ThemeConfig>({
-    layout: 'side', // 强制使用顶部菜单布局
+    layout: savedTheme.layout || 'side',
     primaryColor: savedTheme.primaryColor || '#3b82f6',
     darkMode: savedTheme.darkMode !== undefined ? savedTheme.darkMode : false,
     siderWidth: 220,
-    showTabs: true,
-    showBreadcrumb: true,
-    showFooter: false,
+    showTabs: savedTheme.showTabs !== undefined ? savedTheme.showTabs : true,
+    showBreadcrumb: savedTheme.showBreadcrumb !== undefined ? savedTheme.showBreadcrumb : true,
+    showFooter: savedTheme.showFooter !== undefined ? savedTheme.showFooter : false,
   });
   // 菜单配置
   const menuConfig = ref<MenuConfig>({
