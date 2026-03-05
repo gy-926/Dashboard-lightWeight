@@ -49,7 +49,7 @@
     // 如果还没获取到宽度，显示所有菜单
     if (currentWidth <= 0) return visibleMenus.value;
 
-    const itemMinWidth = 130; // 每个菜单项最小估算宽度
+    const itemMinWidth = props.layoutMode === 'mix' ? 125 : 145; // 每个菜单项最小估算宽度
     const moreButtonWidth = 40; // 更多按钮宽度
 
     // 混合模式逻辑：激进全显示
@@ -232,7 +232,7 @@
               v-if="item.icon"
               :class="['fas', item.icon, 'text-base']"
             />
-            <span class="truncate max-w-[80px]">{{ item.title }}</span>
+            <span class="truncate max-w-[110px]">{{ item.title }}</span>
           </button>
         </li>
 
@@ -255,7 +255,7 @@
               v-if="item.icon"
               :class="['fas', item.icon, 'text-base']"
             />
-            <span class="truncate max-w-[80px]">{{ item.title }}</span>
+            <span class="truncate max-w-[100px]">{{ item.title }}</span>
             <i
               class="fas fa-chevron-down text-xs transition-transform duration-200 flex-shrink-0"
               :class="{ 'rotate-180': openKeys.includes(item.key) }"
