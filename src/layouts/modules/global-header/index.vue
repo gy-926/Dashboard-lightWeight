@@ -17,11 +17,14 @@
   const menuList = ref(menuStore.menuList);
 
   function handleMenuSelect(item: MenuItem) {
-    menuStore.addTab(item);
-    // mix 模式：点击顶部根节点时立即更新侧边子菜单，无需等待路由完成
+    // mix 模式：点击顶部根节点时立即更新侧边子菜单
     if (isMixLayout.value) {
       menuStore.setMixActiveRoot(item.key);
+      // 根节点在原始菜单树中有子项，说明它只是容器而非页面，不加入标签页
+      const original = menuStore.menuList.find(m => m.key === item.key);
+      if (original?.children?.length) return;
     }
+    menuStore.addTab(item);
   }
 
   const userDropdownVisible = ref(false);

@@ -55,11 +55,6 @@ async function handleSelect(item: MenuItem) {
   await openPath(item.path)
 }
 
-// 检查当前路由是否在某个父菜单下
-function isChildOfMenu(menuPath: string): boolean {
-  return selectedKey.value.startsWith(menuPath) && selectedKey.value !== menuPath
-}
-
 // 判断是否是 hover 的一级菜单
 function isHovered(key: string): boolean {
   return hoveredKey.value === key && props.collapsed
@@ -194,10 +189,8 @@ function resetDropdownPosition() {
           <template v-if="!collapsed">
             <span class="flex-1 truncate">{{ item.title }}</span>
             <i
-              class="fas text-xs transition-transform duration-200"
-              :class="[
-                isOpen(item.key) || isChildOfMenu(item.path) ? 'fa-chevron-up rotate-180' : 'fa-chevron-down'
-              ]"
+              class="fas fa-chevron-down text-xs transition-transform duration-200"
+              :class="{ 'rotate-180': isOpen(item.key) }"
             />
           </template>
           <template v-else>
@@ -317,7 +310,7 @@ function resetDropdownPosition() {
           leave-from-class="opacity-100 translate-y-0"
           leave-to-class="opacity-0 -translate-y-2"
         >
-          <div v-if="!collapsed && (isOpen(item.key) || isChildOfMenu(item.path))" class="ml-4 mt-1 space-y-1">
+          <div v-if="!collapsed && isOpen(item.key)" class="ml-4 mt-1 space-y-1">
             <GlobalMenuItem
               :menu="item.children || []"
               :collapsed="collapsed"

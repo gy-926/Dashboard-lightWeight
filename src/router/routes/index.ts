@@ -14,7 +14,7 @@ if (!(window as any).uiGlobalConfig) {
 const uiConfig = (window as any).uiGlobalConfig;
 
 const defaultGlobalConfig: GlobalConfig = {
-  InternalCode: uiConfig.InternalCode || 'vueDashboard',
+  InternalCode: uiConfig.InternalCode || 'umdDashboard',
   UserCode: uiConfig.UserCode || 'admin',
   UserName: uiConfig.UserName || '管理员',
   UseWindowOrigin: uiConfig.UseWindowOrigin !== undefined ? uiConfig.UseWindowOrigin : true,

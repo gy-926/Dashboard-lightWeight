@@ -127,6 +127,12 @@
   // 处理菜单选择
   async function handleSelect(item: MenuItem) {
     emit('select', item);
+    // 混合模式下，顶部仅展示根节点（children 已被剥除）
+    // 若在原始菜单树中有子项，说明是容器节点，不导航、不加标签
+    if (props.layoutMode === 'mix') {
+      const original = menuStore.menuList.find(m => m.key === item.key);
+      if (original?.children?.length) return;
+    }
     if (!hasChildren(item)) {
       await openPath(item.path);
     }
