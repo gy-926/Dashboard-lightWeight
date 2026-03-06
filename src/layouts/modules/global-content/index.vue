@@ -113,7 +113,7 @@
     <div class="flex-1 overflow-y-auto p-0 relative">
       <div
         :class="[
-          'min-h-full relative z-0',
+          'min-h-full relative',
           isFullWidthLayout ? 'w-full px-4 md:px-6 py-6' : 'mx-auto',
         ]"
       >
