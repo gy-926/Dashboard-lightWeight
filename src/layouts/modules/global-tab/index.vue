@@ -117,11 +117,94 @@
   onUnmounted(() => {
     document.removeEventListener('mouseup', handleMouseUp);
     document.removeEventListener('mouseleave', handleMouseLeave);
+    document.removeEventListener('click', closeMenu);
+  });
+
+  // 右键菜单相关
+  const contextMenuVisible = ref(false);
+  const contextMenuLeft = ref(0);
+  const contextMenuTop = ref(0);
+  const targetTabPath = ref('');
+
+  function handleContextMenu(e: MouseEvent, tab: any) {
+    e.preventDefault();
+    contextMenuVisible.value = true;
+    contextMenuLeft.value = e.clientX;
+    contextMenuTop.value = e.clientY;
+    targetTabPath.value = tab.path;
+  }
+
+  function closeMenu() {
+    contextMenuVisible.value = false;
+  }
+
+  // 关闭当前
+  async function handleCloseCurrent() {
+    if (targetTabPath.value) {
+      await closeTab(targetTabPath.value, new Event('click'));
+    }
+    closeMenu();
+  }
+
+  // 关闭其他
+  async function handleCloseOther() {
+    if (targetTabPath.value) {
+      await menuStore.removeOtherTabs(targetTabPath.value);
+      if (activeTab.value !== targetTabPath.value) {
+        openPath(targetTabPath.value);
+      }
+    }
+    closeMenu();
+  }
+
+  // 关闭左侧
+  async function handleCloseLeft() {
+    if (targetTabPath.value) {
+      const targetIndex = tabsList.value.findIndex(t => t.path === targetTabPath.value);
+      const activeIndex = tabsList.value.findIndex(t => t.path === activeTab.value);
+      
+      await menuStore.removeLeftTabs(targetTabPath.value);
+      
+      // 如果激活的标签在左侧（被删除了），跳转到目标标签
+      if (activeIndex < targetIndex) {
+        openPath(targetTabPath.value);
+      }
+    }
+    closeMenu();
+  }
+
+  // 关闭右侧
+  async function handleCloseRight() {
+    if (targetTabPath.value) {
+      const targetIndex = tabsList.value.findIndex(t => t.path === targetTabPath.value);
+      const activeIndex = tabsList.value.findIndex(t => t.path === activeTab.value);
+
+      await menuStore.removeRightTabs(targetTabPath.value);
+
+      // 如果激活的标签在右侧（被删除了），跳转到目标标签
+      if (activeIndex > targetIndex) {
+        openPath(targetTabPath.value);
+      }
+    }
+    closeMenu();
+  }
+
+  // 关闭所有
+  async function handleCloseAll() {
+    await menuStore.removeAllTabs();
+    router.push('/blank');
+    closeMenu();
+  }
+
+  onMounted(() => {
+    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('mouseleave', handleMouseLeave);
+    document.addEventListener('click', closeMenu);
   });
 </script>
 
 <template>
-  <div class="h-9 bg-white dark:bg-gray-800 flex items-center px-2 overflow-hidden">
+  <div class="h-9 bg-white dark:bg-gray-800 flex items-center px-2 overflow-hidden relative">
     <!-- 标签容器 - 支持横向拖拽滚动 -->
     <div
       ref="containerRef"
@@ -144,6 +227,7 @@
               : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:border-gray-200 dark:hover:border-gray-600',
           ]"
           @click="openPath(tab.path)"
+          @contextmenu="handleContextMenu($event, tab)"
         >
           <i
             v-if="tab.icon"
@@ -181,6 +265,53 @@
         </div>
       </template>
     </div>
+
+    <!-- 右键菜单 -->
+    <Teleport to="body">
+      <div
+        v-if="contextMenuVisible"
+        class="fixed z-[9999] bg-white dark:bg-gray-800 shadow-lg rounded-md border border-gray-200 dark:border-gray-700 py-1 min-w-[140px]"
+        :style="{ left: `${contextMenuLeft}px`, top: `${contextMenuTop}px` }"
+        @click.stop
+      >
+        <div
+          class="px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-2"
+          @click="handleCloseCurrent"
+        >
+          <i class="fas fa-times w-4"></i>
+          <span>关闭</span>
+        </div>
+        <div
+          class="px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-2"
+          @click="handleCloseOther"
+        >
+          <i class="fas fa-arrows-alt-h w-4"></i>
+          <span>关闭其它</span>
+        </div>
+        <div
+          class="px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-2"
+          @click="handleCloseLeft"
+        >
+          <i class="fas fa-arrow-left w-4"></i>
+          <span>关闭左侧</span>
+        </div>
+        <div
+          class="px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-2"
+          @click="handleCloseRight"
+        >
+          <i class="fas fa-arrow-right w-4"></i>
+          <span>关闭右侧</span>
+        </div>
+        <div class="h-[1px] bg-gray-200 dark:bg-gray-700 my-1"></div>
+        <div
+          class="px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-2"
+          @click="handleCloseAll"
+        >
+          <i class="fas fa-minus w-4"></i>
+          <span>关闭所有</span>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 

@@ -281,6 +281,44 @@ export const useMenuStore = defineStore('menu', () => {
     }
   }
 
+  // 关闭其他标签页
+  async function removeOtherTabs(path: string) {
+    const tabsToRemove = tabsList.value.filter(t => t.path !== path);
+    for (const tab of tabsToRemove) {
+      await removeTab(tab.path);
+    }
+  }
+
+  // 关闭左侧标签页
+  async function removeLeftTabs(path: string) {
+    const index = tabsList.value.findIndex(t => t.path === path);
+    if (index > 0) {
+      const tabsToRemove = tabsList.value.slice(0, index);
+      for (const tab of tabsToRemove) {
+        await removeTab(tab.path);
+      }
+    }
+  }
+
+  // 关闭右侧标签页
+  async function removeRightTabs(path: string) {
+    const index = tabsList.value.findIndex(t => t.path === path);
+    if (index > -1 && index < tabsList.value.length - 1) {
+      const tabsToRemove = tabsList.value.slice(index + 1);
+      for (const tab of tabsToRemove) {
+        await removeTab(tab.path);
+      }
+    }
+  }
+
+  // 关闭所有标签页
+  async function removeAllTabs() {
+    const tabsToRemove = [...tabsList.value];
+    for (const tab of tabsToRemove) {
+      await removeTab(tab.path);
+    }
+  }
+
   // 设置侧边栏折叠
   function setSiderCollapsed(collapsed: boolean) {
     siderCollapsed.value = collapsed;
@@ -431,6 +469,10 @@ export const useMenuStore = defineStore('menu', () => {
     setSelectedKey,
     addTab,
     removeTab,
+    removeOtherTabs,
+    removeLeftTabs,
+    removeRightTabs,
+    removeAllTabs,
     setSiderCollapsed,
     toggleSider,
     setMixActiveRoot,
