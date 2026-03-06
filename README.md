@@ -1,52 +1,51 @@
-# Kivii Vue3 模板
+# Kivii Admin Dashboard
 
-一个基于 Vue 3 + TypeScript + Vite + Tailwind CSS 的现代化前端开发模板，集成了自动路由、FontAwesome 图标库等开箱即用的功能。
+一个基于 Vue 3 + TypeScript + Vite + Tailwind CSS 的现代化中后台管理系统模板。支持动态路由、UMD 远程组件加载、多主题布局切换以及标签页管理等企业级功能。
 
-## ✨ 特性
+## ✨ 核心特性
 
-- 🚀 **Vue 3** - 使用最新的 Vue 3 Composition API
-- 📦 **TypeScript** - 完整的 TypeScript 支持
-- ⚡ **Vite** - 极速的开发构建工具
-- 🎨 **Tailwind CSS** - 实用优先的 CSS 框架
-- 🛣️ **自动路由** - 基于文件系统的自动路由生成
-- 🎯 **FontAwesome** - 丰富的图标库
-- 🔧 **开发工具** - 集成 Vue DevTools
-- 📱 **响应式设计** - 移动端优先的响应式布局
+- 🚀 **技术栈** - Vue 3.5 + TypeScript 5.8 + Vite 7.0 + Pinia
+- 🎨 **UI 框架** - Tailwind CSS 3.4 + FontAwesome 6.7
+- 🛣️ **动态路由** - 基于后端接口的动态菜单生成与权限控制
+- 🧩 **远程组件** - 支持 UMD 格式的远程组件动态加载与渲染 (Teleport 方案)
+- 📱 **多布局主题** - 内置三种布局模式（侧边栏、顶部菜单、混合模式）与暗色模式支持
+- 📑 **标签页管理** - 支持多标签页操作、右键菜单（关闭当前/其它/左侧/右侧/所有）及持久化存储
+- 🔌 **桥接集成** - 集成 `@kivii.com/bridge` 实现与宿主环境的通信
+- 🔒 **权限控制** - 基于 Token 的登录认证与路由守卫
 
-## 🛠️ 技术栈
+## 🛠️ 技术栈详情
 
 - **前端框架**: Vue 3.5.17
+- **状态管理**: Pinia 2.3.0 (集成持久化)
 - **构建工具**: Vite 7.0.0
 - **类型系统**: TypeScript 5.8.0
 - **样式框架**: Tailwind CSS 3.4.1
 - **路由管理**: Vue Router 4.5.1
-- **图标库**: FontAwesome 6.7.2
+- **远程加载**: vue3-sfc-loader
 - **包管理器**: pnpm
 
 ## 📁 项目结构
 
 ```
-kivii-vue3-template/
-├── public/                 # 静态资源
-│   └── favicon.ico
-├── src/
-│   ├── components/         # 组件目录
-│   ├── composables/        # 组合式函数
-│   ├── router/            # 路由配置
-│   │   └── auto/          # 自动生成的路由
-│   ├── styles/            # 样式文件
-│   │   └── tailwind.css   # Tailwind CSS
-│   ├── types/             # TypeScript 类型定义
-│   ├── utils/             # 工具函数
-│   ├── views/             # 页面组件
-│   │   ├── home.vue       # 首页
-│   │   └── 404.vue        # 404 页面
-│   ├── App.vue            # 根组件
-│   └── main.ts            # 应用入口
-├── package.json           # 项目配置
-├── vite.config.ts         # Vite 配置
-├── tailwind.config.js     # Tailwind 配置
-└── tsconfig.json          # TypeScript 配置
+src/
+├── bridge/                 # Kivii Bridge 桥接层
+├── composables/            # 组合式函数 (Hooks)
+├── layouts/                # 布局组件
+│   ├── base-layout/        # 基础布局框架
+│   └── modules/            # 布局模块 (Header, Sider, Tab, Menu)
+├── router/                 # 路由配置
+│   ├── guards.ts           # 路由守卫 (权限控制)
+│   └── routes/             # 动态路由生成逻辑
+├── store/                  # Pinia 状态管理
+│   ├── modules/
+│   │   ├── global-menu/    # 菜单与主题状态
+│   │   └── teleport-manager.ts # 远程组件渲染管理器
+├── styles/                 # 全局样式
+├── utils/                  # 工具函数
+└── views/                  # 页面视图
+    ├── _builtin/           # 内置视图 (IframePage, UMD加载器)
+    ├── login/              # 登录页
+    └── ...                 # 业务页面
 ```
 
 ## 🚀 快速开始
@@ -82,22 +81,36 @@ pnpm build
 pnpm preview
 ```
 
-### 类型检查
+## 📖 功能指南
 
-```bash
-# 运行 TypeScript 类型检查
-pnpm type-check
-```
+### 1. 动态路由与菜单
 
-## 📖 使用指南
+系统会在登录后请求后端接口获取菜单数据，并自动生成路由配置。
 
-### 路由系统
+- 支持 `Page` (页面)、`Folder` (目录)、`Link` (外链) 等多种类型。
+- 菜单数据会自动缓存，提升加载速度。
 
-项目使用 `@wemt/vue3-auto-router` 实现基于文件系统的自动路由：
+### 2. 远程组件加载 (UMD)
 
-- 在 `src/views/` 目录下创建 `.vue` 文件即可自动生成路由
-- 文件名对应路由路径（如 `about.vue` 对应 `/about`）
-- 支持嵌套路由和动态路由
+系统支持加载远程的 Vue 组件或 UMD 模块，无需重新构建主应用即可扩展功能。
+
+- **原理**: 使用 `vue3-sfc-loader` 动态编译 `.vue` 文件，或通过 `<script>` 标签加载 UMD 库。
+- **渲染**: 使用 `Teleport` 技术将远程组件渲染到指定 DOM 节点，实现高性能的微前端体验。
+
+### 3. 布局与主题
+
+- **布局切换**: 点击右上角设置图标，可在「侧边栏布局」、「顶部菜单布局」、「混合布局」之间切换。
+- **暗色模式**: 支持一键切换深色/浅色主题，并自动持久化用户偏好。
+- **标签页**: 顶部标签页记录用户访问历史，支持拖拽滚动和右键菜单管理。
+
+### 4. 全局配置 (GlobalConfig)
+
+系统支持通过 `window.uiGlobalConfig` 进行运行时配置，包括：
+
+- `Origin`: 后端 API 地址
+- `UserCode`: 当前用户编码
+- `IsAuthenticated`: 认证状态
+- `DisplayName`: 系统名称
 
 ### 样式开发
 
