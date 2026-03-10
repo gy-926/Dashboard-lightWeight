@@ -72,8 +72,13 @@ function handleMouseEnter(key: string) {
     closeTimer = null
   }
   hoveredKey.value = key
-  if (props.collapsed && hasChildren(menuStore.menuList.find(item => item.key === key)!)) {
-    menuStore.openKey(key)
+  // Bug fix: 混合模式下侧边栏展示的是子菜单，key 不在 menuStore.menuList 顶层，
+  // 改为在 props.menu 中查找，避免 find 返回 undefined 导致 TypeError
+  if (props.collapsed) {
+    const item = props.menu.find(i => i.key === key)
+    if (item && hasChildren(item)) {
+      menuStore.openKey(key)
+    }
   }
 }
 
@@ -116,10 +121,15 @@ function updateDropdownPosition(event: MouseEvent) {
   const target = event.currentTarget as HTMLElement
   const rect = target.getBoundingClientRect()
   const aside = target.closest('aside')
-  const left = aside ? aside.getBoundingClientRect().right : rect.right
+  // Bug fix: aside 的 width 在折叠动画（300ms transition）期间会处于中间值，
+  // 直接读 getBoundingClientRect().right 会得到未完成过渡的旧宽度。
+  // 改为：读 aside.left（折叠不影响 left）+ 已知目标宽度（collapsed:72 / expanded:220），
+  // 确保 tooltip/dropdown 始终对齐最终收起/展开位置。
+  const asideLeft = aside ? aside.getBoundingClientRect().left : 0
+  const siderWidth = props.collapsed ? 72 : 220
   dropdownPosition.value = {
     top: `${rect.top}px`,
-    left: `${left}px`
+    left: `${asideLeft + siderWidth}px`
   }
 }
 
