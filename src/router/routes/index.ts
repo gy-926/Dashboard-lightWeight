@@ -14,7 +14,7 @@ if (!(window as any).uiGlobalConfig) {
 const uiConfig = (window as any).uiGlobalConfig;
 
 const defaultGlobalConfig: GlobalConfig = {
-  InternalCode: uiConfig.InternalCode || 'vueDashboard',
+  InternalCode: uiConfig.InternalCode || 'umdDashboard',
   UserCode: uiConfig.UserCode || 'admin',
   UserName: uiConfig.UserName || '管理员',
   UseWindowOrigin: uiConfig.UseWindowOrigin !== undefined ? uiConfig.UseWindowOrigin : true,
@@ -47,7 +47,7 @@ export function getGlobalConfig(): GlobalConfig {
 // ==================== 缓存策略 ====================
 
 const CACHE_KEY = 'DYNAMIC_ROUTES_CACHE';
-const CACHE_VERSION = 'v4'; // 缓存版本，用于强制刷新
+const CACHE_VERSION = 'v5'; // 缓存版本，用于强制刷新
 const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24小时
 
 // 缓存路由（直接存储 ElegantRoute 格式，避免反向序列化在生产构建中因代码压缩而丢失组件映射）
@@ -314,7 +314,7 @@ function generateChildRoutes(
       const route: ElegantRoute = {
         name: routeName,
         path: routePath,
-        component: 'layout.base',
+        component: 'layout.passthrough',
         meta: {
           title: getMenuDisplayName(item),
           icon: item.Icon,
@@ -391,6 +391,7 @@ export function generateRoutes(menuTree: MenuItem[]): ElegantRoute[] {
 // 定义组件路径映射
 const layouts: Record<string, () => Promise<any>> = {
   'layout.base': () => import('../../layouts/base-layout/index.vue'),
+  'layout.passthrough': () => import('../../layouts/passthrough-layout/index.vue'),
 };
 
 const views: Record<string, () => Promise<any>> = {

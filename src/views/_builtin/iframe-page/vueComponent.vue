@@ -123,7 +123,22 @@
           },
         };
 
-        const component = await loadModule(componentUrl.value, options);
+        const result = await loadModule(componentUrl.value, options);
+        // vue3-sfc-loader 可能返回 ES 模块格式（有 __esModule/default），也可能直接返回组件对象
+        const component = (result as any)?.__esModule ? (result as any).default : result;
+
+        // 验证组件是否有效（必须包含 setup、render、template 或 __vccOpts）
+        if (
+          !component ||
+          (typeof component === 'object' &&
+            !component.setup &&
+            !component.render &&
+            !component.template &&
+            !component.__vccOpts)
+        ) {
+          throw new Error(`组件加载失败，返回了无效的组件定义: ${componentUrl.value}`);
+        }
+
         setVueComponent(key, { component }); // 缓存组件定义
         return component;
       } catch (e: any) {
