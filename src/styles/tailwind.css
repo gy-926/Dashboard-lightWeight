@@ -14,6 +14,10 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
+  /* 强制亮色模式渲染原生控件（滚动条、checkbox、radio 等），
+     避免系统暗色主题影响正式环境 light 模式下的原生元素外观 */
+  color-scheme: light;
+
   /* 主题色 - 默认蓝色 */
   --color-primary: #3b82f6;
   --color-primary-hover: #2563eb;
