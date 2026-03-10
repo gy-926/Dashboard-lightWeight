@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { ref, computed } from 'vue';
+  import { ref, computed, onMounted, onUnmounted } from 'vue';
   import { useRouter } from 'vue-router';
   import { useMenuStore } from '../global-menu/store';
   import GlobalTopMenu from '../global-menu/GlobalTopMenu.vue';
@@ -12,6 +12,29 @@
 
   const router = useRouter();
   const menuStore = useMenuStore();
+
+  // 全屏功能
+  const isFullscreen = ref(false);
+
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  }
+
+  function onFullscreenChange() {
+    isFullscreen.value = !!document.fullscreenElement;
+  }
+
+  onMounted(() => {
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+  });
+
+  onUnmounted(() => {
+    document.removeEventListener('fullscreenchange', onFullscreenChange);
+  });
 
   // 菜单列表
   const menuList = ref(menuStore.menuList);
@@ -72,6 +95,7 @@
 
   // 混合布局下的顶部菜单
   const mixHeaderMenuList = computed(() => menuStore.mixHeaderMenuList);
+
 </script>
 
 <template>
@@ -105,9 +129,10 @@
       <!-- 全屏按钮 -->
       <button
         class="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
-        title="全屏"
+        :title="isFullscreen ? '退出全屏' : '全屏'"
+        @click="toggleFullscreen"
       >
-        <i class="fas fa-expand" />
+        <i :class="['fas', isFullscreen ? 'fa-compress' : 'fa-expand']" />
       </button>
 
       <!-- 主题切换按钮 -->
@@ -254,9 +279,10 @@
       <!-- 全屏按钮 -->
       <button
         class="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
-        title="全屏"
+        :title="isFullscreen ? '退出全屏' : '全屏'"
+        @click="toggleFullscreen"
       >
-        <i class="fas fa-expand" />
+        <i :class="['fas', isFullscreen ? 'fa-compress' : 'fa-expand']" />
       </button>
 
       <!-- 主题切换按钮 -->
