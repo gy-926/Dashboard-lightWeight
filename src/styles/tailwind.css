@@ -115,3 +115,26 @@
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* 正式环境修复：
+   1. UMD 组件可能在容器上设了 color-scheme:dark，导致原生 checkbox/radio
+      在 light 模式下也以暗色渲染（Background 显示 #FFFFFF 但视觉是黑色）。
+   2. UMD 组件可能对 input 设了 appearance:none + 深色背景。
+   编译后的 dashboard CSS 排在 UMD <style> 之后（优先级更高），
+   用 color-scheme:light 强制原生控件以亮色渲染，
+   用 appearance:auto 恢复原生渲染（覆盖 appearance:none），
+   accent-color 使 checked 状态跟随主题色。 */
+input[type="checkbox"],
+input[type="radio"] {
+  -webkit-appearance: auto;
+  -moz-appearance: auto;
+  appearance: auto;
+  color-scheme: light;
+  accent-color: var(--color-primary);
+}
+
+/* dark 模式下恢复暗色原生渲染 */
+.dark input[type="checkbox"],
+.dark input[type="radio"] {
+  color-scheme: dark;
+}

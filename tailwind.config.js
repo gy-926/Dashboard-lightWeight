@@ -19,6 +19,8 @@ export default {
     { pattern: /^shadow-(amber|blue|emerald|orange|purple|red|rose|teal)-\d+$/ },
     // rounded-2xl（UMD 组件常用，与 dashboard 的 rounded-xl 不同）
     'rounded-2xl',
+    // UMD 组件对 input 使用 accent-* 类（如 accent-blue-600），远程加载无法被扫描，需加入 safelist
+    { pattern: /^accent-.+$/ },
   ],
   theme: {
     extend: {},
