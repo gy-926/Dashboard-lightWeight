@@ -77,11 +77,6 @@
     }
   }
 
-  const notificationVisible = ref(false);
-  function toggleNotification() {
-    notificationVisible.value = !notificationVisible.value;
-  }
-
   // 是否为顶部菜单布局
   const isTopLayout = computed(() => menuStore.theme.layout === 'top');
 
@@ -95,7 +90,6 @@
 
   // 混合布局下的顶部菜单
   const mixHeaderMenuList = computed(() => menuStore.mixHeaderMenuList);
-
 </script>
 
 <template>
@@ -143,40 +137,6 @@
       >
         <i :class="['fas', menuStore.theme.darkMode ? 'fa-sun' : 'fa-moon']" />
       </button>
-
-      <!-- 通知按钮 -->
-      <div class="relative">
-        <button
-          class="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
-          @click="toggleNotification()"
-        >
-          <i class="fas fa-bell" />
-          <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-        </button>
-
-        <Transition
-          enter-active-class="transition duration-200 ease-out"
-          enter-from-class="opacity-0 scale-95"
-          enter-to-class="opacity-100 scale-100"
-          leave-active-class="transition duration-150 ease-in"
-          leave-from-class="opacity-100 scale-100"
-          leave-to-class="opacity-0 scale-95"
-        >
-          <div
-            v-if="notificationVisible"
-            class="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-50"
-          >
-            <div class="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-              <h3 class="font-medium text-gray-800 dark:text-white">通知</h3>
-            </div>
-            <div class="max-h-64 overflow-y-auto">
-              <div class="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer">
-                <p class="text-sm text-gray-600 dark:text-gray-400">暂无新通知</p>
-              </div>
-            </div>
-          </div>
-        </Transition>
-      </div>
 
       <!-- 用户下拉菜单 -->
       <div
@@ -293,40 +253,6 @@
       >
         <i :class="['fas', menuStore.theme.darkMode ? 'fa-sun' : 'fa-moon']" />
       </button>
-
-      <!-- 通知按钮 -->
-      <div class="relative">
-        <button
-          class="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
-          @click="toggleNotification()"
-        >
-          <i class="fas fa-bell" />
-          <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-        </button>
-
-        <Transition
-          enter-active-class="transition duration-200 ease-out"
-          enter-from-class="opacity-0 scale-95"
-          enter-to-class="opacity-100 scale-100"
-          leave-active-class="transition duration-150 ease-in"
-          leave-from-class="opacity-100 scale-100"
-          leave-to-class="opacity-0 scale-95"
-        >
-          <div
-            v-if="notificationVisible"
-            class="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-50"
-          >
-            <div class="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-              <h3 class="font-medium text-gray-800 dark:text-white">通知</h3>
-            </div>
-            <div class="max-h-64 overflow-y-auto">
-              <div class="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer">
-                <p class="text-sm text-gray-600 dark:text-gray-400">暂无新通知</p>
-              </div>
-            </div>
-          </div>
-        </Transition>
-      </div>
 
       <!-- 用户下拉菜单 -->
       <div
