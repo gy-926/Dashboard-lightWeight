@@ -120,12 +120,12 @@
         <template v-if="shouldKeepAlive">
           <router-view v-slot="{ Component, route }">
             <transition
-              enter-active-class="transition duration-200 ease-out"
-              enter-from-class="opacity-0 translate-y-2"
-              enter-to-class="opacity-100 translate-y-0"
-              leave-active-class="transition duration-150 ease-in"
-              leave-from-class="opacity-100 translate-y-0"
-              leave-to-class="opacity-0 -translate-y-2"
+              enter-active-class="tab-enter-active"
+              enter-from-class="tab-enter-from"
+              enter-to-class="tab-enter-to"
+              leave-active-class="tab-leave-active"
+              leave-from-class="tab-leave-from"
+              leave-to-class="tab-leave-to"
             >
               <keep-alive :include="cachedViews">
                 <component
@@ -140,12 +140,12 @@
         <template v-else>
           <router-view v-slot="{ Component, route }">
             <transition
-              enter-active-class="transition duration-200 ease-out"
-              enter-from-class="opacity-0 translate-y-2"
-              enter-to-class="opacity-100 translate-y-0"
-              leave-active-class="transition duration-150 ease-in"
-              leave-from-class="opacity-100 translate-y-0"
-              leave-to-class="opacity-0 -translate-y-2"
+              enter-active-class="tab-enter-active"
+              enter-from-class="tab-enter-from"
+              enter-to-class="tab-enter-to"
+              leave-active-class="tab-leave-active"
+              leave-from-class="tab-leave-from"
+              leave-to-class="tab-leave-to"
             >
               <component
                 :is="Component"
@@ -172,3 +172,42 @@
     </div>
   </main>
 </template>
+
+<style scoped>
+/*
+ * 内容区标签切换过渡：纯 opacity 淡入淡出
+ * - 不使用 translateY，避免 layout 触发和视觉抖动
+ * - will-change: opacity 让浏览器提前将元素提升为合成层（GPU），切换更顺滑
+ * - enter/leave 同时进行（交叉淡化），无等待延迟
+ */
+.tab-enter-active {
+  transition: opacity 160ms ease-out;
+  will-change: opacity;
+}
+
+.tab-leave-active {
+  transition: opacity 100ms ease-in;
+  will-change: opacity;
+  /* 脱离文档流，让新页面同时淡入，不占位 */
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+}
+
+.tab-enter-from {
+  opacity: 0;
+}
+
+.tab-enter-to {
+  opacity: 1;
+}
+
+.tab-leave-from {
+  opacity: 1;
+}
+
+.tab-leave-to {
+  opacity: 0;
+}
+</style>

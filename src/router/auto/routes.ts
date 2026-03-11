@@ -39,6 +39,15 @@ export const autoRoutes: RouteRecordRaw[] = [
         },
       },
       {
+        path: 'server-info',
+        name: 'server-info',
+        component: () => import('../../views/server-info/index.vue'),
+        meta: {
+          title: '服务器信息',
+          icon: 'fa-server',
+        },
+      },
+      {
         path: 'blank',
         name: 'blank',
         component: () => import('../../views/blank.vue'),

@@ -17,10 +17,11 @@
 
   // 容器引用
   const containerRef = ref<HTMLElement | null>(null);
-
-  // 保持当前行为（允许关闭所有标签，空时跳 `/blank`）
-  function canClose(path: string): boolean {
-    return true;
+  // 各标签 DOM 引用 map（path -> el），用于精确滚动，避免 querySelector 强制重排
+  const tabElMap = new Map<string, HTMLElement>();
+  function setTabRef(el: HTMLElement | null, path: string) {
+    if (el) tabElMap.set(path, el);
+    else tabElMap.delete(path);
   }
 
   // 关闭标签
@@ -54,7 +55,7 @@
   function scrollToActiveTab() {
     if (!containerRef.value) return;
 
-    const activeTabEl = containerRef.value.querySelector('.bg-primary-bg');
+    const activeTabEl = tabElMap.get(activeTab.value);
     if (!activeTabEl) return;
 
     const container = containerRef.value;
@@ -108,11 +109,6 @@
       handleMouseUp();
     }
   }
-
-  onMounted(() => {
-    document.addEventListener('mouseup', handleMouseUp);
-    document.addEventListener('mouseleave', handleMouseLeave);
-  });
 
   onUnmounted(() => {
     document.removeEventListener('mouseup', handleMouseUp);
@@ -215,55 +211,53 @@
       @mouseleave="handleMouseLeave"
       style="margin-top: 10px"
     >
-      <template
+      <div
         v-for="tab in tabsList"
         :key="tab.path"
+        :ref="(el) => setTabRef(el as HTMLElement | null, tab.path)"
+        v-memo="[tab.path, tab.title, tab.icon, activeTab === tab.path]"
+        class="tab-item group flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm cursor-pointer whitespace-nowrap border border-transparent flex-shrink-0"
+        :class="[
+          activeTab === tab.path
+            ? 'bg-primary-bg text-primary border-primary/30 dark:bg-gray-700'
+            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:border-gray-200 dark:hover:border-gray-600',
+        ]"
+        @click="openPath(tab.path)"
+        @contextmenu="handleContextMenu($event, tab)"
       >
-        <div
-          class="group flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm cursor-pointer transition-all duration-200 whitespace-nowrap border border-transparent flex-shrink-0"
+        <i
+          v-if="tab.icon"
+          :class="[
+            'fas',
+            tab.icon,
+            'text-xs flex-shrink-0',
+            activeTab === tab.path ? 'text-primary' : 'text-gray-400 dark:text-gray-500',
+          ]"
+        />
+        <span
+          class="truncate max-w-[100px]"
+          :class="activeTab === tab.path ? 'text-primary' : ''"
+          >{{ tab.title }}</span
+        >
+        <button
+          class="w-4 h-4 rounded-full flex items-center justify-center tab-close-btn"
           :class="[
             activeTab === tab.path
-              ? 'bg-primary-bg text-primary border-primary/30 dark:bg-gray-700'
-              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:border-gray-200 dark:hover:border-gray-600',
+              ? 'opacity-100 hover:bg-gray-200 dark:hover:bg-gray-600'
+              : 'opacity-0 group-hover:opacity-100 hover:bg-gray-200 dark:hover:bg-gray-600',
           ]"
-          @click="openPath(tab.path)"
-          @contextmenu="handleContextMenu($event, tab)"
+          @click="closeTab(tab.path, $event)"
         >
           <i
-            v-if="tab.icon"
-            :class="[
-              'fas',
-              tab.icon,
-              'text-xs flex-shrink-0',
-              activeTab === tab.path ? 'text-primary' : 'text-gray-400 dark:text-gray-500',
-            ]"
-          />
-          <span
-            class="truncate max-w-[100px]"
-            :class="activeTab === tab.path ? 'text-primary' : ''"
-            >{{ tab.title }}</span
-          >
-          <button
-            v-if="canClose(tab.path) || activeTab === tab.path"
-            class="w-4 h-4 rounded-full flex items-center justify-center transition-all"
-            :class="[
+            class="fas fa-times text-[12px] not-italic"
+            :class="
               activeTab === tab.path
-                ? 'opacity-100 hover:bg-gray-200 dark:hover:bg-gray-600'
-                : 'opacity-0 group-hover:opacity-100 hover:bg-gray-200 dark:hover:bg-gray-600',
-            ]"
-            @click="closeTab(tab.path, $event)"
-          >
-            <i
-              class="fas fa-times text-[12px] not-italic"
-              :class="
-                activeTab === tab.path
-                  ? 'text-primary dark:text-blue-400'
-                  : 'text-gray-400 dark:text-gray-500'
-              "
-            />
-          </button>
-        </div>
-      </template>
+                ? 'text-primary dark:text-blue-400'
+                : 'text-gray-400 dark:text-gray-500'
+            "
+          />
+        </button>
+      </div>
     </div>
 
     <!-- 右键菜单 -->
@@ -344,5 +338,24 @@
 
   .cursor-grab:active {
     cursor: grabbing;
+  }
+
+  /* 标签项：只过渡颜色相关属性，避免 transition-all 的全属性扫描开销 */
+  .tab-item {
+    transition:
+      background-color 150ms ease,
+      color 150ms ease,
+      border-color 150ms ease;
+  }
+
+  /* hover/激活时提示 GPU 提前准备合成层，离开后自动回收 */
+  .tab-item:hover,
+  .tab-item.active {
+    will-change: background-color, color;
+  }
+
+  /* 关闭按钮只过渡 opacity */
+  .tab-close-btn {
+    transition: opacity 120ms ease, background-color 120ms ease;
   }
 </style>

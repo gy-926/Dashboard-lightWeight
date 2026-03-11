@@ -193,17 +193,16 @@ export const useMenuStore = defineStore('menu', () => {
     { deep: true }
   );
 
-  // 监听标签页变化并保存到本地存储
+  // 监听标签页变化并保存到本地存储（浅监听，仅数组引用/长度变化时触发，避免深遍历开销）
   watch(
-    tabsList,
-    val => {
+    () => tabsList.value.map(t => t.path).join(','),
+    () => {
       try {
-        localStorage.setItem('kivii-tabs', JSON.stringify(val));
+        localStorage.setItem('kivii-tabs', JSON.stringify(tabsList.value));
       } catch (e) {
         console.warn('Failed to save tabs:', e);
       }
-    },
-    { deep: true }
+    }
   );
 
   // 计算面包屑
@@ -270,7 +269,7 @@ export const useMenuStore = defineStore('menu', () => {
     if (index > -1) {
       const tab = tabsList.value[index];
       tabsList.value.splice(index, 1);
-      // 清理对应的组件缓存
+      // 清理对应的组件缓存（teleportManager 已在 main 中注册，直接取实例，无需重复 import）
       try {
         const { useTeleportManager } = await import('@/store/modules/teleport-manager');
         const teleportManager = useTeleportManager();
@@ -281,22 +280,38 @@ export const useMenuStore = defineStore('menu', () => {
     }
   }
 
+  // 批量移除（先从列表中移除，再并行清理缓存）
+  async function removeTabs(paths: string[]) {
+    if (paths.length === 0) return;
+    const tabsToRemove = paths.map(p => {
+      const idx = tabsList.value.findIndex(t => t.path === p);
+      return idx > -1 ? tabsList.value.splice(idx, 1)[0] : null;
+    }).filter(Boolean) as typeof tabsList.value;
+
+    // 并行清理缓存
+    try {
+      const { useTeleportManager } = await import('@/store/modules/teleport-manager');
+      const teleportManager = useTeleportManager();
+      await Promise.all(tabsToRemove.map(tab =>
+        Promise.resolve(teleportManager.removeComponentCacheByPath(tab.path, tab.kvid))
+      ));
+    } catch (e) {
+      // 忽略导入错误
+    }
+  }
+
   // 关闭其他标签页
   async function removeOtherTabs(path: string) {
-    const tabsToRemove = tabsList.value.filter(t => t.path !== path);
-    for (const tab of tabsToRemove) {
-      await removeTab(tab.path);
-    }
+    const paths = tabsList.value.filter(t => t.path !== path).map(t => t.path);
+    await removeTabs(paths);
   }
 
   // 关闭左侧标签页
   async function removeLeftTabs(path: string) {
     const index = tabsList.value.findIndex(t => t.path === path);
     if (index > 0) {
-      const tabsToRemove = tabsList.value.slice(0, index);
-      for (const tab of tabsToRemove) {
-        await removeTab(tab.path);
-      }
+      const paths = tabsList.value.slice(0, index).map(t => t.path);
+      await removeTabs(paths);
     }
   }
 
@@ -304,19 +319,15 @@ export const useMenuStore = defineStore('menu', () => {
   async function removeRightTabs(path: string) {
     const index = tabsList.value.findIndex(t => t.path === path);
     if (index > -1 && index < tabsList.value.length - 1) {
-      const tabsToRemove = tabsList.value.slice(index + 1);
-      for (const tab of tabsToRemove) {
-        await removeTab(tab.path);
-      }
+      const paths = tabsList.value.slice(index + 1).map(t => t.path);
+      await removeTabs(paths);
     }
   }
 
   // 关闭所有标签页
   async function removeAllTabs() {
-    const tabsToRemove = [...tabsList.value];
-    for (const tab of tabsToRemove) {
-      await removeTab(tab.path);
-    }
+    const paths = tabsList.value.map(t => t.path);
+    await removeTabs(paths);
   }
 
   // 设置侧边栏折叠
