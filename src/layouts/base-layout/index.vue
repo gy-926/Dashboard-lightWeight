@@ -43,7 +43,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="h-screen flex flex-row bg-gray-50 dark:bg-gray-900 overflow-hidden">
+  <div class="h-screen flex flex-row bg-gray-50 dark:bg-gray-900 overflow-hidden transition-colors duration-300">
     <!-- 侧边栏 -->
     <GlobalSider v-if="showSider" class="flex-shrink-0" />
 

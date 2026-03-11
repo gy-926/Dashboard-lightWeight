@@ -200,7 +200,7 @@
 </script>
 
 <template>
-  <div class="h-9 bg-white dark:bg-gray-800 flex items-center px-2 overflow-hidden relative">
+  <div class="h-9 bg-white dark:bg-gray-800 flex items-center px-2 overflow-hidden relative transition-colors duration-300">
     <!-- 标签容器 - 支持横向拖拽滚动 -->
     <div
       ref="containerRef"
@@ -252,7 +252,7 @@
             class="fas fa-times text-[12px] not-italic"
             :class="
               activeTab === tab.path
-                ? 'text-primary dark:text-blue-400'
+                ? 'text-primary'
                 : 'text-gray-400 dark:text-gray-500'
             "
           />
