@@ -65,6 +65,19 @@
   // 缓存包装组件定义，避免重复创建导致组件重置
   const wrapperMap = new Map<string, any>();
 
+  // 监听 cachedViews 变化，清理不再使用的 wrapper 缓存
+  watch(
+    cachedViews,
+    views => {
+      const viewSet = new Set(views);
+      for (const key of wrapperMap.keys()) {
+        if (!viewSet.has(key)) {
+          wrapperMap.delete(key);
+        }
+      }
+    }
+  );
+
   // 包装组件函数：动态设置组件名称以匹配路由名称，从而使 keep-alive 生效
   const wrapComponent = (component: any, routeName: string) => {
     if (!component) return component;

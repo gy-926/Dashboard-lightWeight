@@ -108,6 +108,8 @@
           return fullUrl;
         };
 
+        const styles: HTMLStyleElement[] = [];
+
         const options = {
           moduleCache: { vue: Vue },
           async getFile(url: string) {
@@ -120,6 +122,7 @@
             const style = Object.assign(document.createElement('style'), { textContent });
             const ref = document.head.getElementsByTagName('style')[0] || null;
             document.head.insertBefore(style, ref);
+            styles.push(style);
           },
         };
 
@@ -139,7 +142,7 @@
           throw new Error(`组件加载失败，返回了无效的组件定义: ${componentUrl.value}`);
         }
 
-        setVueComponent(key, { component }); // 缓存组件定义
+        setVueComponent(key, { component, styles }); // 缓存组件定义和样式
         return component;
       } catch (e: any) {
         componentError.value = `加载组件失败: ${e.message}`;

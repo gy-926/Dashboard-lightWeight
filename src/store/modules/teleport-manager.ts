@@ -139,6 +139,16 @@ export const useTeleportManager = defineStore('teleport-manager', () => {
     });
 
     keysToDelete.forEach(key => {
+      // Clean up styles if any (防止内存泄漏)
+      const cached = vueComponentCache.value.get(key);
+      if (cached && Array.isArray(cached.styles)) {
+        cached.styles.forEach((style: any) => {
+          if (style && style.parentNode) {
+            style.parentNode.removeChild(style);
+          }
+        });
+      }
+
       vueComponentCache.value.delete(key);
 
       // Also clear loading state if exists
