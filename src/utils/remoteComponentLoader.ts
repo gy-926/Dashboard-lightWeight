@@ -48,7 +48,6 @@ const loadConfig = async (configPath: string): Promise<Config> => {
     const response = await kivii.request.get<any>(configPath);
     const data = response.data;
 
-
     // 检查是否为旧配置格式 (包含 components 数组)
     if (data.components && Array.isArray(data.components)) {
       return data;
@@ -107,8 +106,9 @@ const loadConfig = async (configPath: string): Promise<Config> => {
 // 避免 UMD 的主题变量/dark 选择器因级联位置靠后而覆盖项目样式
 const relocateUmdStyles = (existingStyleSet: Set<Element>): void => {
   // 找到 IIFE 新增的 <style> 元素
-  const newStyles = Array.from(document.head.querySelectorAll('style'))
-    .filter(s => !existingStyleSet.has(s));
+  const newStyles = Array.from(document.head.querySelectorAll('style')).filter(
+    s => !existingStyleSet.has(s)
+  );
 
   if (newStyles.length === 0) return;
 
@@ -167,8 +167,7 @@ const loadUMDComponent = (url: string, globalName?: string): Promise<any> => {
 // 动态加载ESM组件的函数
 const loadESMComponent = async (url: string): Promise<any> => {
   try {
-    /* @vite-ignore */ // 忽略 Vite 对动态导入的警告
-    const module = await import(url);
+    const module = await import(/* @vite-ignore */ url);
     return module.default || module;
   } catch (error) {
     throw new Error(`ESM组件加载失败: ${url} - ${error}`);
@@ -260,10 +259,21 @@ const registerComponent = async (app: App, componentConfig: ComponentConfig) => 
 
         // 遍历属性并注册
         // 若库无 install 但有 CSS 注入函数，先执行（兼容多种打包器的命名约定）
-        const cssInjectors = ['injectStyles', '__inject_styles', 'injectCss', '_injectStyles', 'applyStyles', 'install_styles'];
+        const cssInjectors = [
+          'injectStyles',
+          '__inject_styles',
+          'injectCss',
+          '_injectStyles',
+          'applyStyles',
+          'install_styles',
+        ];
         for (const cssKey of cssInjectors) {
           if (typeof remoteComponent[cssKey] === 'function') {
-            try { remoteComponent[cssKey](); } catch (_) { /* ignore */ }
+            try {
+              remoteComponent[cssKey]();
+            } catch (_) {
+              /* ignore */
+            }
           }
         }
         // 递归检查每个导出组件对象内部的样式注入函数
@@ -272,7 +282,11 @@ const registerComponent = async (app: App, componentConfig: ComponentConfig) => 
           if (item && typeof item === 'object' && !Array.isArray(item)) {
             for (const cssKey of cssInjectors) {
               if (typeof item[cssKey] === 'function') {
-                try { item[cssKey](); } catch (_) { /* ignore */ }
+                try {
+                  item[cssKey]();
+                } catch (_) {
+                  /* ignore */
+                }
               }
             }
           }
@@ -341,7 +355,16 @@ export function generateUmdRoutes(): ElegantRoute[] {
     if (lib.status !== 'success') continue;
 
     // 过滤掉非组件的导出 key（插件元数据、模块规范字段等）
-    const EXCLUDED_KEYS = new Set(['default', 'install', 'manifest', 'componentsMap', 'componentsDetailed', 'version', '__esModule', 'VueDemoComponent']);
+    const EXCLUDED_KEYS = new Set([
+      'default',
+      'install',
+      'manifest',
+      'componentsMap',
+      'componentsDetailed',
+      'version',
+      '__esModule',
+      'VueDemoComponent',
+    ]);
     const keys = (lib.componentKeys ?? []).filter(k => !EXCLUDED_KEYS.has(k));
     if (keys.length === 0) continue;
 
