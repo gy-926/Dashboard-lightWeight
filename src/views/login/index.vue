@@ -66,6 +66,12 @@
       await reloadDynamicRoutes();
 
       const redirect = (route.query.redirect as string) || '/';
+
+      // 使用 router 跳转
+      // 只有在生产环境中才设置刷新标志位，本地开发环境不刷新以提高开发体验
+      if (import.meta.env.PROD) {
+        sessionStorage.setItem('need_reload_after_login', 'true');
+      }
       router.replace(redirect);
     } catch (e: any) {
       errorMsg.value = e.message || '登录失败，请稍后重试';
@@ -76,7 +82,10 @@
 </script>
 
 <template>
-  <div class="login-page" :class="isDark ? 'is-dark' : 'is-light'">
+  <div
+    class="login-page"
+    :class="isDark ? 'is-dark' : 'is-light'"
+  >
     <!-- 动态背景光晕 -->
     <div class="bg-orb bg-orb-1"></div>
     <div class="bg-orb bg-orb-2"></div>
@@ -87,37 +96,153 @@
 
     <!-- 主体卡片 -->
     <div class="glass-card">
-
       <!-- 主题切换按钮 -->
-      <button class="theme-toggle" @click="toggleTheme" :title="isDark ? '切换浅色模式' : '切换深色模式'">
+      <button
+        class="theme-toggle"
+        @click="toggleTheme"
+        :title="isDark ? '切换浅色模式' : '切换深色模式'"
+      >
         <!-- 月亮 (dark 模式下显示，点击切换到 light) -->
-        <svg v-if="isDark" width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <svg
+          v-if="isDark"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+        >
+          <path
+            d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
         </svg>
         <!-- 太阳 (light 模式下显示，点击切换到 dark) -->
-        <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2" />
-          <line x1="12" y1="1" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          <line x1="12" y1="21" x2="12" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          <line x1="1" y1="12" x2="3" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          <line x1="21" y1="12" x2="23" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+        <svg
+          v-else
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            r="5"
+            stroke="currentColor"
+            stroke-width="2"
+          />
+          <line
+            x1="12"
+            y1="1"
+            x2="12"
+            y2="3"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          />
+          <line
+            x1="12"
+            y1="21"
+            x2="12"
+            y2="23"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          />
+          <line
+            x1="4.22"
+            y1="4.22"
+            x2="5.64"
+            y2="5.64"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          />
+          <line
+            x1="18.36"
+            y1="18.36"
+            x2="19.78"
+            y2="19.78"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          />
+          <line
+            x1="1"
+            y1="12"
+            x2="3"
+            y2="12"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          />
+          <line
+            x1="21"
+            y1="12"
+            x2="23"
+            y2="12"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          />
+          <line
+            x1="4.22"
+            y1="19.78"
+            x2="5.64"
+            y2="18.36"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          />
+          <line
+            x1="18.36"
+            y1="5.64"
+            x2="19.78"
+            y2="4.22"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          />
         </svg>
       </button>
 
       <!-- 品牌区域 -->
       <div class="brand-area">
         <div class="brand-logo">
-          <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect width="40" height="40" rx="10" fill="url(#logoGrad)" />
-            <path d="M12 20L18 26L28 14" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+          <svg
+            viewBox="0 0 40 40"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <rect
+              width="40"
+              height="40"
+              rx="10"
+              fill="url(#logoGrad)"
+            />
+            <path
+              d="M12 20L18 26L28 14"
+              stroke="white"
+              stroke-width="3"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
             <defs>
-              <linearGradient id="logoGrad" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+              <linearGradient
+                id="logoGrad"
+                x1="0"
+                y1="0"
+                x2="40"
+                y2="40"
+                gradientUnits="userSpaceOnUse"
+              >
                 <stop stop-color="#3B82F6" />
-                <stop offset="1" stop-color="#1D4ED8" />
+                <stop
+                  offset="1"
+                  stop-color="#1D4ED8"
+                />
               </linearGradient>
             </defs>
           </svg>
@@ -134,15 +259,38 @@
       </div>
 
       <!-- 登录表单 -->
-      <form @submit.prevent="handleLogin" class="login-form" autocomplete="off">
+      <form
+        @submit.prevent="handleLogin"
+        class="login-form"
+        autocomplete="off"
+      >
         <!-- 用户名 -->
         <div class="field-group">
           <div class="field-label">用户名</div>
-          <div class="field-input-wrap" :class="{ disabled: isLoading }">
+          <div
+            class="field-input-wrap"
+            :class="{ disabled: isLoading }"
+          >
             <span class="field-icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" />
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+              >
+                <path
+                  d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
+                <circle
+                  cx="12"
+                  cy="7"
+                  r="4"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
               </svg>
             </span>
             <input
@@ -159,11 +307,32 @@
         <!-- 密码 -->
         <div class="field-group">
           <div class="field-label">密码</div>
-          <div class="field-input-wrap" :class="{ disabled: isLoading }">
+          <div
+            class="field-input-wrap"
+            :class="{ disabled: isLoading }"
+          >
             <span class="field-icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" stroke-width="2" />
-                <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+              >
+                <rect
+                  x="3"
+                  y="11"
+                  width="18"
+                  height="11"
+                  rx="2"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <path
+                  d="M7 11V7a5 5 0 0 1 10 0v4"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
               </svg>
             </span>
             <input
@@ -179,27 +348,91 @@
 
         <!-- 错误提示 -->
         <transition name="shake">
-          <div v-if="errorMsg" class="error-alert">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
-              <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-              <line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          <div
+            v-if="errorMsg"
+            class="error-alert"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+            >
+              <circle
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="2"
+              />
+              <line
+                x1="12"
+                y1="8"
+                x2="12"
+                y2="12"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+              <line
+                x1="12"
+                y1="16"
+                x2="12.01"
+                y2="16"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
             </svg>
             {{ errorMsg }}
           </div>
         </transition>
 
         <!-- 登录按钮 -->
-        <button type="submit" class="login-btn" :disabled="isLoading">
-          <span v-if="!isLoading" class="btn-content">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-              <polyline points="10 17 15 12 10 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-              <line x1="15" y1="12" x2="3" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+        <button
+          type="submit"
+          class="login-btn"
+          :disabled="isLoading"
+        >
+          <span
+            v-if="!isLoading"
+            class="btn-content"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+            >
+              <path
+                d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+              <polyline
+                points="10 17 15 12 10 7"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <line
+                x1="15"
+                y1="12"
+                x2="3"
+                y2="12"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
             </svg>
             登 录
           </span>
-          <span v-else class="btn-spinner">
+          <span
+            v-else
+            class="btn-spinner"
+          >
             <span class="spinner-ring"></span>
             验证中...
           </span>
@@ -209,8 +442,18 @@
       <!-- 底部信息 -->
       <div class="card-footer">
         <div class="security-badge">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+          <svg
+            width="11"
+            height="11"
+            viewBox="0 0 24 24"
+            fill="none"
+          >
+            <path
+              d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linejoin="round"
+            />
           </svg>
           SSL 加密传输
         </div>
@@ -236,12 +479,10 @@
     --grid-color: rgba(59, 130, 246, 0.06);
     --card-bg: rgba(255, 255, 255, 0.05);
     --card-border: rgba(255, 255, 255, 0.12);
-    --card-shadow: 0 0 0 1px rgba(59, 130, 246, 0.25),
-                   0 0 28px 6px rgba(59, 130, 246, 0.18),
-                   0 0 64px 16px rgba(99, 102, 241, 0.12),
-                   0 16px 40px rgba(0, 0, 0, 0.45),
-                   0 0 0 1px rgba(255, 255, 255, 0.04) inset,
-                   0 1px 0 rgba(255, 255, 255, 0.1) inset;
+    --card-shadow:
+      0 0 0 1px rgba(59, 130, 246, 0.25), 0 0 28px 6px rgba(59, 130, 246, 0.18),
+      0 0 64px 16px rgba(99, 102, 241, 0.12), 0 16px 40px rgba(0, 0, 0, 0.45),
+      0 0 0 1px rgba(255, 255, 255, 0.04) inset, 0 1px 0 rgba(255, 255, 255, 0.1) inset;
     --brand-name: #ffffff;
     --tagline: rgba(148, 163, 184, 0.9);
     --divider-line: rgba(255, 255, 255, 0.1);
@@ -275,12 +516,10 @@
     --grid-color: rgba(59, 130, 246, 0.05);
     --card-bg: rgba(255, 255, 255, 0.78);
     --card-border: rgba(255, 255, 255, 0.95);
-    --card-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2),
-                   0 0 24px 6px rgba(59, 130, 246, 0.14),
-                   0 0 56px 14px rgba(99, 102, 241, 0.08),
-                   0 12px 32px rgba(37, 99, 235, 0.1),
-                   0 2px 8px rgba(0, 0, 0, 0.05),
-                   0 1px 0 rgba(255, 255, 255, 0.9) inset;
+    --card-shadow:
+      0 0 0 1px rgba(59, 130, 246, 0.2), 0 0 24px 6px rgba(59, 130, 246, 0.14),
+      0 0 56px 14px rgba(99, 102, 241, 0.08), 0 12px 32px rgba(37, 99, 235, 0.1),
+      0 2px 8px rgba(0, 0, 0, 0.05), 0 1px 0 rgba(255, 255, 255, 0.9) inset;
     --brand-name: #1e293b;
     --tagline: #64748b;
     --divider-line: #e2e8f0;
@@ -359,16 +598,28 @@
   }
 
   @keyframes drift1 {
-    from { transform: translate(0, 0) scale(1); }
-    to   { transform: translate(40px, 60px) scale(1.1); }
+    from {
+      transform: translate(0, 0) scale(1);
+    }
+    to {
+      transform: translate(40px, 60px) scale(1.1);
+    }
   }
   @keyframes drift2 {
-    from { transform: translate(0, 0) scale(1); }
-    to   { transform: translate(-50px, -40px) scale(1.08); }
+    from {
+      transform: translate(0, 0) scale(1);
+    }
+    to {
+      transform: translate(-50px, -40px) scale(1.08);
+    }
   }
   @keyframes drift3 {
-    from { transform: translate(-50%, -50%) scale(1); }
-    to   { transform: translate(-46%, -54%) scale(1.15); }
+    from {
+      transform: translate(-50%, -50%) scale(1);
+    }
+    to {
+      transform: translate(-46%, -54%) scale(1.15);
+    }
   }
 
   /* ── 网格纹理 ── */
@@ -401,7 +652,6 @@
       border-color 0.4s ease,
       box-shadow 0.4s ease;
   }
-
 
   /* ── 主题切换按钮 ── */
   .theme-toggle {
@@ -580,11 +830,22 @@
   }
 
   @keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    20%       { transform: translateX(-6px); }
-    40%       { transform: translateX(6px); }
-    60%       { transform: translateX(-4px); }
-    80%       { transform: translateX(4px); }
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    20% {
+      transform: translateX(-6px);
+    }
+    40% {
+      transform: translateX(6px);
+    }
+    60% {
+      transform: translateX(-4px);
+    }
+    80% {
+      transform: translateX(4px);
+    }
   }
 
   /* ── 登录按钮 ── */
@@ -606,14 +867,17 @@
     cursor: pointer;
     letter-spacing: 0.5px;
     overflow: hidden;
-    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease,
+      opacity 0.2s ease;
   }
 
   .login-btn::before {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, transparent 60%);
     pointer-events: none;
   }
 
@@ -654,7 +918,9 @@
   }
 
   @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   /* ── 卡片底部 ── */

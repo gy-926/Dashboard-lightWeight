@@ -41,6 +41,13 @@ watch(() => route.path, (path) => {
 }, { immediate: true })
 
 onMounted(() => {
+  // 检查是否需要登录后刷新
+  if (sessionStorage.getItem('need_reload_after_login') === 'true') {
+    sessionStorage.removeItem('need_reload_after_login');
+    window.location.reload();
+    return; // 刷新前阻止后续逻辑
+  }
+
   if (menuStore.theme.darkMode) {
     document.documentElement.classList.add('dark')
   }

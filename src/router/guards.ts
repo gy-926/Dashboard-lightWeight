@@ -1,6 +1,11 @@
 import type { Router } from 'vue-router';
 import { waitForRoutesReady, isDynamicRoutesReady, setTargetNavigation } from './index';
 import { getGlobalConfig } from '@/router/routes';
+import NProgress from 'nprogress';
+import 'nprogress/nprogress.css';
+
+// 配置 NProgress
+NProgress.configure({ showSpinner: false });
 
 // 路由守卫配置
 const guardsConfig = {
@@ -14,6 +19,22 @@ export function setupRouteGuards(router: Router) {
   }
 
   router.beforeEach(async (to, from, next) => {
+    // 开始进度条
+    NProgress.start();
+
+    // 根据主题配置动态修改进度条颜色
+    try {
+      const savedTheme = localStorage.getItem('kivii-theme');
+      if (savedTheme) {
+        const theme = JSON.parse(savedTheme);
+        if (theme.primaryColor) {
+          const root = document.documentElement;
+          root.style.setProperty('--nprogress-color', theme.primaryColor);
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
     // 检查是否已登录
     const config = getGlobalConfig();
     if (!config.IsAuthenticated && to.path !== '/login') {
@@ -72,6 +93,7 @@ export function setupRouteGuards(router: Router) {
 
   router.afterEach((to, from) => {
     // 路由切换完成后的处理
+    NProgress.done();
   });
 }
 
