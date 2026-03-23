@@ -9,7 +9,12 @@ const menuStore = useMenuStore()
 const layoutMode = computed(() => menuStore.theme.layout)
 
 const showSider = computed(() => {
-  return layoutMode.value === 'side' || layoutMode.value === 'mix'
+  if (layoutMode.value === 'side') return true
+  if (layoutMode.value === 'mix') {
+    // 混合模式下，只有当侧边栏有菜单项时才显示
+    return menuStore.mixSiderMenuList.length > 0
+  }
+  return false
 })
 
 const themeDrawerVisible = ref(false)

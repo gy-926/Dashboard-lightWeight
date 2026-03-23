@@ -211,7 +211,7 @@
     v-else
     class="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 relative z-[20] transition-colors duration-300"
   >
-    <!-- 左侧：侧边栏折叠按钮 -->
+    <!-- 左侧：侧边栏折叠按钮 或 Logo -->
     <div class="flex items-center gap-4 flex-shrink-0">
       <button
         v-if="showSiderToggle !== false"
@@ -220,6 +220,16 @@
       >
         <i class="fas fa-bars" />
       </button>
+      <div
+        v-else-if="isMixLayout"
+        class="flex items-center gap-2 cursor-pointer pr-4 border-r border-gray-200 dark:border-gray-700"
+        @click="router.push('/')"
+      >
+        <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+          <i class="fas fa-bolt text-white" />
+        </div>
+        <span class="text-lg font-bold text-gray-800 dark:text-white">Kivii</span>
+      </div>
     </div>
 
     <!-- 混合布局下的二级菜单 -->
