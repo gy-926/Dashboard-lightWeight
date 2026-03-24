@@ -52,9 +52,7 @@
         // 库 folder 节点：先过滤子项，再判断是否保留 folder
         if (!umdConfig.isLibVisible(libName)) continue;
 
-        const filteredChildren = item.children?.length
-          ? filterUmdItems(item.children)
-          : [];
+        const filteredChildren = item.children?.length ? filterUmdItems(item.children) : [];
 
         if (filteredChildren.length > 0) {
           result.push({ ...item, children: filteredChildren });
@@ -80,6 +78,15 @@
   function handleLogoClick() {
     // 可以添加 Logo 点击逻辑
   }
+
+  // 获取全局配置中的 Logo 和显示名称
+  const systemName = computed(() => {
+    return (window as any).uiGlobalConfig?.DisplayName || 'Kivii';
+  });
+
+  const systemIcon = computed(() => {
+    return (window as any).uiGlobalConfig?.Icon || 'fas fa-bolt';
+  });
 </script>
 
 <template>
@@ -95,20 +102,25 @@
       <template v-if="!collapsed">
         <div class="flex items-center gap-2">
           <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-            <i class="fas fa-bolt text-white" />
+            <i :class="[systemIcon, 'text-white']" />
           </div>
-          <span class="text-lg font-bold text-gray-800 dark:text-white">Kivii</span>
+          <span class="text-lg font-bold text-gray-800 dark:text-white">{{ systemName }}</span>
         </div>
       </template>
       <template v-else>
         <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-          <i class="fas fa-bolt text-white" />
+          <i :class="[systemIcon, 'text-white']" />
         </div>
       </template>
     </div>
 
     <!-- 菜单滚动区域 -->
-    <div :class="['flex-1 py-4 scrollbar-hide overflow-y-auto overflow-x-hidden', !collapsed && 'px-3']">
+    <div
+      :class="[
+        'flex-1 py-4 scrollbar-hide overflow-y-auto overflow-x-hidden',
+        !collapsed && 'px-3',
+      ]"
+    >
       <GlobalMenu
         :menu="menuList"
         :collapsed="collapsed"

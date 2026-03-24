@@ -90,6 +90,19 @@
 
   // 混合布局下的顶部菜单
   const mixHeaderMenuList = computed(() => menuStore.mixHeaderMenuList);
+
+  // 全局配置相关的展示字段
+  const systemName = computed(() => {
+    return (window as any).uiGlobalConfig?.DisplayName || 'Kivii';
+  });
+
+  const systemIcon = computed(() => {
+    return (window as any).uiGlobalConfig?.Icon || 'fas fa-bolt';
+  });
+
+  const currentUserName = computed(() => {
+    return (window as any).KiviiContext?.CurrentMember?.DisplayName || 'Admin';
+  });
 </script>
 
 <template>
@@ -104,9 +117,9 @@
     >
       <div class="flex items-center gap-2 cursor-pointer">
         <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-          <i class="fas fa-bolt text-white" />
+          <i :class="[systemIcon, 'text-white']" />
         </div>
-        <span class="text-lg font-bold text-gray-800 dark:text-white">Kivii</span>
+        <span class="text-lg font-bold text-gray-800 dark:text-white">{{ systemName }}</span>
       </div>
     </div>
 
@@ -152,7 +165,7 @@
           >
             <i class="fas fa-user text-blue-600 dark:text-blue-400" />
           </div>
-          <span class="text-sm text-gray-600 dark:text-gray-400">Admin</span>
+          <span class="text-sm text-gray-600 dark:text-gray-400">{{ currentUserName }}</span>
           <i class="fas fa-chevron-down text-xs text-gray-400 dark:text-gray-500" />
         </button>
 
@@ -226,9 +239,9 @@
         @click="router.push('/')"
       >
         <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-          <i class="fas fa-bolt text-white" />
+          <i :class="[systemIcon, 'text-white']" />
         </div>
-        <span class="text-lg font-bold text-gray-800 dark:text-white">Kivii</span>
+        <span class="text-lg font-bold text-gray-800 dark:text-white">{{ systemName }}</span>
       </div>
     </div>
 
@@ -278,7 +291,7 @@
           >
             <i class="fas fa-user text-blue-600 dark:text-blue-400" />
           </div>
-          <span class="text-sm text-gray-600 dark:text-gray-400">Admin</span>
+          <span class="text-sm text-gray-600 dark:text-gray-400">{{ currentUserName }}</span>
           <i class="fas fa-chevron-down text-xs text-gray-400 dark:text-gray-500" />
         </button>
 
