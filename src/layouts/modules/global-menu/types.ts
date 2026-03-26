@@ -60,6 +60,8 @@ export interface ThemeConfig {
   showWatermark: boolean
   /** 水印文案 */
   watermarkText: string
+  /** 关闭全部/左侧/右侧时是否保留首页标签 */
+  preserveHomeTab: boolean
 }
 
 /** 将路由转换为菜单项 */

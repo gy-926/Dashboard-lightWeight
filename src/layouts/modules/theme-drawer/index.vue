@@ -47,6 +47,7 @@ const localTheme = ref({
   showFooter: menuStore.theme.showFooter,
   showWatermark: menuStore.theme.showWatermark,
   watermarkText: menuStore.theme.watermarkText,
+  preserveHomeTab: menuStore.theme.preserveHomeTab,
 })
 
 // 同步本地配置到 store
@@ -291,6 +292,28 @@ function toggleCustomColor() {
                   水印会覆盖整个工作区，但不会影响点击操作。
                 </p>
               </div>
+            </div>
+          </div>
+
+          <!-- 标签设置 -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+              标签设置
+            </label>
+            <div class="space-y-3">
+              <label class="flex items-center justify-between cursor-pointer">
+                <span class="text-sm text-gray-600 dark:text-gray-400">关闭全部/左侧/右侧时保留首页</span>
+                <div
+                  class="relative w-11 h-6 rounded-full transition-colors cursor-pointer"
+                  :class="localTheme.preserveHomeTab ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'"
+                  @click="localTheme.preserveHomeTab = !localTheme.preserveHomeTab"
+                >
+                  <div
+                    class="absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform"
+                    :class="localTheme.preserveHomeTab ? 'translate-x-5' : 'translate-x-0'"
+                  />
+                </div>
+              </label>
             </div>
           </div>
 

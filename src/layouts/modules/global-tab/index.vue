@@ -188,7 +188,11 @@
   // 关闭所有
   async function handleCloseAll() {
     await menuStore.removeAllTabs();
-    router.push('/blank');
+    if (menuStore.tabsList.length === 0) {
+      router.push('/blank');
+    } else {
+      openPath(menuStore.tabsList[menuStore.tabsList.length - 1].path);
+    }
     closeMenu();
   }
 

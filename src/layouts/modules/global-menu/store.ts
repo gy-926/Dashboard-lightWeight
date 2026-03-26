@@ -3,6 +3,14 @@ import { ref, computed, watch } from 'vue';
 import type { MenuItem, ThemeConfig, MenuConfig } from './types';
 import { transformRouteToMenu } from './types';
 
+const HOME_TAB_PATH = '/home';
+const DEFAULT_HOME_TAB: MenuItem = {
+  key: 'home',
+  path: HOME_TAB_PATH,
+  title: '首页',
+  icon: 'fa-home',
+};
+
 // 辅助函数：颜色变亮
 function lightenColor(hex: string, percent: number): string {
   const num = parseInt(hex.replace('#', ''), 16);
@@ -96,6 +104,10 @@ function applyThemeColor(color: string) {
   root.style.setProperty('--color-primary-dark-mode-hover', darkModeHover);
 }
 
+function isHomeTab(path: string) {
+  return path === HOME_TAB_PATH;
+}
+
 export const useMenuStore = defineStore('menu', () => {
   // 加载保存的设置
   const savedTheme = loadThemeFromStorage();
@@ -119,6 +131,7 @@ export const useMenuStore = defineStore('menu', () => {
     showFooter: savedTheme.showFooter !== undefined ? savedTheme.showFooter : false,
     showWatermark: savedTheme.showWatermark !== undefined ? savedTheme.showWatermark : false,
     watermarkText: savedTheme.watermarkText || 'Kivii Dashboard',
+    preserveHomeTab: savedTheme.preserveHomeTab !== undefined ? savedTheme.preserveHomeTab : true,
   });
   // 菜单配置
   const menuConfig = ref<MenuConfig>({
@@ -188,6 +201,7 @@ export const useMenuStore = defineStore('menu', () => {
             showFooter: val.showFooter,
             showWatermark: val.showWatermark,
             watermarkText: val.watermarkText,
+            preserveHomeTab: val.preserveHomeTab,
           })
         );
       } catch (e) {
@@ -267,6 +281,40 @@ export const useMenuStore = defineStore('menu', () => {
     }
   }
 
+  function getHomeTab(): MenuItem {
+    const existing = tabsList.value.find(tab => isHomeTab(tab.path));
+    if (existing) return existing;
+
+    const findInMenu = (list: MenuItem[]): MenuItem | null => {
+      for (const item of list) {
+        if (isHomeTab(item.path)) return item;
+        if (item.children?.length) {
+          const found = findInMenu(item.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const menuHome = findInMenu(menuList.value);
+    if (menuHome) {
+      return { ...menuHome };
+    }
+
+    return { ...DEFAULT_HOME_TAB };
+  }
+
+  function ensureHomeTab() {
+    if (!theme.value.preserveHomeTab) return;
+    if (tabsList.value.some(tab => isHomeTab(tab.path))) return;
+    tabsList.value.unshift(getHomeTab());
+  }
+
+  function getProtectedPaths(paths: string[], preserveHome = false) {
+    if (!preserveHome || !theme.value.preserveHomeTab) return paths;
+    return paths.filter(path => !isHomeTab(path));
+  }
+
   // 移除标签页
   async function removeTab(path: string) {
     const index = tabsList.value.findIndex(t => t.path === path);
@@ -285,9 +333,12 @@ export const useMenuStore = defineStore('menu', () => {
   }
 
   // 批量移除（先从列表中移除，再并行清理缓存）
-  async function removeTabs(paths: string[]) {
+  async function removeTabs(paths: string[], options?: { preserveHome?: boolean }) {
     if (paths.length === 0) return;
-    const tabsToRemove = paths.map(p => {
+    const removablePaths = getProtectedPaths(paths, options?.preserveHome);
+    if (removablePaths.length === 0) return;
+
+    const tabsToRemove = removablePaths.map(p => {
       const idx = tabsList.value.findIndex(t => t.path === p);
       return idx > -1 ? tabsList.value.splice(idx, 1)[0] : null;
     }).filter(Boolean) as typeof tabsList.value;
@@ -315,7 +366,8 @@ export const useMenuStore = defineStore('menu', () => {
     const index = tabsList.value.findIndex(t => t.path === path);
     if (index > 0) {
       const paths = tabsList.value.slice(0, index).map(t => t.path);
-      await removeTabs(paths);
+      await removeTabs(paths, { preserveHome: true });
+      ensureHomeTab();
     }
   }
 
@@ -324,14 +376,16 @@ export const useMenuStore = defineStore('menu', () => {
     const index = tabsList.value.findIndex(t => t.path === path);
     if (index > -1 && index < tabsList.value.length - 1) {
       const paths = tabsList.value.slice(index + 1).map(t => t.path);
-      await removeTabs(paths);
+      await removeTabs(paths, { preserveHome: true });
+      ensureHomeTab();
     }
   }
 
   // 关闭所有标签页
   async function removeAllTabs() {
     const paths = tabsList.value.map(t => t.path);
-    await removeTabs(paths);
+    await removeTabs(paths, { preserveHome: true });
+    ensureHomeTab();
   }
 
   // 设置侧边栏折叠

@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "app-config.schema.json",
+  "title": "Kivii Dashboard App Config",
+  "description": "Dashboard 运行时配置结构定义。当前 schema 与 public/app-config.json 中实际保留的字段保持一致。",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "loginTitle": {
+      "type": "string",
+      "description": "登录页主标题。",
+      "default": "Kivii Dashboard"
+    },
+    "loginSubtitle": {
+      "type": "string",
+      "description": "登录页副标题或系统简介。",
+      "default": "企业级后台管理系统"
+    },
+    "authLoginUrl": {
+      "type": "string",
+      "description": "登录接口地址。",
+      "default": "/auth/kivii.json"
+    },
+    "authLogoutUrl": {
+      "type": "string",
+      "description": "登出接口地址。",
+      "default": "/auth/logout.json"
+    },
+    "runtimeInternalCode": {
+      "type": "string",
+      "description": "菜单根编码，动态菜单加载时使用的核心参数。",
+      "default": "umdDashboard"
+    }
+  },
+  "required": [
+    "loginTitle",
+    "loginSubtitle",
+    "authLoginUrl",
+    "authLogoutUrl",
+    "runtimeInternalCode"
+  ]
+}
