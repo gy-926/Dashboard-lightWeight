@@ -117,6 +117,8 @@ export const useMenuStore = defineStore('menu', () => {
     showTabs: savedTheme.showTabs !== undefined ? savedTheme.showTabs : true,
     showBreadcrumb: savedTheme.showBreadcrumb !== undefined ? savedTheme.showBreadcrumb : true,
     showFooter: savedTheme.showFooter !== undefined ? savedTheme.showFooter : false,
+    showWatermark: savedTheme.showWatermark !== undefined ? savedTheme.showWatermark : false,
+    watermarkText: savedTheme.watermarkText || 'Kivii Dashboard',
   });
   // 菜单配置
   const menuConfig = ref<MenuConfig>({
@@ -184,6 +186,8 @@ export const useMenuStore = defineStore('menu', () => {
             showTabs: val.showTabs,
             showBreadcrumb: val.showBreadcrumb,
             showFooter: val.showFooter,
+            showWatermark: val.showWatermark,
+            watermarkText: val.watermarkText,
           })
         );
       } catch (e) {

@@ -56,6 +56,10 @@ export interface ThemeConfig {
   showBreadcrumb: boolean
   /** 是否显示页脚 */
   showFooter: boolean
+  /** 是否显示全屏水印 */
+  showWatermark: boolean
+  /** 水印文案 */
+  watermarkText: string
 }
 
 /** 将路由转换为菜单项 */

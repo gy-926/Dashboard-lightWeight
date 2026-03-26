@@ -7,6 +7,7 @@ import GlobalContent from './global-content/index.vue'
 import GlobalFooter from './global-footer/index.vue'
 import ThemeDrawer from './theme-drawer/index.vue'
 import GlobalMenu from './global-menu/index.vue'
+import GlobalWatermark from './global-watermark/index.vue'
 
 export {
   GlobalSider,
@@ -17,4 +18,5 @@ export {
   GlobalFooter,
   ThemeDrawer,
   GlobalMenu,
+  GlobalWatermark,
 }

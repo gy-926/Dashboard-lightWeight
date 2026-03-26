@@ -71,6 +71,8 @@ onMounted(() => {
       <GlobalContent class="flex-1" />
     </div>
 
+    <GlobalWatermark />
+
     <!-- 主题抽屉 -->
     <ThemeDrawer v-model="themeDrawerVisible" />
   </div>
