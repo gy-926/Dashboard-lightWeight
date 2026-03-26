@@ -32,6 +32,12 @@ const hoveredKey = ref<string | null>(null)
 // 当前 hover 的二级菜单
 const subHoveredKey = ref<string | null>(null)
 
+const VIEWPORT_PADDING = 12
+const ROOT_DROPDOWN_WIDTH = 256
+const SUB_DROPDOWN_WIDTH = 240
+const DROPDOWN_OFFSET = 8
+const DROPDOWN_MIN_HEIGHT = 220
+
 // 延迟关闭时间（毫秒）
 const closeDelay = 200
 let closeTimer: ReturnType<typeof setTimeout> | null = null
@@ -99,6 +105,7 @@ function handleMouseLeave() {
   closeTimer = setTimeout(() => {
     hoveredKey.value = null
     subHoveredKey.value = null
+    resetDropdownPosition()
     if (props.collapsed) {
       menuStore.closeAllKeys()
     }
@@ -113,29 +120,89 @@ function cancelCloseTimer() {
   }
 }
 
-// 下拉菜单位置状态
-const dropdownPosition = ref<{ top: string; left: string } | null>(null)
+type DropdownPosition = {
+  left: string
+  maxWidth: string
+  maxHeight: string
+  top?: string
+  bottom?: string
+}
 
-// 获取下拉菜单位置（left 对齐 aside 右边线）
+// 下拉菜单位置状态
+const dropdownPosition = ref<DropdownPosition | null>(null)
+const subDropdownPosition = ref<DropdownPosition | null>(null)
+
+function getClampedLeft(left: number, width: number) {
+  return Math.max(
+    VIEWPORT_PADDING,
+    Math.min(left, window.innerWidth - width - VIEWPORT_PADDING)
+  )
+}
+
+function getVerticalPosition(rect: DOMRect, minHeight = DROPDOWN_MIN_HEIGHT) {
+  const spaceAbove = rect.top - VIEWPORT_PADDING
+  const spaceBelow = window.innerHeight - rect.bottom - VIEWPORT_PADDING
+  const alignTop = spaceBelow >= minHeight || spaceBelow >= spaceAbove
+  const availableHeight = Math.max(160, (alignTop ? spaceBelow : spaceAbove) + rect.height)
+
+  if (alignTop) {
+    return {
+      top: `${Math.max(VIEWPORT_PADDING, rect.top)}px`,
+      bottom: undefined,
+      maxHeight: `${availableHeight}px`
+    }
+  }
+
+  return {
+    top: undefined,
+    bottom: `${Math.max(VIEWPORT_PADDING, window.innerHeight - rect.bottom)}px`,
+    maxHeight: `${availableHeight}px`
+  }
+}
+
+// 获取下拉菜单位置（left 对齐 aside 右边线，并限制在可视区域内）
 function updateDropdownPosition(event: MouseEvent) {
   const target = event.currentTarget as HTMLElement
   const rect = target.getBoundingClientRect()
   const aside = target.closest('aside')
-  // Bug fix: aside 的 width 在折叠动画（300ms transition）期间会处于中间值，
-  // 直接读 getBoundingClientRect().right 会得到未完成过渡的旧宽度。
-  // 改为：读 aside.left（折叠不影响 left）+ 已知目标宽度（collapsed:72 / expanded:220），
-  // 确保 tooltip/dropdown 始终对齐最终收起/展开位置。
   const asideLeft = aside ? aside.getBoundingClientRect().left : 0
   const siderWidth = props.collapsed ? 72 : 220
+  const left = getClampedLeft(asideLeft + siderWidth + DROPDOWN_OFFSET, ROOT_DROPDOWN_WIDTH)
+  const verticalPosition = getVerticalPosition(rect, 260)
+
   dropdownPosition.value = {
-    top: `${rect.top}px`,
-    left: `${asideLeft + siderWidth}px`
+    left: `${left}px`,
+    maxWidth: `${Math.max(220, window.innerWidth - left - VIEWPORT_PADDING)}px`,
+    maxHeight: verticalPosition.maxHeight,
+    top: verticalPosition.top,
+    bottom: verticalPosition.bottom
+  }
+}
+
+function updateSubDropdownPosition(event: MouseEvent) {
+  const target = event.currentTarget as HTMLElement
+  const rect = target.getBoundingClientRect()
+
+  let left = rect.right + DROPDOWN_OFFSET
+  if (left + SUB_DROPDOWN_WIDTH > window.innerWidth - VIEWPORT_PADDING) {
+    left = rect.left - SUB_DROPDOWN_WIDTH - DROPDOWN_OFFSET
+  }
+  left = getClampedLeft(left, SUB_DROPDOWN_WIDTH)
+  const verticalPosition = getVerticalPosition(rect, 220)
+
+  subDropdownPosition.value = {
+    left: `${left}px`,
+    maxWidth: `${Math.max(200, window.innerWidth - left - VIEWPORT_PADDING)}px`,
+    maxHeight: verticalPosition.maxHeight,
+    top: verticalPosition.top,
+    bottom: verticalPosition.bottom
   }
 }
 
 // 重置下拉菜单位置
 function resetDropdownPosition() {
   dropdownPosition.value = null
+  subDropdownPosition.value = null
 }
 </script>
 
@@ -171,8 +238,8 @@ function resetDropdownPosition() {
         >
           <div
             v-if="collapsed && isHovered(item.key)"
-            class="fixed z-[999] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 whitespace-nowrap pointer-events-none"
-            :style="dropdownPosition ? { top: dropdownPosition.top, left: dropdownPosition.left } : {}"
+            class="fixed z-[999] min-w-[12rem] max-w-[20rem] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 leading-5 break-all pointer-events-none"
+            :style="dropdownPosition ? { top: dropdownPosition.top, bottom: dropdownPosition.bottom, left: dropdownPosition.left, maxWidth: dropdownPosition.maxWidth } : {}"
           >
             {{ item.title }}
           </div>
@@ -219,8 +286,8 @@ function resetDropdownPosition() {
         >
           <div
             v-if="collapsed && isHovered(item.key)"
-            class="fixed z-[999] w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 max-h-[calc(100vh-64px)] overflow-y-auto overflow-x-hidden"
-            :style="dropdownPosition ? { top: dropdownPosition.top, left: dropdownPosition.left } : {}"
+            class="fixed z-[999] min-w-[14rem] max-w-[20rem] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 pb-1 overflow-y-auto overflow-x-hidden"
+            :style="dropdownPosition ? { top: dropdownPosition.top, bottom: dropdownPosition.bottom, left: dropdownPosition.left, maxWidth: dropdownPosition.maxWidth, maxHeight: dropdownPosition.maxHeight } : {}"
             @mouseenter="cancelCloseTimer"
             @mouseleave="handleMouseLeave"
           >
@@ -234,7 +301,7 @@ function resetDropdownPosition() {
                 <!-- 无三级子菜单的二级菜单 -->
                 <button
                   v-if="!hasChildren(child)"
-                  class="flex items-center gap-2 px-3 py-2 text-sm transition-colors mx-1 rounded w-[calc(100%-0.5rem)] text-left"
+                  class="w-full flex items-start gap-2 px-3 py-2 text-sm transition-colors mx-1 rounded text-left"
                   :class="[
                     selectedKey === child.path
                       ? 'bg-primary-bg text-primary font-medium'
@@ -244,17 +311,17 @@ function resetDropdownPosition() {
                   @click="handleSelect(child)"
                 >
                   <i v-if="child.icon" :class="['fas', child.icon, 'w-4 h-4 flex-shrink-0']" />
-                  <span class="truncate">{{ child.title }}</span>
+                  <span class="flex-1 whitespace-normal break-all leading-5">{{ child.title }}</span>
                 </button>
                 <!-- 有三级子菜单的二级菜单 -->
                 <div
                   v-else
                   class="relative"
-                  @mouseenter="handleSubMouseEnter(child.key); updateDropdownPosition($event)"
+                  @mouseenter="handleSubMouseEnter(child.key); updateSubDropdownPosition($event)"
                   @mouseleave="handleMouseLeave"
                 >
                   <button
-                    class="w-[calc(100%-0.5rem)] flex items-center gap-2 px-3 py-2 text-sm transition-colors mx-1 rounded text-left"
+                    class="w-full flex items-start gap-2 px-3 py-2 text-sm transition-colors mx-1 rounded text-left"
                     :class="[
                       selectedKey.startsWith(child.path)
                         ? 'bg-primary-bg text-primary font-medium'
@@ -263,8 +330,8 @@ function resetDropdownPosition() {
                     :title="child.title"
                   >
                     <i v-if="child.icon" :class="['fas', child.icon, 'w-4 h-4 flex-shrink-0']" />
-                    <span class="flex-1 truncate">{{ child.title }}</span>
-                    <i class="fas fa-chevron-right text-xs opacity-50" />
+                    <span class="flex-1 whitespace-normal break-all leading-5">{{ child.title }}</span>
+                    <i class="fas fa-chevron-right text-xs opacity-50 mt-1 flex-shrink-0" />
                   </button>
                   <!-- 三级子菜单下拉面板 -->
                   <Transition
@@ -277,8 +344,8 @@ function resetDropdownPosition() {
                   >
                     <div
                       v-if="isSubHovered(child.key)"
-                      class="fixed z-[999] w-44 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 max-h-[calc(100vh-64px)] overflow-y-auto overflow-x-hidden"
-                      :style="dropdownPosition ? { top: dropdownPosition.top, left: dropdownPosition.left } : {}"
+                      class="fixed z-[999] min-w-[13rem] max-w-[20rem] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 pb-1 overflow-y-auto overflow-x-hidden"
+                      :style="subDropdownPosition ? { top: subDropdownPosition.top, bottom: subDropdownPosition.bottom, left: subDropdownPosition.left, maxWidth: subDropdownPosition.maxWidth, maxHeight: subDropdownPosition.maxHeight } : {}"
                       @mouseenter="cancelCloseTimer"
                       @mouseleave="handleMouseLeave"
                     >
@@ -290,7 +357,7 @@ function resetDropdownPosition() {
                         <button
                           v-for="subChild in child.children"
                           :key="subChild.key"
-                          class="flex items-center gap-2 px-3 py-2 text-sm transition-colors mx-1 rounded w-[calc(100%-0.5rem)] text-left"
+                          class="w-full flex items-start gap-2 px-3 py-2 text-sm transition-colors mx-1 rounded text-left"
                           :class="[
                             selectedKey === subChild.path
                               ? 'bg-primary-bg text-primary font-medium'
@@ -300,7 +367,7 @@ function resetDropdownPosition() {
                           @click="handleSelect(subChild)"
                         >
                           <i v-if="subChild.icon" :class="['fas', subChild.icon, 'w-3.5 h-3.5 flex-shrink-0']" />
-                          <span class="truncate">{{ subChild.title }}</span>
+                          <span class="flex-1 whitespace-normal break-all leading-5">{{ subChild.title }}</span>
                         </button>
                       </div>
                     </div>
