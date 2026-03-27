@@ -529,11 +529,7 @@ export async function generateDynamicRoutes(): Promise<{
   authRoutes: RouteRecordRaw[];
 }> {
   // 等待后台 UMD 组件加载完成，确保能正确生成 UMD 路由
-  // 添加超时机制，防止在未登录页 (Login) 因为没有加载 UMD 而一直死锁等待
-  await Promise.race([
-    umdComponentsReady,
-    new Promise(resolve => setTimeout(resolve, 500)), // 500ms 兜底
-  ]);
+  await umdComponentsReady;
 
   // 始终生成 UMD 路由（组件在 main.ts 中已触发加载，并在上面等待完成，此处直接读取）
   const umdVueRoutes = transformRoutesToVueRoutes(generateUmdRoutes());

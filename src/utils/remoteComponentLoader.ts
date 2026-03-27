@@ -425,6 +425,12 @@ export const registerRemoteComponents = async (
     (window as any).Vue = Vue;
   }
 
+  // 针对 login 页面跳过加载的特殊处理
+  if (configUrl === 'empty_skip_load') {
+    _resolveUmdReady();
+    return;
+  }
+
   try {
     const config = await loadConfig(configUrl);
     console.log('Config loaded:', config);

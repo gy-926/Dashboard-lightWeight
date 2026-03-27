@@ -55,11 +55,9 @@ const initApp = async () => {
     }
   } else {
     console.log('On login page and not authenticated, skipping UMD component loading.');
-    // 必须 resolve umdComponentsReady，否则路由系统会一直卡住等待
-    // 虽然我们在 index.ts 里通过 setTimeout 处理了兜底，但主动释放更安全
-    // 我们可以在 registerRemoteComponents 不执行时也给个假完成状态
-    // 由于 _resolveUmdReady 是非导出的内部方法，最简单的就是让 index.ts 依赖不卡死
-    // （在上面的 commit 我们已经处理了）
+    // 如果不加载 UMD 组件，我们需要触发一个空的执行，以正确 resolve umdComponentsReady
+    // 否则会导致路由系统一直死锁等待
+    registerRemoteComponents(app, 'empty_skip_load').catch(e => {});
   }
 
   // 安装路由 (放在远程组件加载之后，避免潜在的冲突)
