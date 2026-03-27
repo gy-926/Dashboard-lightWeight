@@ -3,7 +3,7 @@ import type { RouteRecordRaw } from 'vue-router';
 import { autoRoutes } from '../auto/routes';
 import type { MenuItem, GlobalConfig, CachedRoutes, ElegantRoute } from './types';
 import { fetchMenuData } from './menu-service';
-import { generateUmdRoutes } from '@/utils/remoteComponentLoader';
+import { generateUmdRoutes, umdComponentsReady } from '@/utils/remoteComponentLoader';
 
 // ==================== 全局配置 ====================
 
@@ -528,7 +528,14 @@ export async function generateDynamicRoutes(): Promise<{
   constantRoutes: RouteRecordRaw[];
   authRoutes: RouteRecordRaw[];
 }> {
-  // 始终生成 UMD 路由（组件在 main.ts 中已加载完毕，此处直接读取）
+  // 等待后台 UMD 组件加载完成，确保能正确生成 UMD 路由
+  // 添加超时机制，防止在未登录页 (Login) 因为没有加载 UMD 而一直死锁等待
+  await Promise.race([
+    umdComponentsReady,
+    new Promise(resolve => setTimeout(resolve, 500)), // 500ms 兜底
+  ]);
+
+  // 始终生成 UMD 路由（组件在 main.ts 中已触发加载，并在上面等待完成，此处直接读取）
   const umdVueRoutes = transformRoutesToVueRoutes(generateUmdRoutes());
 
   // 1. 尝试从缓存恢复（后端菜单路由）

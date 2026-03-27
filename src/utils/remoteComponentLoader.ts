@@ -444,40 +444,47 @@ export const registerRemoteComponents = async (
       status: 'pending',
     }));
 
-    // 并行加载所有组件
-    const loadPromises = config.components.map(async componentConfig => {
-      // 查找并更新状态为 loading
-      const libIndex = remoteLibraries.value.findIndex(l => l.name === componentConfig.name);
-      if (libIndex !== -1) {
-        remoteLibraries.value[libIndex].status = 'loading';
-      }
+    // 控制并发数以降低内存峰值 (Chunk/Sequential Loading)
+    const CONCURRENCY_LIMIT = 3;
 
-      try {
-        await registerComponent(app, componentConfig);
-        loadResults.push({ name: componentConfig.name, success: true });
+    // 按块加载以降低初始内存飙升
+    for (let i = 0; i < config.components.length; i += CONCURRENCY_LIMIT) {
+      const chunk = config.components.slice(i, i + CONCURRENCY_LIMIT);
 
-        // 成功后在 registerComponent 内部逻辑已经（或即将）处理详细信息的提取，
-        // 这里主要更新最终状态，防止在 registerComponent 中漏掉
-        if (libIndex !== -1 && remoteLibraries.value[libIndex].status !== 'success') {
-          remoteLibraries.value[libIndex].status = 'success';
-        }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        loadResults.push({
-          name: componentConfig.name,
-          success: false,
-          error: errorMessage,
-        });
-
-        // 更新错误状态
+      const loadPromises = chunk.map(async componentConfig => {
+        // 查找并更新状态为 loading
+        const libIndex = remoteLibraries.value.findIndex(l => l.name === componentConfig.name);
         if (libIndex !== -1) {
-          remoteLibraries.value[libIndex].status = 'error';
-          remoteLibraries.value[libIndex].error = errorMessage;
+          remoteLibraries.value[libIndex].status = 'loading';
         }
-      }
-    });
 
-    await Promise.allSettled(loadPromises);
+        try {
+          await registerComponent(app, componentConfig);
+          loadResults.push({ name: componentConfig.name, success: true });
+
+          // 成功后在 registerComponent 内部逻辑已经（或即将）处理详细信息的提取，
+          // 这里主要更新最终状态，防止在 registerComponent 中漏掉
+          if (libIndex !== -1 && remoteLibraries.value[libIndex].status !== 'success') {
+            remoteLibraries.value[libIndex].status = 'success';
+          }
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          loadResults.push({
+            name: componentConfig.name,
+            success: false,
+            error: errorMessage,
+          });
+
+          // 更新错误状态
+          if (libIndex !== -1) {
+            remoteLibraries.value[libIndex].status = 'error';
+            remoteLibraries.value[libIndex].error = errorMessage;
+          }
+        }
+      });
+
+      await Promise.allSettled(loadPromises);
+    }
 
     // 输出加载结果统计
     const successCount = loadResults.filter(r => r.success).length;
