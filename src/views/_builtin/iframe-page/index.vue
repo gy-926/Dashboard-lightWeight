@@ -29,6 +29,7 @@
 
   const pageId = ref<string>('');
   const cleanupCallbacks = ref<(() => void)[]>([]);
+  let offTabClose: (() => void) | null = null;
 
   // 动态渲染类型（由接口决定）
   const dynamicRenderType = ref<PageType>('webview');
@@ -197,7 +198,7 @@
     handleCustomRouteParams();
 
     // 监听标签关闭
-    tabCloseBus.on(closedPath => {
+    offTabClose = tabCloseBus.on(closedPath => {
       if (closedPath === route.path && pageId.value) {
         cleanupAll();
       }
@@ -212,6 +213,10 @@
   });
 
   onUnmounted(() => {
+    if (offTabClose) {
+      offTabClose();
+      offTabClose = null;
+    }
     cleanupAll();
   });
 

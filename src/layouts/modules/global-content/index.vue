@@ -35,8 +35,13 @@
   // 检查是否为动态路由（需要禁用 keep-alive）
   const isDynamicRoute = computed(() => {
     const path = route.path;
-    // 动态路由通常以 /custom_ 或 /bridge_ 开头
-    return path.startsWith('/custom_') || path.startsWith('/bridge_');
+    const name = String(route.name || '');
+    // iframe / 自定义动态页通常承载重型 DOM、iframe 或远程组件，继续保活会显著抬高内存占用
+    return (
+      path.startsWith('/custom_') ||
+      path.startsWith('/bridge_') ||
+      name.startsWith('iframe-page')
+    );
   });
 
   // 是否应该使用 keep-alive（动态路由不使用）

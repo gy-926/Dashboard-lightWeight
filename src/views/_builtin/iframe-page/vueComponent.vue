@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { ref, shallowRef, computed, onMounted, watch } from 'vue';
+  import { ref, shallowRef, computed, onMounted, onUnmounted, watch } from 'vue';
   import * as Vue from 'vue';
   import { useTeleportManager, generateComponentCacheKey } from '@/store/modules/teleport-manager';
   import { loadModule } from 'vue3-sfc-loader';
@@ -180,6 +180,11 @@
   onMounted(() => {
     updatePageStatus(props.pageId, 'loading');
     loadRemoteComponent();
+  });
+
+  onUnmounted(() => {
+    emit('cleanup');
+    dynamicComponent.value = null;
   });
 
   // 暴露 reload 方法
