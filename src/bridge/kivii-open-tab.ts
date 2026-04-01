@@ -32,6 +32,8 @@ export interface OpenTabOptions {
  * 路径信息接口
  */
 interface PathInfo {
+  /** 标签缓存键（路由名优先） */
+  key: string;
   /** 路由路径 */
   path: string;
   /** 页面标题 */
@@ -108,7 +110,7 @@ export class KiviiOpenTab {
       // 添加标签页
       if (pathInfo) {
         const tab: MenuItem = {
-          key: pathInfo.path,
+          key: pathInfo.key,
           path: pathInfo.path,
           title: pathInfo.title || '未命名页面',
           icon: pathInfo.icon || 'fa-file',
@@ -192,6 +194,7 @@ export class KiviiOpenTab {
       for (const item of items) {
         if (item.path === path) {
           return {
+            key: item.key,
             path: item.path,
             title: item.title || item.DisplayName || item.Title,
             icon: item.icon || item.Icon,
@@ -222,6 +225,7 @@ export class KiviiOpenTab {
       for (const item of items) {
         if (item.kvid === kvid || item.Kvid === kvid) {
           return {
+            key: item.key,
             path: item.path,
             title: item.title || item.DisplayName || item.Title,
             icon: item.icon || item.Icon,

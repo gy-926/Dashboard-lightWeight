@@ -176,17 +176,14 @@ interface TreeStats {
 export function getMenuTree(items: MenuItem[]): MenuItem[] {
   if (!items || items.length === 0) return [];
 
-  // 构建父Kvid集合
-  const parentKvids = new Set<string>();
-  items.forEach(item => {
-    if (item.ParentKvid) {
-      parentKvids.add(item.ParentKvid);
-    }
-  });
+  const itemKvids = new Set(items.map(item => item.Kvid));
 
-  // 找出根节点（ParentKvid 为空或 undefined 的项）
+  // 找出根节点：
+  // 1. ParentKvid 为 null / undefined / ''
+  // 2. ParentKvid 不存在于当前数据集中（孤儿节点兜底为根节点）
   const rootItems = items.filter(item => {
-    return !item.ParentKvid && item.ParentKvid !== '';
+    const parentKvid = item.ParentKvid;
+    return parentKvid == null || parentKvid === '' || !itemKvids.has(parentKvid);
   });
 
   // 递归构建子树

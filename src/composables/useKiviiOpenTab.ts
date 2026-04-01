@@ -24,6 +24,7 @@ export interface OpenTabOptions {
  * 路径信息
  */
 interface PathInfo {
+  key: string
   path: string
   title?: string
   icon?: string
@@ -107,7 +108,7 @@ export function useKiviiOpenTab() {
       const pathInfo = findPathInfo(normalizedPath)
       if (pathInfo) {
         const tab: MenuItem = {
-          key: pathInfo.path,
+          key: pathInfo.key,
           path: pathInfo.path,
           title: pathInfo.title || '未命名页面',
           icon: pathInfo.icon || 'fa-file',
@@ -171,6 +172,7 @@ export function useKiviiOpenTab() {
         if (item.path === path) {
           const meta = (item as any).meta || {}
           return {
+            key: item.key,
             path: item.path,
             title: item.title,
             icon: item.icon,
@@ -199,6 +201,7 @@ export function useKiviiOpenTab() {
         const meta = (item as any).meta || {}
         if (meta.kvid === kvid || item.key === kvid) {
           return {
+            key: item.key,
             path: item.path,
             title: item.title,
             icon: item.icon,

@@ -213,7 +213,7 @@ export const useMenuStore = defineStore('menu', () => {
 
   // 监听标签页变化并保存到本地存储（浅监听，仅数组引用/长度变化时触发，避免深遍历开销）
   watch(
-    () => tabsList.value.map(t => t.path).join(','),
+    () => tabsList.value.map(t => `${t.path}|${t.key}|${t.title}|${t.icon || ''}`).join(','),
     () => {
       try {
         localStorage.setItem('kivii-tabs', JSON.stringify(tabsList.value));
@@ -275,10 +275,20 @@ export const useMenuStore = defineStore('menu', () => {
     // 过滤掉空白页
     if (menu.path === '/blank' || menu.key === 'blank') return;
 
-    const exists = tabsList.value.find(t => t.path === menu.path);
-    if (!exists) {
+    const index = tabsList.value.findIndex(t => t.path === menu.path);
+    if (index === -1) {
       tabsList.value.push({ ...menu });
+      return;
     }
+
+    const existing = tabsList.value[index];
+    tabsList.value[index] = {
+      ...existing,
+      ...menu,
+      key: menu.key || existing.key,
+      title: menu.title || existing.title,
+      icon: menu.icon || existing.icon,
+    };
   }
 
   function getHomeTab(): MenuItem {
