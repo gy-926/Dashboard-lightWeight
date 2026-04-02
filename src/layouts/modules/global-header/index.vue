@@ -179,7 +179,7 @@
         >
           <div
             v-if="userDropdownVisible"
-            class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50"
+            class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-[200]"
           >
             <a
               href="#"
@@ -222,7 +222,7 @@
   <!-- 侧边栏/混合布局 -->
   <header
     v-else
-    class="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 relative z-[20] transition-colors duration-300"
+    class="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 relative z-[50] transition-colors duration-300"
   >
     <!-- 左侧：侧边栏折叠按钮 或 Logo -->
     <div class="flex items-center gap-4 flex-shrink-0">
@@ -305,7 +305,7 @@
         >
           <div
             v-if="userDropdownVisible"
-            class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50"
+            class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-[200]"
           >
             <a
               href="#"
