@@ -40,66 +40,62 @@ export interface Config {
   components: ComponentConfig[];
 }
 
-import { kivii } from '@kivii.com/bridge';
+// [MOCK MODE] 已注释掉后端请求依赖
+// import { kivii } from '@kivii.com/bridge';
 
 // 加载配置文件
-const loadConfig = async (configPath: string): Promise<Config> => {
-  try {
-    const response = await kivii.request.get<any>(configPath);
-    const data = response.data;
+const loadConfig = async (_configPath: string): Promise<Config> => {
+  // [MOCK MODE] 跳过远程 UMD 组件加载，直接返回空列表
+  // UMD 组件依赖后端接口获取文件列表，Mock 模式下暂不支持
+  // 恢复后端连接时，注释掉下面这行，取消注释下方原始请求代码
+  return { components: [] };
 
-    // 检查是否为旧配置格式 (包含 components 数组)
-    if (data.components && Array.isArray(data.components)) {
-      return data;
-    }
-
-    // 处理新接口格式：期望是一个文件列表数组，其中每个项包含 Path 字段
-    // 兼容直接数组或 { data: [] } 或 { items: [] } 或 { Results: [] } 格式
-    let items: any[] = [];
-    if (Array.isArray(data)) {
-      items = data;
-    } else if (data.data && Array.isArray(data.data)) {
-      items = data.data;
-    } else if (data.items && Array.isArray(data.items)) {
-      items = data.items;
-    } else if (data.Results && Array.isArray(data.Results)) {
-      items = data.Results;
-    }
-
-    if (items.length > 0) {
-      console.log(`Detected API response format with ${items.length} items`);
-      const components: ComponentConfig[] = items
-        .filter((item: any) => item.Path) // 过滤掉没有 Path 的项
-        .map((item: any) => {
-          // 从 Path 中提取文件名作为组件名 (去除扩展名)
-          // 例如: /Umd/File/MyComponent.umd.js -> MyComponent
-          const fileName = item.Path.split('/').pop() || 'UnknownComponent';
-
-          // 优先使用 Name 字段，否则使用文件名
-          let name = item.Name || fileName;
-
-          // 移除 .umd.js, .min.js, .js 等后缀，确保组件名干净
-          name = name.replace(/(\.umd)?(\.min)?\.js$/i, '');
-
-          return {
-            name: name,
-            type: 'umd',
-            version: item.Version || '1.0.0',
-            path: item.Path,
-            globalName: item.GlobalName, // 可选
-            autoRegister: true, // 默认自动注册
-          };
-        });
-      return { components };
-    }
-
-    // 如果既不是旧格式也没有检测到有效项，返回空
-    console.warn('Unknown config format or empty list, returning empty components');
-    return { components: [] };
-  } catch (error) {
-    console.error('Failed to load config:', error);
-    throw error;
-  }
+  // ── 原始后端请求（恢复时取消注释）──
+  // try {
+  //   const response = await kivii.request.get<any>(_configPath);
+  //   const data = response.data;
+  //
+  //   if (data.components && Array.isArray(data.components)) {
+  //     return data;
+  //   }
+  //
+  //   let items: any[] = [];
+  //   if (Array.isArray(data)) {
+  //     items = data;
+  //   } else if (data.data && Array.isArray(data.data)) {
+  //     items = data.data;
+  //   } else if (data.items && Array.isArray(data.items)) {
+  //     items = data.items;
+  //   } else if (data.Results && Array.isArray(data.Results)) {
+  //     items = data.Results;
+  //   }
+  //
+  //   if (items.length > 0) {
+  //     console.log(`Detected API response format with ${items.length} items`);
+  //     const components: ComponentConfig[] = items
+  //       .filter((item: any) => item.Path)
+  //       .map((item: any) => {
+  //         const fileName = item.Path.split('/').pop() || 'UnknownComponent';
+  //         let name = item.Name || fileName;
+  //         name = name.replace(/(\.umd)?(\.min)?\.js$/i, '');
+  //         return {
+  //           name,
+  //           type: 'umd',
+  //           version: item.Version || '1.0.0',
+  //           path: item.Path,
+  //           globalName: item.GlobalName,
+  //           autoRegister: true,
+  //         };
+  //       });
+  //     return { components };
+  //   }
+  //
+  //   console.warn('Unknown config format or empty list, returning empty components');
+  //   return { components: [] };
+  // } catch (error) {
+  //   console.error('Failed to load config:', error);
+  //   throw error;
+  // }
 };
 
 // 将 UMD IIFE 注入的 <style> 移到 dashboard 自身 CSS 之前，

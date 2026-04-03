@@ -2,7 +2,8 @@
   import { ref, reactive, computed, onMounted, onUnmounted } from 'vue';
   import { useRouter, useRoute } from 'vue-router';
   import { reloadDynamicRoutes } from '@/router';
-  import { kivii } from '@kivii.com/bridge';
+  // [MOCK MODE] 已注释掉后端请求依赖
+  // import { kivii } from '@kivii.com/bridge';
   import { setGlobalConfig } from '@/router/routes';
   import { useMenuStore } from '@/layouts/modules/global-menu/store';
 
@@ -49,13 +50,22 @@
     errorMsg.value = '';
 
     try {
-      const response = await kivii.request.post<any>('/auth/kivii.json', {
-        username: form.username,
-        password: form.password,
-      });
-      const data = response.data;
+      // [MOCK MODE] 本地 Mock 登录验证，跳过后端请求
+      // 演示账号：admin / admin123（任意非空账号密码均可登录）
+      // 恢复后端连接时，注释掉下面的 mock 逻辑，取消注释下方原始请求代码
+      await new Promise(resolve => setTimeout(resolve, 600)); // 模拟网络延迟
+      if (form.username !== 'admin' || form.password !== 'admin123') {
+        throw new Error('演示账号：admin / admin123');
+      }
+      console.log('[Mock] 登录成功');
 
-      console.log('登录成功:', data);
+      // ── 原始后端请求（恢复时取消注释）──
+      // const response = await kivii.request.post<any>('/auth/kivii.json', {
+      //   username: form.username,
+      //   password: form.password,
+      // });
+      // const data = response.data;
+      // console.log('登录成功:', data);
 
       setGlobalConfig({ IsAuthenticated: true });
       if (!(window as any).uiGlobalConfig) {
@@ -438,6 +448,14 @@
           </span>
         </button>
       </form>
+
+      <!-- 演示账号提示 -->
+      <div class="demo-hint">
+        <span class="demo-hint-label">演示账号</span>
+        <span class="demo-hint-value">admin</span>
+        <span class="demo-hint-sep">/</span>
+        <span class="demo-hint-value">admin123</span>
+      </div>
 
       <!-- 底部信息 -->
       <div class="card-footer">
@@ -921,6 +939,36 @@
     to {
       transform: rotate(360deg);
     }
+  }
+
+  /* ── 演示账号提示 ── */
+  .demo-hint {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 12px;
+    padding: 8px 14px;
+    background: rgba(99, 102, 241, 0.08);
+    border: 1px dashed rgba(99, 102, 241, 0.3);
+    border-radius: 8px;
+    font-size: 12px;
+  }
+
+  .demo-hint-label {
+    color: rgba(148, 163, 184, 0.8);
+    letter-spacing: 0.3px;
+  }
+
+  .demo-hint-value {
+    font-family: monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: #818cf8;
+  }
+
+  .demo-hint-sep {
+    color: rgba(148, 163, 184, 0.5);
   }
 
   /* ── 卡片底部 ── */

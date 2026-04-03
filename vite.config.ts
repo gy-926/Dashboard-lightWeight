@@ -38,32 +38,33 @@ export default defineConfig({
     drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
   },
   server: {
-    proxy: {
-      // datav.kivii.org API 代理配置
-      '/auth': {
-        target: 'https://datav.kivii.org',
-        changeOrigin: true,
-      },
-      '/kivii': {
-        target: 'https://datav.kivii.org',
-        changeOrigin: true,
-      },
-      '/Restful': {
-        target: 'https://datav.kivii.org',
-        changeOrigin: true,
-      },
-      '/codes': {
-        target: 'https://datav.kivii.org',
-        changeOrigin: true,
-      },
-      '/codet': {
-        target: 'https://datav.kivii.org',
-        changeOrigin: true,
-      },
-      '/storages': {
-        target: 'https://datav.kivii.org',
-        changeOrigin: true,
-      },
-    },
+    // [MOCK MODE] 已注释掉后端代理，项目运行在本地 Mock 模式，无需连接服务器
+    // 恢复连接后端时，取消下方 proxy 注释，并将 target 改为实际后端地址
+    // proxy: {
+    //   '/auth': {
+    //     target: 'https://datav.kivii.org',
+    //     changeOrigin: true,
+    //   },
+    //   '/kivii': {
+    //     target: 'https://datav.kivii.org',
+    //     changeOrigin: true,
+    //   },
+    //   '/Restful': {
+    //     target: 'https://datav.kivii.org',
+    //     changeOrigin: true,
+    //   },
+    //   '/codes': {
+    //     target: 'https://datav.kivii.org',
+    //     changeOrigin: true,
+    //   },
+    //   '/codet': {
+    //     target: 'https://datav.kivii.org',
+    //     changeOrigin: true,
+    //   },
+    //   '/storages': {
+    //     target: 'https://datav.kivii.org',
+    //     changeOrigin: true,
+    //   },
+    // },
   },
 });

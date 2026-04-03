@@ -10,7 +10,8 @@
   } from '@/store/modules/teleport-manager';
   import WebviewComponent from './webview.vue';
   import VueComponent from './vueComponent.vue';
-  import { kivii } from '@kivii.com/bridge';
+  // [MOCK MODE] 已注释掉后端请求依赖
+  // import { kivii } from '@kivii.com/bridge';
   import { getGlobalConfig } from '@/router/routes';
 
   // 路由 props
@@ -90,37 +91,42 @@
       return;
     }
 
-    try {
-      const response = await kivii.request.get<any>(
-        `/Restful/Kivii.Basic.Entities.Function/Access.json?MenuKvids=${props.kvid}`
-      );
-      const data = response.data;
+    // [MOCK MODE] 返回本地演示页面，跳过后端权限请求
+    // 恢复后端连接时，注释掉下面的 mock 逻辑，取消注释下方原始请求代码
+    dynamicHandler.value = window.location.origin + '/mock-demo.html';
+    dynamicRenderType.value = 'webview';
+    isLoading.value = false;
+    return;
 
-      const config = getGlobalConfig();
-      // 优先使用配置的 Origin，如果未配置则根据 UseWindowOrigin 决定是否使用 window.location.origin
-      let origin = config.Origin || '';
-      if (!origin && config.UseWindowOrigin) {
-        origin = window.location.origin;
-      }
-
-      if (data?.Results && data.Results.length > 0) {
-        const handler = data.Results[0].Handler;
-
-        if (handler) {
-          // 如果 handler 已经是绝对路径，直接使用；否则拼接 origin
-          if (handler.startsWith('http')) {
-            dynamicHandler.value = handler;
-          } else {
-            dynamicHandler.value = origin + handler;
-          }
-          dynamicRenderType.value = determineRenderTypeByHandler(handler);
-        }
-      }
-    } catch (error) {
-      console.error('[IframePage] 获取功能权限失败:', error);
-    } finally {
-      isLoading.value = false;
-    }
+    // ── 原始后端请求（恢复时取消注释）──
+    // try {
+    //   const response = await kivii.request.get<any>(
+    //     `/Restful/Kivii.Basic.Entities.Function/Access.json?MenuKvids=${props.kvid}`
+    //   );
+    //   const data = response.data;
+    //
+    //   const config = getGlobalConfig();
+    //   let origin = config.Origin || '';
+    //   if (!origin && config.UseWindowOrigin) {
+    //     origin = window.location.origin;
+    //   }
+    //
+    //   if (data?.Results && data.Results.length > 0) {
+    //     const handler = data.Results[0].Handler;
+    //     if (handler) {
+    //       if (handler.startsWith('http')) {
+    //         dynamicHandler.value = handler;
+    //       } else {
+    //         dynamicHandler.value = origin + handler;
+    //       }
+    //       dynamicRenderType.value = determineRenderTypeByHandler(handler);
+    //     }
+    //   }
+    // } catch (error) {
+    //   console.error('[IframePage] 获取功能权限失败:', error);
+    // } finally {
+    //   isLoading.value = false;
+    // }
   }
 
   // 生成页面实例 ID
