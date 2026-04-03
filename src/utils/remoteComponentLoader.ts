@@ -34,6 +34,16 @@ export interface ComponentConfig {
   globalName?: string; // UMD组件在全局对象中的名称 (例如: VueComponent)
   dependencies?: string[]; // 组件依赖的其他资源
   autoRegister?: boolean; // 是否自动注册导出对象中的所有组件
+  /** 可选的本地元数据，用于覆盖 UMD bundle 自身 manifest（如添加中文名称） */
+  metadata?: {
+    zhName?: string;
+    componentsDetailed?: Array<{
+      name: string;
+      zhName?: string;
+      displayName?: string;
+      icon?: string;
+    }>;
+  };
 }
 
 export interface Config {
@@ -56,6 +66,22 @@ const loadConfig = async (_configPath: string): Promise<Config> => {
         path: '/umd/kivii-component-crmUmd.umd.js',
         globalName: 'VueComponent',
         autoRegister: true,
+        metadata: {
+          zhName: 'CRM 业务套件',
+          componentsDetailed: [
+            { name: 'AnalysisReport',                  zhName: '分析报告' },
+            { name: 'CustomerBasicInfo',               zhName: '客户基础信息' },
+            { name: 'CustomerEvaluationSystem',        zhName: '客户评价体系' },
+            { name: 'CustomerFeedbackComplaint',       zhName: '客户反馈与投诉' },
+            { name: 'CustomerLifecycleTracking',       zhName: '客户生命周期追踪' },
+            { name: 'CustomerOwnershipManagement',     zhName: '客户归属管理' },
+            { name: 'CustomerRelatedInfoIntegration',  zhName: '客户关联信息整合' },
+            { name: 'CustomerValueAddedServiceConfig', zhName: '增值服务配置' },
+            { name: 'DataAggregation3D',               zhName: '3D 数据聚合' },
+            { name: 'PricingRuleConfig',               zhName: '定价规则配置' },
+            { name: 'SmartWarningSystem',              zhName: '智能预警系统' },
+          ],
+        },
       },
       {
         name: 'KiviiDashboardStandards',
@@ -64,6 +90,12 @@ const loadConfig = async (_configPath: string): Promise<Config> => {
         path: '/umd/kivii-dashboard-umd-standards.js',
         globalName: 'VueComponent',
         autoRegister: true,
+        metadata: {
+          zhName: '仪表盘标准组件',
+          componentsDetailed: [
+            { name: 'SmartStandardLibrary', zhName: '智能标准库' },
+          ],
+        },
       },
     ],
   };
@@ -234,6 +266,17 @@ const registerComponent = async (app: App, componentConfig: ComponentConfig) => 
         if (remoteComponent.componentsMap) lib.componentsMap = remoteComponent.componentsMap;
         if (remoteComponent.componentsDetailed)
           lib.componentsDetailed = remoteComponent.componentsDetailed;
+
+        // 应用 componentConfig.metadata 覆盖（优先级高于 UMD 自身 manifest）
+        if (componentConfig.metadata) {
+          if (componentConfig.metadata.zhName) {
+            if (!lib.manifest) lib.manifest = {};
+            lib.manifest.zhName = componentConfig.metadata.zhName;
+          }
+          if (componentConfig.metadata.componentsDetailed) {
+            lib.componentsDetailed = componentConfig.metadata.componentsDetailed;
+          }
+        }
       }
     }
 
