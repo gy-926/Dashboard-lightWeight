@@ -45,10 +45,28 @@ export interface Config {
 
 // 加载配置文件
 const loadConfig = async (_configPath: string): Promise<Config> => {
-  // [MOCK MODE] 跳过远程 UMD 组件加载，直接返回空列表
-  // UMD 组件依赖后端接口获取文件列表，Mock 模式下暂不支持
-  // 恢复后端连接时，注释掉下面这行，取消注释下方原始请求代码
-  return { components: [] };
+  // [MOCK MODE] 使用本地 UMD 文件（public/umd/），跳过后端接口
+  // 恢复后端连接时，注释掉下面的 return，取消注释下方原始请求代码
+  return {
+    components: [
+      {
+        name: 'KiviiCrmUmd',
+        type: 'umd',
+        version: '1.0.0',
+        path: '/umd/kivii-component-crmUmd.umd.js',
+        globalName: 'VueComponent',
+        autoRegister: true,
+      },
+      {
+        name: 'KiviiDashboardStandards',
+        type: 'umd',
+        version: '1.0.0',
+        path: '/umd/kivii-dashboard-umd-standards.js',
+        globalName: 'VueComponent',
+        autoRegister: true,
+      },
+    ],
+  };
 
   // ── 原始后端请求（恢复时取消注释）──
   // try {
