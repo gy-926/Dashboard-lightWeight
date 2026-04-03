@@ -1,30 +1,47 @@
-# Kivii Admin Dashboard
+<p align="center">
+  <h1 align="center">Kivii Admin Dashboard</h1>
+  <p align="center">一个基于 Vue 3 + TypeScript + Vite + Tailwind CSS 的轻量级中后台管理系统模板</p>
+  <p align="center">A lightweight admin dashboard template built with Vue 3 + TypeScript + Vite + Tailwind CSS</p>
+</p>
 
-一个基于 Vue 3 + TypeScript + Vite + Tailwind CSS 的现代化中后台管理系统模板。支持动态路由、UMD 远程组件加载、多主题布局切换以及标签页管理等企业级功能。
+<p align="center">
+  <a href="https://github.com/gy-926/Dashboard-lightWeight/blob/main/LICENSE">
+    <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License" />
+  </a>
+  <img src="https://img.shields.io/badge/vue-3.5-42b883.svg" alt="Vue 3" />
+  <img src="https://img.shields.io/badge/vite-7.0-646cff.svg" alt="Vite" />
+  <img src="https://img.shields.io/badge/typescript-5.8-3178c6.svg" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/tailwindcss-3.4-38bdf8.svg" alt="Tailwind CSS" />
+  <img src="https://img.shields.io/badge/pnpm-recommended-f69220.svg" alt="pnpm" />
+</p>
 
-## ✨ 核心特性
+---
 
-- 🚀 **技术栈** - Vue 3.5 + TypeScript 5.8 + Vite 7.0 + Pinia
-- 🎨 **UI 框架** - Tailwind CSS 3.4 + FontAwesome 6.7
-- 🛣️ **动态路由** - 基于后端接口的动态菜单生成与权限控制
-- 🧩 **远程组件** - 支持 UMD 格式的远程组件动态加载与渲染 (Teleport 方案)
-- 📱 **多布局主题** - 内置三种布局模式（侧边栏、顶部菜单、混合模式）与暗色模式支持
-- 📑 **标签页管理** - 支持多标签页操作、右键菜单（关闭当前/其它/左侧/右侧/所有）及持久化存储
-- 🔌 **桥接集成** - 集成 `@kivii.com/bridge` 实现与宿主环境的通信
-- 🔒 **权限控制** - 基于 Token 的登录认证与路由守卫
+## ✨ 核心特性 / Features
 
-## 🛠️ 技术栈详情
+- 🚀 **现代技术栈** — Vue 3.5 + TypeScript 5.8 + Vite 7.0 + Pinia
+- 🎨 **原子化样式** — Tailwind CSS 3.4 + FontAwesome 6.7
+- 🛣️ **动态路由** — 基于后端接口的动态菜单生成与权限控制
+- 🧩 **远程组件** — 支持 UMD 格式远程组件动态加载（Teleport 方案）
+- 📱 **多布局主题** — 侧边栏、顶部菜单、混合模式，支持暗色模式
+- 📑 **标签页管理** — 多标签页操作 + 右键菜单 + 持久化存储
+- 🔒 **权限控制** — 基于 Token 的登录认证与路由守卫
+- 🔌 **桥接集成** — `@kivii.com/bridge` 宿主环境通信支持
 
-- **前端框架**: Vue 3.5.17
-- **状态管理**: Pinia 2.3.0 (集成持久化)
-- **构建工具**: Vite 7.0.0
-- **类型系统**: TypeScript 5.8.0
-- **样式框架**: Tailwind CSS 3.4.1
-- **路由管理**: Vue Router 4.5.1
-- **远程加载**: vue3-sfc-loader
-- **包管理器**: pnpm
+## 🛠️ 技术栈 / Tech Stack
 
-## 📁 项目结构
+| 类别 | 技术 | 版本 |
+|------|------|------|
+| 前端框架 | Vue | 3.5.17 |
+| 构建工具 | Vite | 7.0.0 |
+| 类型系统 | TypeScript | 5.8.0 |
+| 状态管理 | Pinia | 2.3.0 |
+| 路由管理 | Vue Router | 4.5.1 |
+| 样式框架 | Tailwind CSS | 3.4.1 |
+| 远程加载 | vue3-sfc-loader | 0.9.5 |
+| 包管理器 | pnpm | ≥ 8.0.0 |
+
+## 📁 项目结构 / Project Structure
 
 ```
 src/
@@ -37,9 +54,9 @@ src/
 │   ├── guards.ts           # 路由守卫 (权限控制)
 │   └── routes/             # 动态路由生成逻辑
 ├── store/                  # Pinia 状态管理
-│   ├── modules/
-│   │   ├── global-menu/    # 菜单与主题状态
-│   │   └── teleport-manager.ts # 远程组件渲染管理器
+│   └── modules/
+│       ├── global-menu/    # 菜单与主题状态
+│       └── teleport-manager.ts  # 远程组件渲染管理器
 ├── styles/                 # 全局样式
 ├── utils/                  # 工具函数
 └── views/                  # 页面视图
@@ -48,30 +65,30 @@ src/
     └── ...                 # 业务页面
 ```
 
-## 🚀 快速开始
+## 🚀 快速开始 / Quick Start
 
-### 环境要求
+### 环境要求 / Prerequisites
 
 - Node.js >= 18.0.0
 - pnpm >= 8.0.0
 
-### 安装依赖
+### 安装与启动 / Install & Run
 
 ```bash
-# 使用 pnpm 安装依赖
+# 克隆项目
+git clone https://github.com/gy-926/Dashboard-lightWeight.git
+cd Dashboard-lightWeight
+
+# 安装依赖
 pnpm install
-```
 
-### 开发模式
-
-```bash
 # 启动开发服务器
 pnpm dev
 ```
 
 访问 [http://localhost:5173](http://localhost:5173) 查看应用。
 
-### 构建生产版本
+### 构建 / Build
 
 ```bash
 # 构建生产版本
@@ -81,53 +98,62 @@ pnpm build
 pnpm preview
 ```
 
-## 📖 功能指南
+## 📖 功能说明 / Features Guide
 
-### 1. 动态路由与菜单
+### 动态路由与菜单
 
-系统会在登录后请求后端接口获取菜单数据，并自动生成路由配置。
+登录后请求后端接口获取菜单数据，自动生成路由配置。支持 `Page`（页面）、`Folder`（目录）、`Link`（外链）等类型，菜单数据自动缓存。
 
-- 支持 `Page` (页面)、`Folder` (目录)、`Link` (外链) 等多种类型。
-- 菜单数据会自动缓存，提升加载速度。
+### 远程组件加载 (UMD)
 
-### 2. 远程组件加载 (UMD)
+无需重新构建主应用即可扩展功能：
+- 使用 `vue3-sfc-loader` 动态编译 `.vue` 文件
+- 通过 `<script>` 标签加载 UMD 库
+- 使用 `Teleport` 技术渲染远程组件到指定 DOM 节点
 
-系统支持加载远程的 Vue 组件或 UMD 模块，无需重新构建主应用即可扩展功能。
+### 布局与主题
 
-- **原理**: 使用 `vue3-sfc-loader` 动态编译 `.vue` 文件，或通过 `<script>` 标签加载 UMD 库。
-- **渲染**: 使用 `Teleport` 技术将远程组件渲染到指定 DOM 节点，实现高性能的微前端体验。
+- **布局切换**：侧边栏布局 / 顶部菜单布局 / 混合布局
+- **暗色模式**：一键切换，自动持久化用户偏好
+- **标签页**：记录访问历史，支持右键菜单（关闭当前/其它/左侧/右侧/所有）
 
-### 3. 布局与主题
+### 全局配置 (GlobalConfig)
 
-- **布局切换**: 点击右上角设置图标，可在「侧边栏布局」、「顶部菜单布局」、「混合布局」之间切换。
-- **暗色模式**: 支持一键切换深色/浅色主题，并自动持久化用户偏好。
-- **标签页**: 顶部标签页记录用户访问历史，支持拖拽滚动和右键菜单管理。
+通过 `window.uiGlobalConfig` 进行运行时配置：
 
-### 4. 全局配置 (GlobalConfig)
+| 字段 | 说明 |
+|------|------|
+| `Origin` | 后端 API 地址 |
+| `UserCode` | 当前用户编码 |
+| `IsAuthenticated` | 认证状态 |
+| `DisplayName` | 系统名称 |
 
-系统支持通过 `window.uiGlobalConfig` 进行运行时配置，包括：
+## 🤝 贡献指南 / Contributing
 
-- `Origin`: 后端 API 地址
-- `UserCode`: 当前用户编码
-- `IsAuthenticated`: 认证状态
-- `DisplayName`: 系统名称
+欢迎提交 Issue 和 Pull Request！
 
-### 样式开发
+1. Fork 本仓库
+2. 创建特性分支：`git checkout -b feature/your-feature`
+3. 提交更改：`git commit -m 'feat: add some feature'`
+4. 推送分支：`git push origin feature/your-feature`
+5. 提交 Pull Request
 
-- 优先使用 Tailwind CSS 实用类
-- 避免自定义样式，通过 Tailwind 类实现
-- 如需自定义样式，使用 CSS 自定义属性
-- 确保移动端适配
+**Commit 规范** 参考 [Conventional Commits](https://www.conventionalcommits.org/)：
+- `feat:` 新功能
+- `fix:` Bug 修复
+- `docs:` 文档变更
+- `style:` 代码格式
+- `refactor:` 重构
+- `perf:` 性能优化
+- `chore:` 构建/工具变更
 
-### 组件开发
+## 📝 开发规范 / Code Style
 
 - 使用 Vue 3 Composition API
-- 组件文件使用 TypeScript
-- 遵循 Vue 3 最佳实践
-
-### 图标使用
-
-项目已集成 FontAwesome，可以直接使用：
+- 组件文件使用 PascalCase（`UserProfile.vue`）
+- 页面文件使用 kebab-case（`user-profile.vue`）
+- 优先使用 Tailwind CSS 实用类，避免自定义样式
+- 图标使用已集成的 FontAwesome
 
 ```vue
 <template>
@@ -136,38 +162,12 @@ pnpm preview
 </template>
 ```
 
-## 🔧 配置说明
+## 📄 License
 
-### Vite 配置
+本项目基于 [MIT License](./LICENSE) 开源。
 
-- 支持 Vue 3 和 TypeScript
-- 集成 Vue DevTools
-- 配置路径别名 `@` 指向 `src` 目录
-- 自动路由插件
+---
 
-### Tailwind 配置
-
-- 扫描 `src` 目录下的所有 Vue、JS、TS 文件
-- 支持响应式设计
-- 可扩展主题配置
-
-### TypeScript 配置
-
-- 严格的类型检查
-- 支持 Vue 3 类型推导
-- 路径映射支持
-
-## 📝 开发规范
-
-### 代码风格
-
-- 使用中文注释提高可读性
-- 调试输出使用英文
-- 优先使用 Tailwind CSS 类
-- 响应式设计优先
-
-### 文件命名
-
-- 组件文件使用 PascalCase（如 `UserProfile.vue`）
-- 页面文件使用 kebab-case（如 `user-profile.vue`）
-- 工具函数使用 camelCase
+<p align="center">
+  如果这个项目对你有帮助，欢迎 ⭐ Star 支持！
+</p>
