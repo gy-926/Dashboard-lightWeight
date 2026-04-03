@@ -224,7 +224,10 @@ function resetDropdownPosition() {
           @mouseleave="handleMouseLeave"
         >
           <i v-if="item.icon" :class="['fas', item.icon, 'w-5 h-5 flex-shrink-0']" />
-          <span v-if="!collapsed" class="truncate">{{ item.title }}</span>
+          <span v-if="!collapsed" class="flex flex-col min-w-0">
+            <span class="truncate">{{ item.title }}</span>
+            <span v-if="item.description" class="text-xs text-gray-400 dark:text-gray-500 truncate leading-4 mt-0.5 font-normal">{{ item.description }}</span>
+          </span>
         </button>
 
         <!-- 折叠状态下的菜单名称 tooltip -->
@@ -310,8 +313,11 @@ function resetDropdownPosition() {
                   :title="child.title"
                   @click="handleSelect(child)"
                 >
-                  <i v-if="child.icon" :class="['fas', child.icon, 'w-4 h-4 flex-shrink-0']" />
-                  <span class="flex-1 whitespace-normal break-all leading-5">{{ child.title }}</span>
+                  <i v-if="child.icon" :class="['fas', child.icon, 'w-4 h-4 flex-shrink-0 mt-0.5']" />
+                  <span class="flex flex-col flex-1 min-w-0">
+                    <span class="whitespace-normal break-all leading-5">{{ child.title }}</span>
+                    <span v-if="child.description" class="text-xs text-gray-400 dark:text-gray-500 leading-4 mt-0.5">{{ child.description }}</span>
+                  </span>
                 </button>
                 <!-- 有三级子菜单的二级菜单 -->
                 <div

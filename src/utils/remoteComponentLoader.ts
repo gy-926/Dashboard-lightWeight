@@ -68,19 +68,7 @@ const loadConfig = async (_configPath: string): Promise<Config> => {
         autoRegister: true,
         metadata: {
           zhName: 'CRM 业务套件',
-          componentsDetailed: [
-            { name: 'AnalysisReport',                  zhName: '分析报告' },
-            { name: 'CustomerBasicInfo',               zhName: '客户基础信息' },
-            { name: 'CustomerEvaluationSystem',        zhName: '客户评价体系' },
-            { name: 'CustomerFeedbackComplaint',       zhName: '客户反馈与投诉' },
-            { name: 'CustomerLifecycleTracking',       zhName: '客户生命周期追踪' },
-            { name: 'CustomerOwnershipManagement',     zhName: '客户归属管理' },
-            { name: 'CustomerRelatedInfoIntegration',  zhName: '客户关联信息整合' },
-            { name: 'CustomerValueAddedServiceConfig', zhName: '增值服务配置' },
-            { name: 'DataAggregation3D',               zhName: '3D 数据聚合' },
-            { name: 'PricingRuleConfig',               zhName: '定价规则配置' },
-            { name: 'SmartWarningSystem',              zhName: '智能预警系统' },
-          ],
+          // componentsDetailed 由 UMD 自身 manifest 提供，含 zhName/icon/description，无需在此覆盖
         },
       },
       {
@@ -92,9 +80,7 @@ const loadConfig = async (_configPath: string): Promise<Config> => {
         autoRegister: true,
         metadata: {
           zhName: '仪表盘标准组件',
-          componentsDetailed: [
-            { name: 'SmartStandardLibrary', zhName: '智能标准库' },
-          ],
+          // componentsDetailed 由 UMD 自身 manifest 提供，含 zhName/icon/description，无需在此覆盖
         },
       },
     ],
@@ -438,6 +424,7 @@ export function generateUmdRoutes(): ElegantRoute[] {
       // 图标去掉前缀 (e.g. "fas fa-cube" → "fa-cube")，菜单渲染时会自动加 "fas"
       const rawIcon: string | undefined = detail?.icon;
       const icon: string | undefined = rawIcon?.replace(/^(fas|far|fab|fal|fad)\s+/, '');
+      const description: string | undefined = detail?.description;
 
       return {
         name: `${libRouteName}_${toRouteSafeName(compName)}`,
@@ -447,6 +434,7 @@ export function generateUmdRoutes(): ElegantRoute[] {
         meta: {
           title,
           ...(icon ? { icon } : {}),
+          ...(description ? { description } : {}),
           keepAlive: true,
           umdLibrary: lib.name,
           umdComponent: compName,

@@ -10,6 +10,8 @@ export interface MenuItem {
   title: string
   /** 图标类名 */
   icon?: string
+  /** 描述文字（来自 UMD componentsDetailed.description） */
+  description?: string
   /** 子菜单 */
   children?: MenuItem[]
   /** 是否隐藏 */
@@ -89,6 +91,7 @@ export function transformRouteToMenu(routes: RouteRecordRaw[], parentPath = ''):
       path: fullPath,
       title: (route.meta?.title as string) || route.name as string || route.path,
       icon: route.meta?.icon as string,
+      description: route.meta?.description as string | undefined,
       hidden: route.meta?.hidden as boolean,
       alwaysShow: route.meta?.alwaysShow as boolean,
       meta: route.meta as Record<string, unknown>,
