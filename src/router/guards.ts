@@ -37,7 +37,8 @@ export function setupRouteGuards(router: Router) {
     }
     // 检查是否已登录
     const config = getGlobalConfig();
-    if (!config.IsAuthenticated && to.path !== '/login') {
+    const loginPaths = ['/login', '/login1'];
+    if (!config.IsAuthenticated && !loginPaths.includes(to.path)) {
       next('/login');
       return;
     }
@@ -51,7 +52,7 @@ export function setupRouteGuards(router: Router) {
       setTargetNavigation(targetPath);
     }
 
-    if (to.path === '/login') {
+    if (loginPaths.includes(to.path)) {
       return next();
     }
 

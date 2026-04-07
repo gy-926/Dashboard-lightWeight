@@ -17,6 +17,12 @@ const initialRoutes: RouteRecordRaw[] = [
     meta: { hidden: true },
   },
   {
+    path: '/login1',
+    name: 'login1',
+    component: () => import('../views/login/login1.vue'),
+    meta: { hidden: true },
+  },
+  {
     path: '/',
     component: () => import('../layouts/base-layout/index.vue'),
     redirect: '/home',
@@ -121,6 +127,7 @@ async function initRoutes() {
         restorePath &&
         restorePath !== '/' &&
         restorePath !== '/login' &&
+        restorePath !== '/login1' &&
         restorePath !== '/404'
       ) {
         targetNavigation = null;
@@ -148,7 +155,10 @@ async function initRoutes() {
       if (error instanceof UnauthorizedError) {
         const currentPath = router.currentRoute.value.path;
         const redirect =
-          currentPath && currentPath !== '/login' && currentPath !== '/'
+          currentPath &&
+          currentPath !== '/login' &&
+          currentPath !== '/login1' &&
+          currentPath !== '/'
             ? `?redirect=${encodeURIComponent(currentPath)}`
             : '';
         dynamicRoutesLoaded = true;
