@@ -34,10 +34,10 @@
     const currentPath = route.path;
     if (currentPath === '/blank') return;
 
-    const currentTab = menuStore.tabsList.find(t => t.path === currentPath);
-    if (!currentTab) return;
+    const originalIndex = menuStore.tabsList.findIndex(t => t.path === currentPath);
+    if (originalIndex === -1) return;
 
-    const savedTab = { ...currentTab };
+    const savedTab = { ...menuStore.tabsList[originalIndex] };
 
     // 移除标签（清除 keep-alive 缓存 + teleport 组件缓存）
     await menuStore.removeTab(currentPath);
@@ -46,8 +46,10 @@
     await router.push('/blank');
     await nextTick();
 
-    // 重新加入标签并导航回原路径
-    menuStore.addTab(savedTab);
+    // 在原有位置插回标签，而非追加到末尾
+    const insertIndex = Math.min(originalIndex, menuStore.tabsList.length);
+    menuStore.tabsList.splice(insertIndex, 0, savedTab);
+
     router.push(currentPath);
   }
 
