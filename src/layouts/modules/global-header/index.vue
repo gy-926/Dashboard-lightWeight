@@ -1,6 +1,6 @@
 <script setup lang="ts">
-  import { ref, computed, onMounted, onUnmounted } from 'vue';
-  import { useRouter } from 'vue-router';
+  import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
+  import { useRouter, useRoute } from 'vue-router';
   import { useMenuStore } from '../global-menu/store';
   import GlobalTopMenu from '../global-menu/GlobalTopMenu.vue';
   import type { MenuItem } from '../global-menu/types';
@@ -11,6 +11,7 @@
   }>();
 
   const router = useRouter();
+  const route = useRoute();
   const menuStore = useMenuStore();
 
   // 全屏功能
@@ -26,6 +27,28 @@
 
   function onFullscreenChange() {
     isFullscreen.value = !!document.fullscreenElement;
+  }
+
+  // 刷新当前标签页
+  async function refreshCurrentTab() {
+    const currentPath = route.path;
+    if (currentPath === '/blank') return;
+
+    const currentTab = menuStore.tabsList.find(t => t.path === currentPath);
+    if (!currentTab) return;
+
+    const savedTab = { ...currentTab };
+
+    // 移除标签（清除 keep-alive 缓存 + teleport 组件缓存）
+    await menuStore.removeTab(currentPath);
+
+    // 跳转到空白页，触发当前组件卸载
+    await router.push('/blank');
+    await nextTick();
+
+    // 重新加入标签并导航回原路径
+    menuStore.addTab(savedTab);
+    router.push(currentPath);
   }
 
   onMounted(() => {
@@ -140,6 +163,15 @@
         @click="toggleFullscreen"
       >
         <i :class="['fas', isFullscreen ? 'fa-compress' : 'fa-expand']" />
+      </button>
+
+      <!-- 刷新当前标签页按钮 -->
+      <button
+        class="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
+        title="刷新当前页"
+        @click="refreshCurrentTab"
+      >
+        <i class="fas fa-redo-alt" />
       </button>
 
       <!-- 主题切换按钮 -->
@@ -266,6 +298,15 @@
         @click="toggleFullscreen"
       >
         <i :class="['fas', isFullscreen ? 'fa-compress' : 'fa-expand']" />
+      </button>
+
+      <!-- 刷新当前标签页按钮 -->
+      <button
+        class="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
+        title="刷新当前页"
+        @click="refreshCurrentTab"
+      >
+        <i class="fas fa-redo-alt" />
       </button>
 
       <!-- 主题切换按钮 -->
