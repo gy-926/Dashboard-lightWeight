@@ -29,8 +29,22 @@ async function handleLogin() {
     
     await reloadDynamicRoutes();
     
-    const redirect = (route.query.redirect as string) || '/';
-    
+    // redirect 参数可能是绝对 URL（来自 PublicLoginUrl 流程），需要提取 hash 路径
+    const rawRedirect = route.query.redirect as string;
+    let redirect = '/';
+    if (rawRedirect) {
+      if (rawRedirect.startsWith('/')) {
+        redirect = rawRedirect;
+      } else {
+        try {
+          const url = new URL(rawRedirect);
+          redirect = url.hash?.startsWith('#/') ? url.hash.substring(1) : '/';
+        } catch {
+          redirect = '/';
+        }
+      }
+    }
+
     if (import.meta.env.PROD) sessionStorage.setItem('need_reload_after_login', 'true');
     router.replace(redirect);
   } catch (e: any) {
