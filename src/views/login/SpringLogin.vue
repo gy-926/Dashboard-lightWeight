@@ -18,12 +18,19 @@ async function handleLogin() {
   if (!form.username || !form.password) { errorMsg.value = '请输入用户名和密码'; return; }
   isLoading.value = true; errorMsg.value = '';
   try {
-    await kivii.request.post<any>('/auth/kivii.json', { username: form.username, password: form.password });
+    const response = await kivii.request.post<any>('/auth/kivii.json', { username: form.username, password: form.password });
+    const data = response.data;
+    
+    console.log('登录成功:', data);
+
     setGlobalConfig({ IsAuthenticated: true });
     if (!(window as any).uiGlobalConfig) (window as any).uiGlobalConfig = {};
     (window as any).uiGlobalConfig.IsAuthenticated = true;
+    
     await reloadDynamicRoutes();
+    
     const redirect = (route.query.redirect as string) || '/';
+    
     if (import.meta.env.PROD) sessionStorage.setItem('need_reload_after_login', 'true');
     router.replace(redirect);
   } catch (e: any) {

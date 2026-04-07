@@ -17,9 +17,9 @@ const initialRoutes: RouteRecordRaw[] = [
     meta: { hidden: true },
   },
   {
-    path: '/login1',
-    name: 'login1',
-    component: () => import('../views/login/login1.vue'),
+    path: '/SpringLogin',
+    name: 'SpringLogin',
+    component: () => import('../views/login/SpringLogin.vue'),
     meta: { hidden: true },
   },
   {
@@ -127,7 +127,7 @@ async function initRoutes() {
         restorePath &&
         restorePath !== '/' &&
         restorePath !== '/login' &&
-        restorePath !== '/login1' &&
+        restorePath !== '/SpringLogin' &&
         restorePath !== '/404'
       ) {
         targetNavigation = null;
@@ -154,15 +154,33 @@ async function initRoutes() {
       // 401：权限不足，跳转到登录页
       if (error instanceof UnauthorizedError) {
         const currentPath = router.currentRoute.value.path;
-        const redirect =
-          currentPath &&
-          currentPath !== '/login' &&
-          currentPath !== '/login1' &&
-          currentPath !== '/'
-            ? `?redirect=${encodeURIComponent(currentPath)}`
-            : '';
+
+        // 获取全局配置
+        const { getGlobalConfig } = await import('@/router/routes');
+        const config = getGlobalConfig();
+
+        // 标记动态路由加载结束
         dynamicRoutesLoaded = true;
-        router.replace(`/login${redirect}`).catch(() => {});
+
+        if (config.PublicLoginUrl) {
+          // 如果配置了公共登录页，则跳转至公共登录页
+          const redirectUrl = encodeURIComponent(window.location.href);
+          const targetUrl = config.PublicLoginUrl.includes('?')
+            ? `${config.PublicLoginUrl}&redirect=${redirectUrl}`
+            : `${config.PublicLoginUrl}?redirect=${redirectUrl}`;
+
+          window.location.href = targetUrl;
+        } else {
+          // 否则走自带的登录页
+          const redirect =
+            currentPath &&
+            currentPath !== '/login' &&
+            currentPath !== '/SpringLogin' &&
+            currentPath !== '/'
+              ? `?redirect=${encodeURIComponent(currentPath)}`
+              : '';
+          router.replace(`/login${redirect}`).catch(() => {});
+        }
         return;
       }
 

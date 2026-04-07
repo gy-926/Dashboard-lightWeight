@@ -29,6 +29,7 @@ const defaultGlobalConfig: GlobalConfig = {
   Scope: uiConfig.Scope || '',
   Parameters: uiConfig.Parameters || {},
   IsAuthenticated: uiConfig.IsAuthenticated !== undefined ? uiConfig.IsAuthenticated : false,
+  PublicLoginUrl: uiConfig.PublicLoginUrl || '',
 };
 
 // 当前全局配置
