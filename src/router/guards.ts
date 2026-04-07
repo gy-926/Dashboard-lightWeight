@@ -37,7 +37,23 @@ export function setupRouteGuards(router: Router) {
     }
     // 检查是否已登录
     const config = getGlobalConfig();
-    if (!config.IsAuthenticated && to.path !== '/login') {
+    const loginPaths = ['/login', '/SpringLogin'];
+    
+    // 如果未登录且当前访问的不是登录页面
+    if (!config.IsAuthenticated && !loginPaths.includes(to.path)) {
+      // 1. 如果配置了公共登录页（PublicLoginUrl），则跳往公共登录页
+      if (config.PublicLoginUrl) {
+        // 构造带回跳地址的公共登录页 URL，便于公共登录成功后能跳回本系统
+        const redirectUrl = encodeURIComponent(window.location.href);
+        const targetUrl = config.PublicLoginUrl.includes('?') 
+          ? `${config.PublicLoginUrl}&redirect=${redirectUrl}` 
+          : `${config.PublicLoginUrl}?redirect=${redirectUrl}`;
+          
+        window.location.href = targetUrl;
+        return;
+      }
+      
+      // 2. 否则按原有流程，跳转到系统自带的登录页
       next('/login');
       return;
     }
@@ -51,7 +67,7 @@ export function setupRouteGuards(router: Router) {
       setTargetNavigation(targetPath);
     }
 
-    if (to.path === '/login') {
+    if (loginPaths.includes(to.path)) {
       return next();
     }
 
