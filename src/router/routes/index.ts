@@ -512,6 +512,15 @@ export function getStaticRoutes(): RouteRecordRaw[] {
       meta: { hidden: true },
     },
     {
+      path: '/update-password',
+      name: 'update-password',
+      component: () => import('@/views/login/update-password.vue'),
+      meta: {
+        title: '更新密码',
+        hideMenu: true,
+      },
+    },
+    {
       path: '/:pathMatch(.*)*',
       redirect: '/404',
       meta: { hidden: true },

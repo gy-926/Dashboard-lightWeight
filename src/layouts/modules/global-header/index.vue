@@ -5,6 +5,7 @@
   import GlobalTopMenu from '../global-menu/GlobalTopMenu.vue';
   import type { MenuItem } from '../global-menu/types';
   import { kivii } from '@kivii.com/bridge';
+  import { supabase } from '@/utils/supabase';
 
   defineProps<{
     showSiderToggle?: boolean;
@@ -83,11 +84,16 @@
   // 退出登录
   async function handleLogout() {
     try {
-      await kivii.request.post('/auth/logout.json', undefined, {
-        header: {
-          'Content-Type': 'application/json',
-        },
-      });
+      // 1. 调用 Supabase 的退出接口，清除服务端的 session 状态
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+
+      // [保留旧的后端退出逻辑，如有需要可以取消注释]
+      // await kivii.request.post('/auth/logout.json', undefined, {
+      //   header: {
+      //     'Content-Type': 'application/json',
+      //   },
+      // });
     } catch (error) {
       console.error('Logout failed:', error);
     } finally {

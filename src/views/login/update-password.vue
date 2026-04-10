@@ -1,36 +1,27 @@
 <script setup lang="ts">
   import { ref, reactive, computed, onMounted, onUnmounted } from 'vue';
-  import { useRouter, useRoute } from 'vue-router';
-  import { reloadDynamicRoutes } from '@/router';
-  // [MOCK MODE] 已注释掉后端请求依赖
-  // import { kivii } from '@kivii.com/bridge';
-  import { setGlobalConfig } from '@/router/routes';
+  import { useRouter } from 'vue-router';
   import { useMenuStore } from '@/layouts/modules/global-menu/store';
   import { supabase } from '@/utils/supabase';
 
   const router = useRouter();
-  const route = useRoute();
   const menuStore = useMenuStore();
 
   const form = reactive({
-    username: '',
     password: '',
+    confirmPassword: '',
   });
 
   const isLoading = ref(false);
   const errorMsg = ref('');
-  const successMsg = ref(''); // 新增：用于显示成功信息
-  const isSignUp = ref(false); // 切换登录/注册模式
-  const isForgotPassword = ref(false); // 新增：切换忘记密码模式
+  const successMsg = ref('');
 
-  // 直接从 Pinia store 读取，与主题侧边栏、顶部切换按钮共享同一状态
   const isDark = computed(() => menuStore.theme.darkMode);
 
   function toggleTheme() {
     menuStore.toggleDarkMode();
   }
 
-  // 跨标签页同步：其他 tab 修改主题时，通过 storage 事件通知本 tab 的 store
   function onStorageChange(e: StorageEvent) {
     if (e.key !== 'kivii-theme' || !e.newValue) return;
     try {
@@ -41,16 +32,31 @@
     } catch {}
   }
 
-  onMounted(() => window.addEventListener('storage', onStorageChange));
+  onMounted(() => {
+    window.addEventListener('storage', onStorageChange);
+    // 检查是否处于重置密码的会话中
+    supabase.auth.getSession().then(({ data }) => {
+      if (!data.session) {
+        errorMsg.value = '无效或已过期的重置链接，请重新发送邮件。';
+      }
+    });
+  });
+
   onUnmounted(() => window.removeEventListener('storage', onStorageChange));
 
-  async function handleLogin() {
-    if (!form.username) {
-      errorMsg.value = '请输入邮箱地址';
+  async function handleUpdatePassword() {
+    if (!form.password || !form.confirmPassword) {
+      errorMsg.value = '请输入新密码并确认';
       return;
     }
-    if (!isForgotPassword.value && !form.password) {
-      errorMsg.value = '请输入密码';
+
+    if (form.password !== form.confirmPassword) {
+      errorMsg.value = '两次输入的密码不一致';
+      return;
+    }
+
+    if (form.password.length < 6) {
+      errorMsg.value = '密码长度不能少于 6 位';
       return;
     }
 
@@ -59,71 +65,21 @@
     successMsg.value = '';
 
     try {
-      if (isForgotPassword.value) {
-        // 发送重置密码邮件
-        const { error } = await supabase.auth.resetPasswordForEmail(form.username, {
-          redirectTo: `${window.location.origin}/update-password`,
-        });
-        if (error) throw error;
+      const { error } = await supabase.auth.updateUser({
+        password: form.password,
+      });
 
-        successMsg.value = '重置链接已发送到您的邮箱，请查收（如果没收到请检查垃圾箱）。';
-        isLoading.value = false;
-        return; // 发送邮件后停留在当前页
-      } else if (isSignUp.value) {
-        // 注册流程
-        const { data, error } = await supabase.auth.signUp({
-          email: form.username,
-          password: form.password,
-        });
+      if (error) throw error;
 
-        if (error) throw error;
+      successMsg.value = '密码修改成功！即将跳转至登录页...';
 
-        // 如果开启了邮箱验证，注册后不会立即返回会话
-        if (!data.session) {
-          errorMsg.value = '注册成功，请前往您的邮箱验证（如无验证邮件请检查垃圾箱）';
-          isLoading.value = false;
-          return;
-        }
-      } else {
-        // 登录流程
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: form.username,
-          password: form.password,
-        });
-
-        if (error) throw error;
-      }
-
-      setGlobalConfig({ IsAuthenticated: true });
-      if (!(window as any).uiGlobalConfig) {
-        (window as any).uiGlobalConfig = {};
-      }
-      (window as any).uiGlobalConfig.IsAuthenticated = true;
-
-      await reloadDynamicRoutes();
-
-      const redirect = (route.query.redirect as string) || '/';
-
-      // 使用 router 跳转
-      // 只有在生产环境中才设置刷新标志位，本地开发环境不刷新以提高开发体验
-      if (import.meta.env.PROD) {
-        sessionStorage.setItem('need_reload_after_login', 'true');
-      }
-      router.replace(redirect);
+      // 修改成功后跳转到登录页
+      setTimeout(() => {
+        router.replace('/login');
+      }, 2000);
     } catch (e: any) {
-      console.error('Auth error:', e);
-      // 提供更友好的中文提示
-      if (e.message.includes('Invalid login credentials')) {
-        errorMsg.value = '账号或密码错误';
-      } else if (e.message.includes('Email not confirmed')) {
-        errorMsg.value = '邮箱未验证，请先前往邮箱验证';
-      } else if (e.message.includes('already registered')) {
-        errorMsg.value = '该邮箱已被注册';
-      } else if (e.message.includes('rate limit')) {
-        errorMsg.value = '请求过于频繁，请稍后再试';
-      } else {
-        errorMsg.value = e.message || '操作失败，请稍后重试';
-      }
+      console.error('Update password error:', e);
+      errorMsg.value = e.message || '密码修改失败，请重试或重新发送重置邮件';
     } finally {
       isLoading.value = false;
     }
@@ -304,77 +260,18 @@
 
       <!-- 分割线 -->
       <div class="divider">
-        <span>{{ isForgotPassword ? '重置密码' : isSignUp ? '创建账号' : '安全登录' }}</span>
+        <span>重置您的密码</span>
       </div>
 
-      <!-- 登录表单 -->
+      <!-- 重置密码表单 -->
       <form
-        @submit.prevent="handleLogin"
+        @submit.prevent="handleUpdatePassword"
         class="login-form"
         autocomplete="off"
       >
-        <!-- 邮箱 -->
+        <!-- 新密码 -->
         <div class="field-group">
-          <div class="field-label">邮箱地址</div>
-          <div
-            class="field-input-wrap"
-            :class="{ disabled: isLoading }"
-          >
-            <span class="field-icon">
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-              >
-                <path
-                  d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-                <polyline
-                  points="22,6 12,13 2,6"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-            </span>
-            <input
-              id="username"
-              v-model="form.username"
-              type="email"
-              placeholder="请输入邮箱"
-              :disabled="isLoading"
-              autocomplete="email"
-            />
-          </div>
-        </div>
-
-        <!-- 密码 -->
-        <div
-          class="field-group"
-          v-if="!isForgotPassword"
-        >
-          <div class="field-label">
-            密码
-            <!-- 忘记密码链接 (仅在登录模式下显示) -->
-            <a
-              v-if="!isSignUp && !isForgotPassword"
-              href="#"
-              @click.prevent="
-                isForgotPassword = true;
-                errorMsg = '';
-                successMsg = '';
-              "
-              class="forgot-password-link"
-            >
-              忘记密码？
-            </a>
-          </div>
+          <div class="field-label">新密码</div>
           <div
             class="field-input-wrap"
             :class="{ disabled: isLoading }"
@@ -407,9 +304,43 @@
               id="password"
               v-model="form.password"
               type="password"
-              placeholder="请输入密码"
+              placeholder="请输入新密码 (至少 6 位)"
               :disabled="isLoading"
-              autocomplete="current-password"
+              autocomplete="new-password"
+            />
+          </div>
+        </div>
+
+        <!-- 确认新密码 -->
+        <div class="field-group">
+          <div class="field-label">确认新密码</div>
+          <div
+            class="field-input-wrap"
+            :class="{ disabled: isLoading }"
+          >
+            <span class="field-icon">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+              >
+                <path
+                  d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </span>
+            <input
+              id="confirmPassword"
+              v-model="form.confirmPassword"
+              type="password"
+              placeholder="请再次输入新密码"
+              :disabled="isLoading"
+              autocomplete="new-password"
             />
           </div>
         </div>
@@ -498,98 +429,20 @@
             class="btn-content"
           >
             <svg
-              v-if="isForgotPassword"
               width="16"
               height="16"
               viewBox="0 0 24 24"
               fill="none"
             >
               <path
-                d="M22 2L11 13"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-              <path
-                d="M22 2L15 22L11 13L2 9L22 2Z"
+                d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
                 stroke="currentColor"
                 stroke-width="2"
                 stroke-linecap="round"
                 stroke-linejoin="round"
               />
             </svg>
-            <svg
-              v-else-if="!isSignUp"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-            >
-              <path
-                d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-              />
-              <polyline
-                points="10 17 15 12 10 7"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-              <line
-                x1="15"
-                y1="12"
-                x2="3"
-                y2="12"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-              />
-            </svg>
-            <svg
-              v-else
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-            >
-              <path
-                d="M16 21v-2a4 4 0 0 0-4-4H5c-1.1 0-2 .9-2 2v2"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-              />
-              <circle
-                cx="8.5"
-                cy="7"
-                r="4"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-              />
-              <line
-                x1="20"
-                y1="8"
-                x2="20"
-                y2="14"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-              />
-              <line
-                x1="23"
-                y1="11"
-                x2="17"
-                y2="11"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-              />
-            </svg>
-            {{ isForgotPassword ? '发送重置邮件' : isSignUp ? '注 册' : '登 录' }}
+            确认修改
           </span>
           <span
             v-else
@@ -600,28 +453,16 @@
           </span>
         </button>
 
-        <!-- 切换登录/注册 -->
         <div
           class="toggle-mode"
           style="text-align: center; margin-top: 16px"
         >
-          <a
-            href="#"
-            @click.prevent="
-              if (isForgotPassword) {
-                isForgotPassword = false;
-                errorMsg = '';
-                successMsg = '';
-              } else {
-                isSignUp = !isSignUp;
-                errorMsg = '';
-                successMsg = '';
-              }
-            "
+          <router-link
+            to="/login"
             style="color: #3b82f6; font-size: 14px; text-decoration: none"
           >
-            {{ isForgotPassword ? '返回登录' : isSignUp ? '已有账号？去登录' : '没有账号？去注册' }}
-          </a>
+            返回登录
+          </router-link>
         </div>
       </form>
 

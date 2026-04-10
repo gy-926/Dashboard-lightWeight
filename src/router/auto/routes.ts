@@ -30,6 +30,15 @@ export const autoRoutes: RouteRecordRaw[] = [
         },
       },
       {
+        path: 'test-supabase',
+        name: 'test-supabase',
+        component: () => import('../../views/test-supabase/index.vue'),
+        meta: {
+          title: 'Supabase测试',
+          icon: 'fa-database',
+        },
+      },
+      {
         path: 'umd-menu-config',
         name: 'umd-menu-config',
         component: () => import('../../views/umd-menu-config/index.vue'),
