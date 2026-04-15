@@ -57,6 +57,15 @@ export const autoRoutes: RouteRecordRaw[] = [
         },
       },
       {
+        path: 'test-table',
+        name: 'test-table',
+        component: () => import('../../views/test-table/index.vue'),
+        meta: {
+          title: '表格组件',
+          icon: 'fa-table',
+        },
+      },
+      {
         path: 'iframe-page',
         name: 'iframe-page',
         component: () => import('../../views/_builtin/iframe-page/index.vue'),

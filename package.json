@@ -13,6 +13,7 @@
   "dependencies": {
     "@kivii.com/bridge": "^1.1.11",
     "@vueuse/core": "^14.2.0",
+    "kivii-public-components": "^0.2.8",
     "nprogress": "^0.2.0",
     "pinia": "^2.3.0",
     "vue": "^3.5.17",
@@ -34,5 +35,6 @@
     "vite": "^7.0.0",
     "vite-plugin-vue-devtools": "^7.7.7",
     "vue-tsc": "^2.2.12"
-  }
+  },
+  "packageManager": "pnpm@10.28.1+sha1.20817ab95fb7f61154ba5ff3bcb61f27defb6142"
 }

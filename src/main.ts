@@ -7,6 +7,8 @@ import router from './router';
 import * as LayoutComponents from '@/layouts/modules';
 // 引入 kivii.com/bridge 库
 import '@kivii.com/bridge';
+// 引入公共组件样式
+import 'kivii-public-components/style';
 // 引入自定义 OpenTab 实现
 import { KiviiOpenTab } from './bridge/kivii-open-tab';
 // 引入远程组件加载器
@@ -37,8 +39,7 @@ const initApp = async () => {
   // 动态加载远程组件 (改为后台加载，不阻塞应用挂载)
   // 如果处于未登录状态，且当前路由是登录页，则不加载 UMD 组件，避免重复加载
   const isLoginPage =
-    window.location.hash.includes('/login') ||
-    window.location.hash.includes('/SpringLogin');
+    window.location.hash.includes('/login') || window.location.hash.includes('/SpringLogin');
   const uiConfig = (window as any).uiGlobalConfig || {};
   const isAuthenticated = uiConfig.IsAuthenticated === true;
 
