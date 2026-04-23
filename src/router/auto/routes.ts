@@ -20,6 +20,7 @@ export const autoRoutes: RouteRecordRaw[] = [
           icon: 'fa-home',
         },
       },
+
       {
         path: 'dashboard',
         name: 'dashboard',
@@ -27,6 +28,15 @@ export const autoRoutes: RouteRecordRaw[] = [
         meta: {
           title: 'UMD文件配置页面',
           icon: 'fa-chart-line',
+        },
+      },
+      {
+        path: 'umd-management',
+        name: 'umd-management',
+        component: () => import('../../views/umd-management/index.vue'),
+        meta: {
+          title: 'UMD模块管理',
+          icon: 'fa-cubes',
         },
       },
       {

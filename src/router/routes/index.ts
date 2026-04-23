@@ -30,6 +30,8 @@ const defaultGlobalConfig: GlobalConfig = {
   Parameters: uiConfig.Parameters || {},
   IsAuthenticated: uiConfig.IsAuthenticated !== undefined ? uiConfig.IsAuthenticated : false,
   PublicLoginUrl: uiConfig.PublicLoginUrl || '',
+  ShowWatermark: uiConfig.ShowWatermark !== undefined ? uiConfig.ShowWatermark : false,
+  WatermarkText: uiConfig.WatermarkText || 'Dashboard',
 };
 
 // 当前全局配置

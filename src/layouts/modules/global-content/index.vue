@@ -64,7 +64,7 @@
 
   // 判断是否需要全宽布局（带内边距的页面）
   const isFullWidthLayout = computed(() => {
-    return ['home', 'dashboard', 'umd-menu-config'].includes(String(route.name));
+    return ['home', 'dashboard', 'umd-management', 'umd-menu-config'].includes(String(route.name));
   });
 
   // 缓存包装组件定义，避免重复创建导致组件重置

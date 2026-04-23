@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed, watch } from 'vue';
+import { getGlobalConfig } from '@/router/routes';
 import type { MenuItem, ThemeConfig, MenuConfig } from './types';
 import { transformRouteToMenu } from './types';
 
@@ -111,6 +112,7 @@ function isHomeTab(path: string) {
 export const useMenuStore = defineStore('menu', () => {
   // 加载保存的设置
   const savedTheme = loadThemeFromStorage();
+  const uiConfig = getGlobalConfig();
 
   // 菜单列表
   const menuList = ref<MenuItem[]>([]);
@@ -129,8 +131,8 @@ export const useMenuStore = defineStore('menu', () => {
     showTabs: savedTheme.showTabs !== undefined ? savedTheme.showTabs : true,
     showBreadcrumb: savedTheme.showBreadcrumb !== undefined ? savedTheme.showBreadcrumb : true,
     showFooter: savedTheme.showFooter !== undefined ? savedTheme.showFooter : false,
-    showWatermark: savedTheme.showWatermark !== undefined ? savedTheme.showWatermark : false,
-    watermarkText: savedTheme.watermarkText || 'Kivii Dashboard',
+    showWatermark: uiConfig.ShowWatermark ?? false,
+    watermarkText: uiConfig.WatermarkText ?? 'Kivii 内部系统',
     preserveHomeTab: savedTheme.preserveHomeTab !== undefined ? savedTheme.preserveHomeTab : true,
   });
   // 菜单配置
@@ -199,8 +201,6 @@ export const useMenuStore = defineStore('menu', () => {
             showTabs: val.showTabs,
             showBreadcrumb: val.showBreadcrumb,
             showFooter: val.showFooter,
-            showWatermark: val.showWatermark,
-            watermarkText: val.watermarkText,
             preserveHomeTab: val.preserveHomeTab,
           })
         );
@@ -348,18 +348,22 @@ export const useMenuStore = defineStore('menu', () => {
     const removablePaths = getProtectedPaths(paths, options?.preserveHome);
     if (removablePaths.length === 0) return;
 
-    const tabsToRemove = removablePaths.map(p => {
-      const idx = tabsList.value.findIndex(t => t.path === p);
-      return idx > -1 ? tabsList.value.splice(idx, 1)[0] : null;
-    }).filter(Boolean) as typeof tabsList.value;
+    const tabsToRemove = removablePaths
+      .map(p => {
+        const idx = tabsList.value.findIndex(t => t.path === p);
+        return idx > -1 ? tabsList.value.splice(idx, 1)[0] : null;
+      })
+      .filter(Boolean) as typeof tabsList.value;
 
     // 并行清理缓存
     try {
       const { useTeleportManager } = await import('@/store/modules/teleport-manager');
       const teleportManager = useTeleportManager();
-      await Promise.all(tabsToRemove.map(tab =>
-        Promise.resolve(teleportManager.removeComponentCacheByPath(tab.path, tab.kvid))
-      ));
+      await Promise.all(
+        tabsToRemove.map(tab =>
+          Promise.resolve(teleportManager.removeComponentCacheByPath(tab.path, tab.kvid))
+        )
+      );
     } catch (e) {
       // 忽略导入错误
     }
