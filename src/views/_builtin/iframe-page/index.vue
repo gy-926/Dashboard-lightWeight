@@ -10,6 +10,7 @@
   } from '@/store/modules/teleport-manager';
   import WebviewComponent from './webview.vue';
   import VueComponent from './vueComponent.vue';
+  import UmdComponentPage from '../umd-component/index.vue';
   import { kivii } from '@kivii.com/bridge';
   import { getGlobalConfig } from '@/router/routes';
 
@@ -42,12 +43,16 @@
       return dynamicRenderType.value;
     }
     const type = props.type?.toLowerCase() as PageType;
-    if (type === 'vue') {
+    if (type === 'vue' || type === 'umd') {
       return type;
     }
     // 如果 URL 以 .vue 结尾，识别为 Vue 组件
     if (props.url?.endsWith('.vue') || props.functionKvid?.endsWith('.vue')) {
       return 'vue';
+    }
+    // 如果 URL 是以 < 开头且包含 > 的标签形式，识别为 UMD 组件
+    if (props.url?.startsWith('<') && props.url?.includes('>')) {
+      return 'umd';
     }
     return 'webview';
   });
@@ -80,7 +85,19 @@
       return 'vue';
     }
 
+    // 包含 < 和 > 的标签形式，作为 UMD 组件
+    if (handler.startsWith('<') && handler.includes('>')) {
+      return 'umd';
+    }
+
     return 'webview';
+  }
+
+  // 从类似 <SmartStandardLibrary> 的标签中提取组件名
+  function extractComponentName(tag: string): string {
+    if (!tag) return '';
+    const match = tag.match(/<([a-zA-Z0-9-]+)[^>]*>/);
+    return match ? match[1] : tag;
   }
 
   // 获取功能访问权限并决定渲染方式
@@ -107,13 +124,16 @@
         const handler = data.Results[0].Handler;
 
         if (handler) {
+          dynamicRenderType.value = determineRenderTypeByHandler(handler);
           // 如果 handler 已经是绝对路径，直接使用；否则拼接 origin
           if (handler.startsWith('http')) {
             dynamicHandler.value = handler;
+          } else if (dynamicRenderType.value === 'umd') {
+            // 如果是 UMD 组件，直接使用提取的组件名
+            dynamicHandler.value = extractComponentName(handler);
           } else {
             dynamicHandler.value = origin + handler;
           }
-          dynamicRenderType.value = determineRenderTypeByHandler(handler);
         }
       }
     } catch (error) {
@@ -157,7 +177,26 @@
 
   // 选择渲染组件
   const CurrentComponent = computed(() => {
-    return renderType.value === 'vue' ? VueComponent : WebviewComponent;
+    if (renderType.value === 'vue') {
+      return VueComponent;
+    }
+    if (renderType.value === 'umd') {
+      return UmdComponentPage;
+    }
+    return WebviewComponent;
+  });
+
+  // UMD 组件参数处理
+  const umdComponentProps = computed(() => {
+    if (renderType.value === 'umd') {
+      // 这里的 renderUrl.value 应该已经是通过 extractComponentName 处理过的组件名
+      const compName = renderUrl.value;
+      return {
+        componentName: compName,
+        // 这里可以继续向下透传需要的参数
+      };
+    }
+    return {};
   });
 
   // 组件就绪回调
@@ -260,6 +299,7 @@
       :page-id="pageId"
       :route-query="routeQuery"
       :backend-origin="backendOrigin"
+      v-bind="umdComponentProps"
       @ready="handleComponentReady"
       @cleanup="handleComponentCleanup"
     />
