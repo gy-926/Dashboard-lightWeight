@@ -38,9 +38,7 @@
     const name = String(route.name || '');
     // iframe / 自定义动态页通常承载重型 DOM、iframe 或远程组件，继续保活会显著抬高内存占用
     return (
-      path.startsWith('/custom_') ||
-      path.startsWith('/bridge_') ||
-      name.startsWith('iframe-page')
+      path.startsWith('/custom_') || path.startsWith('/bridge_') || name.startsWith('iframe-page')
     );
   });
 
@@ -64,24 +62,26 @@
 
   // 判断是否需要全宽布局（带内边距的页面）
   const isFullWidthLayout = computed(() => {
-    return ['home', 'dashboard', 'umd-management', 'umd-menu-config'].includes(String(route.name));
+    return ['home', 'umd-management', 'umd-menu-config'].includes(String(route.name));
+  });
+
+  // 判断是否需要无内边距的全屏布局
+  const isNoPaddingLayout = computed(() => {
+    return ['dashboard'].includes(String(route.name));
   });
 
   // 缓存包装组件定义，避免重复创建导致组件重置
   const wrapperMap = new Map<string, any>();
 
   // 监听 cachedViews 变化，清理不再使用的 wrapper 缓存
-  watch(
-    cachedViews,
-    views => {
-      const viewSet = new Set(views);
-      for (const key of wrapperMap.keys()) {
-        if (!viewSet.has(key)) {
-          wrapperMap.delete(key);
-        }
+  watch(cachedViews, views => {
+    const viewSet = new Set(views);
+    for (const key of wrapperMap.keys()) {
+      if (!viewSet.has(key)) {
+        wrapperMap.delete(key);
       }
     }
-  );
+  });
 
   // 包装组件函数：动态设置组件名称以匹配路由名称，从而使 keep-alive 生效
   const wrapComponent = (component: any, routeName: string) => {
@@ -132,7 +132,11 @@
       <div
         :class="[
           'min-h-full relative',
-          isFullWidthLayout ? 'w-full px-4 md:px-6 py-6' : 'mx-auto',
+          isNoPaddingLayout
+            ? 'w-full h-full p-0 flex flex-col'
+            : isFullWidthLayout
+              ? 'w-full px-4 md:px-6 py-6'
+              : 'mx-auto',
         ]"
       >
         <template v-if="shouldKeepAlive">
@@ -192,40 +196,40 @@
 </template>
 
 <style scoped>
-/*
+  /*
  * 内容区标签切换过渡：纯 opacity 淡入淡出
  * - 不使用 translateY，避免 layout 触发和视觉抖动
  * - will-change: opacity 让浏览器提前将元素提升为合成层（GPU），切换更顺滑
  * - enter/leave 同时进行（交叉淡化），无等待延迟
  */
-.tab-enter-active {
-  transition: opacity 160ms ease-out;
-  will-change: opacity;
-}
+  .tab-enter-active {
+    transition: opacity 160ms ease-out;
+    will-change: opacity;
+  }
 
-.tab-leave-active {
-  transition: opacity 100ms ease-in;
-  will-change: opacity;
-  /* 脱离文档流，让新页面同时淡入，不占位 */
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-}
+  .tab-leave-active {
+    transition: opacity 100ms ease-in;
+    will-change: opacity;
+    /* 脱离文档流，让新页面同时淡入，不占位 */
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
 
-.tab-enter-from {
-  opacity: 0;
-}
+  .tab-enter-from {
+    opacity: 0;
+  }
 
-.tab-enter-to {
-  opacity: 1;
-}
+  .tab-enter-to {
+    opacity: 1;
+  }
 
-.tab-leave-from {
-  opacity: 1;
-}
+  .tab-leave-from {
+    opacity: 1;
+  }
 
-.tab-leave-to {
-  opacity: 0;
-}
+  .tab-leave-to {
+    opacity: 0;
+  }
 </style>
