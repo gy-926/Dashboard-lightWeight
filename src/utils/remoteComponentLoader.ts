@@ -415,6 +415,60 @@ export function generateUmdRoutes(): ElegantRoute[] {
   return routes;
 }
 
+// 按需加载单个 UMD 文件并注册到 app（懒加载 / remark 路径场景）
+export const loadUmdOnDemand = async (app: App, scriptPath: string): Promise<void> => {
+  const EXCLUDED_KEYS = new Set([
+    'default',
+    'install',
+    'manifest',
+    'componentsMap',
+    'componentsDetailed',
+    'version',
+    '__esModule',
+    'VueDemoComponent',
+  ]);
+
+  const remoteComponent = await loadUMDComponent(scriptPath);
+
+  if (typeof remoteComponent !== 'object' || remoteComponent === null) return;
+
+  // 插件模式
+  if (remoteComponent.install) {
+    app.use(remoteComponent);
+    return;
+  }
+
+  // CSS 注入
+  const cssInjectors = [
+    'injectStyles',
+    '__inject_styles',
+    'injectCss',
+    '_injectStyles',
+    'applyStyles',
+    'install_styles',
+  ];
+  for (const cssKey of cssInjectors) {
+    if (typeof remoteComponent[cssKey] === 'function') {
+      try {
+        remoteComponent[cssKey]();
+      } catch (_) {
+        /* ignore */
+      }
+    }
+  }
+
+  // 注册所有导出的组件（跳过已注册的，避免重复覆盖）
+  for (const key in remoteComponent) {
+    if (EXCLUDED_KEYS.has(key)) continue;
+    const component = remoteComponent[key];
+    if (component && (typeof component === 'object' || typeof component === 'function')) {
+      if (!Object.prototype.hasOwnProperty.call(app._context.components, key)) {
+        app.component(key, component);
+      }
+    }
+  }
+};
+
 // 注册所有远程组件
 export const registerRemoteComponents = async (
   app: App,

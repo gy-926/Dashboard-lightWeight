@@ -1,6 +1,14 @@
 <script setup lang="ts">
   defineOptions({ name: 'IframePage' });
-  import { ref, onMounted, onUnmounted, onActivated, computed, watch } from 'vue';
+  import {
+    ref,
+    onMounted,
+    onUnmounted,
+    onActivated,
+    computed,
+    watch,
+    getCurrentInstance,
+  } from 'vue';
   import { useRoute } from 'vue-router';
   import { useEventBus } from '@vueuse/core';
   import {
@@ -13,6 +21,7 @@
   import UmdComponentPage from '../umd-component/index.vue';
   import { kivii } from '@kivii.com/bridge';
   import { getGlobalConfig } from '@/router/routes';
+  import { loadUmdOnDemand } from '@/utils/remoteComponentLoader';
 
   // 路由 props
   const props = defineProps<{
@@ -25,6 +34,7 @@
   }>();
 
   const route = useRoute();
+  const instance = getCurrentInstance();
   const { registerPage, unregisterPage, updatePageStatus, requestActivation, forceActivate } =
     useTeleportManager();
 
@@ -129,8 +139,20 @@
           if (handler.startsWith('http')) {
             dynamicHandler.value = handler;
           } else if (dynamicRenderType.value === 'umd') {
-            // 如果是 UMD 组件，直接使用提取的组件名
-            dynamicHandler.value = extractComponentName(handler);
+            const compName = extractComponentName(handler);
+            dynamicHandler.value = compName;
+
+            // 按需加载：remark 字段临时存放 UMD 脚本路径（后期替换为专用字段）
+            const scriptPath: string | undefined = data.Results[0].Remark;
+            if (scriptPath && instance) {
+              const isRegistered = Object.prototype.hasOwnProperty.call(
+                instance.appContext.components,
+                compName
+              );
+              if (!isRegistered) {
+                await loadUmdOnDemand(instance.appContext.app, scriptPath);
+              }
+            }
           } else {
             dynamicHandler.value = origin + handler;
           }
