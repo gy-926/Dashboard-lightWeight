@@ -163,7 +163,13 @@ export function restoreDynamicRoutesFromCache(): RouteRecordRaw[] | null {
 export async function getRootMenu(): Promise<MenuItem[]> {
   const config = getGlobalConfig();
   const response = await fetchMenuData(config.InternalCode);
-  return response.MenusMain.Results;
+
+  // 过滤掉类型为 System 的菜单
+  const filteredMenus = response.MenusMain.Results.filter(
+    (item: MenuItem) => item.Type !== 'System'
+  );
+
+  return filteredMenus;
 }
 
 // ==================== 菜单树构建 ====================
