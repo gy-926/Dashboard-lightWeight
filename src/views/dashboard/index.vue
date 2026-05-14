@@ -1,15 +1,22 @@
 <template>
   <div class="dashboard-page bg-white dark:bg-[#18181c]">
-    <kivii-dashboard
+    <EchartsField
       v-model:widgets="dashboardWidgets"
       :editable="true"
+      :api-config="{
+        type: 'Kivii.Finances.Entities.InvoiceDashBOard',
+        internalCode: '发票管理图表(InvoiceDashboard)',
+        isDefault: true,
+        getUrl: '/Restful/Kivii.Basic.Entities.UiConfig/Get.json',
+        setUrl: '/Restful/Kivii.Basic.Entities.UiConfig/Set.json',
+      }"
     />
   </div>
 </template>
 
 <script setup lang="ts">
   import { ref } from 'vue';
-  import { KiviiDashboard } from 'kivii-public-components';
+  import { EchartsField } from 'kivii-public-components';
 
   const dashboardWidgets = ref([]);
 </script>
@@ -21,6 +28,7 @@
     width: 100%;
     display: flex;
     flex-direction: column;
+    margin-top: 10px;
     /* 这里可以让内部元素撑满剩余空间 */
   }
 

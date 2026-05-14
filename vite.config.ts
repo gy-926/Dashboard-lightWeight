@@ -65,6 +65,10 @@ export default defineConfig({
         target: 'https://datav.kivii.org',
         changeOrigin: true,
       },
+      '/Serve': {
+        target: 'https://datav.kivii.org',
+        changeOrigin: true,
+      }
     },
   },
 });
