@@ -11,40 +11,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
-import { isDynamicRoutesReady } from '@/router'
+import { ref, onMounted } from 'vue'
+import { waitForRoutesReady } from '@/router'
 
 const isReady = ref(false)
-let pollInterval: ReturnType<typeof setInterval> | null = null
-
-function clearReadyPoll() {
-  if (pollInterval) {
-    clearInterval(pollInterval)
-    pollInterval = null
-  }
-}
 
 onMounted(() => {
-  // 等待动态路由加载完成
-  if (isDynamicRoutesReady()) {
+  waitForRoutesReady().then(() => {
     isReady.value = true
-    return
-  }
-
-  // 监听动态路由加载完成
-  const checkReady = () => {
-    if (isDynamicRoutesReady()) {
-      isReady.value = true
-      clearReadyPoll()
-    }
-  }
-
-  // 轮询检查（作为备用方案）
-  pollInterval = setInterval(checkReady, 50)
-})
-
-onUnmounted(() => {
-  clearReadyPoll()
+  })
 })
 </script>
 

@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, computed, watch } from 'vue';
 import type { MenuItem, ThemeConfig, MenuConfig } from './types';
 import { transformRouteToMenu } from './types';
+import { lightenColor, darkenColor, hexToRgba } from '@/utils/color';
 
 const HOME_TAB_PATH = '/home';
 const DEFAULT_HOME_TAB: MenuItem = {
@@ -10,35 +11,6 @@ const DEFAULT_HOME_TAB: MenuItem = {
   title: '首页',
   icon: 'fa-home',
 };
-
-// 辅助函数：颜色变亮
-function lightenColor(hex: string, percent: number): string {
-  const num = parseInt(hex.replace('#', ''), 16);
-  const amt = Math.round(2.55 * percent);
-  const R = Math.min(255, (num >> 16) + amt);
-  const G = Math.min(255, ((num >> 8) & 0x00ff) + amt);
-  const B = Math.min(255, (num & 0x0000ff) + amt);
-  return `rgba(${R}, ${G}, ${B}, 0.2)`;
-}
-
-// 辅助函数：颜色变暗
-function darkenColor(hex: string, percent: number): string {
-  const num = parseInt(hex.replace('#', ''), 16);
-  const amt = Math.round(2.55 * percent);
-  const R = Math.max(0, (num >> 16) - amt);
-  const G = Math.max(0, ((num >> 8) & 0x00ff) - amt);
-  const B = Math.max(0, (num & 0x0000ff) - amt);
-  return `#${((1 << 24) | (R << 16) | (G << 8) | B).toString(16).slice(1)}`;
-}
-
-// 辅助函数：hex 转 rgba
-function hexToRgba(hex: string, alpha: number): string {
-  const num = parseInt(hex.replace('#', ''), 16);
-  const R = (num >> 16) & 255;
-  const G = (num >> 8) & 255;
-  const B = num & 255;
-  return `rgba(${R}, ${G}, ${B}, ${alpha})`;
-}
 
 // 从本地存储读取保存的主题设置
 function loadThemeFromStorage(): Partial<ThemeConfig> {
@@ -348,18 +320,22 @@ export const useMenuStore = defineStore('menu', () => {
     const removablePaths = getProtectedPaths(paths, options?.preserveHome);
     if (removablePaths.length === 0) return;
 
-    const tabsToRemove = removablePaths.map(p => {
-      const idx = tabsList.value.findIndex(t => t.path === p);
-      return idx > -1 ? tabsList.value.splice(idx, 1)[0] : null;
-    }).filter(Boolean) as typeof tabsList.value;
+    const tabsToRemove = removablePaths
+      .map(p => {
+        const idx = tabsList.value.findIndex(t => t.path === p);
+        return idx > -1 ? tabsList.value.splice(idx, 1)[0] : null;
+      })
+      .filter(Boolean) as typeof tabsList.value;
 
     // 并行清理缓存
     try {
       const { useTeleportManager } = await import('@/store/modules/teleport-manager');
       const teleportManager = useTeleportManager();
-      await Promise.all(tabsToRemove.map(tab =>
-        Promise.resolve(teleportManager.removeComponentCacheByPath(tab.path, tab.kvid))
-      ));
+      await Promise.all(
+        tabsToRemove.map(tab =>
+          Promise.resolve(teleportManager.removeComponentCacheByPath(tab.path, tab.kvid))
+        )
+      );
     } catch (e) {
       // 忽略导入错误
     }

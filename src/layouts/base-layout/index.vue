@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { useMenuStore } from '../modules/global-menu/store'
-import type { MenuItem } from '../modules/global-menu/types'
+import { useMenuStore } from '@/layouts/modules/global-menu/store'
+import type { MenuItem } from '@/layouts/modules/global-menu/types'
 
 const menuStore = useMenuStore()
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useMenuStore } from '../global-menu/store'
+import { useMenuStore } from '@/layouts/modules/global-menu/store'
 import { useKiviiOpenTab } from '@/composables/useKiviiOpenTab'
 
 const menuStore = useMenuStore()

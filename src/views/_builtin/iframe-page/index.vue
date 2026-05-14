@@ -2,7 +2,6 @@
   defineOptions({ name: 'IframePage' });
   import { ref, onMounted, onUnmounted, onActivated, computed, watch } from 'vue';
   import { useRoute } from 'vue-router';
-  import { useEventBus } from '@vueuse/core';
   import {
     useTeleportManager,
     generatePageId,
@@ -30,7 +29,6 @@
 
   const pageId = ref<string>('');
   const cleanupCallbacks = ref<(() => void)[]>([]);
-  let offTabClose: (() => void) | null = null;
 
   // 动态渲染类型（由接口决定）
   const dynamicRenderType = ref<PageType>('webview');
@@ -148,15 +146,15 @@
     if (isCustomRoute.value && renderType.value === 'vue') {
       const routeQuery = props.routeQuery;
       if (routeQuery) {
-        if (!(window as any).customRouteParamsManager) {
-          (window as any).customRouteParamsManager = {};
+        if (!window.customRouteParamsManager) {
+          window.customRouteParamsManager = {};
         }
-        (window as any).customRouteParamsManager[route.fullPath] = {
+        window.customRouteParamsManager[route.fullPath] = {
           params: routeQuery,
           routeId: pageId.value,
           timestamp: Date.now(),
         };
-        (window as any).currentCustomRouteKey = route.fullPath;
+        window.currentCustomRouteKey = route.fullPath;
       }
     }
   }
@@ -194,21 +192,10 @@
     }
   }
 
-  // 监听标签关闭事件
-  const tabCloseBus = useEventBus<string>('tab-close');
   onMounted(async () => {
-    // 获取功能权限并决定渲染方式
     await fetchFunctionAccess();
-
     registerCurrentPage();
     handleCustomRouteParams();
-
-    // 监听标签关闭
-    offTabClose = tabCloseBus.on(closedPath => {
-      if (closedPath === route.path && pageId.value) {
-        cleanupAll();
-      }
-    });
   });
 
   // 激活时更新状态
@@ -219,10 +206,6 @@
   });
 
   onUnmounted(() => {
-    if (offTabClose) {
-      offTabClose();
-      offTabClose = null;
-    }
     cleanupAll();
   });
 

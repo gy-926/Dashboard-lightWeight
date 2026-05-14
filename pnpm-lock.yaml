@@ -17,9 +17,6 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.102.1
         version: 2.102.1
-      '@vueuse/core':
-        specifier: ^14.2.0
-        version: 14.2.0(vue@3.5.17(typescript@5.8.3))
       nprogress:
         specifier: ^0.2.0
         version: 0.2.0
@@ -51,9 +48,6 @@ importers:
       '@vue/tsconfig':
         specifier: ^0.7.0
         version: 0.7.0(typescript@5.8.3)(vue@3.5.17(typescript@5.8.3))
-      '@wemt/vue3-auto-router':
-        specifier: ^1.0.25
-        version: 1.0.25(glob@10.4.5)(vite@7.0.4(@types/node@22.16.3)(jiti@1.21.7)(lightningcss@1.30.1)(yaml@2.8.0))(vue-router@4.5.1(vue@3.5.17(typescript@5.8.3)))(vue@3.5.17(typescript@5.8.3))
       autoprefixer:
         specifier: ^10.4.21
         version: 10.4.21(postcss@8.5.6)
@@ -681,9 +675,6 @@ packages:
   '@types/nprogress@0.2.3':
     resolution: {integrity: sha512-k7kRA033QNtC+gLc4VPlfnue58CM1iQLgn1IMAU8VPHGOj7oIHPp9UlhedEnD/Gl8evoCjwkZjlBORtZ3JByUA==}
 
-  '@types/web-bluetooth@0.0.21':
-    resolution: {integrity: sha512-oIQLCGWtcFZy2JW77j9k8nHzAOpqMHLQejDA48XXMWH6tjCQHz5RCFz1bzsmROyL6PUm+LLnUiI4BCn221inxA==}
-
   '@types/ws@8.18.1':
     resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
 
@@ -833,27 +824,6 @@ packages:
         optional: true
       vue:
         optional: true
-
-  '@vueuse/core@14.2.0':
-    resolution: {integrity: sha512-tpjzVl7KCQNVd/qcaCE9XbejL38V6KJAEq/tVXj7mDPtl6JtzmUdnXelSS+ULRkkrDgzYVK7EerQJvd2jR794Q==}
-    peerDependencies:
-      vue: ^3.5.0
-
-  '@vueuse/metadata@14.2.0':
-    resolution: {integrity: sha512-i3axTGjU8b13FtyR4Keeama+43iD+BwX9C2TmzBVKqjSHArF03hjkp2SBZ1m72Jk2UtrX0aYCugBq2R1fhkuAQ==}
-
-  '@vueuse/shared@14.2.0':
-    resolution: {integrity: sha512-Z0bmluZTlAXgUcJ4uAFaML16JcD8V0QG00Db3quR642I99JXIDRa2MI2LGxiLVhcBjVnL1jOzIvT5TT2lqJlkA==}
-    peerDependencies:
-      vue: ^3.5.0
-
-  '@wemt/vue3-auto-router@1.0.25':
-    resolution: {integrity: sha512-LswuGziCE6Z9+1CCe+r1KWUO1GTRpGvbYCVlEw4nKKTXgouOgMkDGwnKv8a5xrhHSYJW2nOwbZypVW83i6FwYQ==}
-    peerDependencies:
-      glob: ^10.0.0
-      vite: ^7.0.0
-      vue: ^3.0.0
-      vue-router: ^4.0.0
 
   alien-signals@1.0.13:
     resolution: {integrity: sha512-OGj9yyTnJEttvzhTUWuscOvtqxq5vrhF7vL9oS0xJ2mK0ItPYP1/y+vCFebfxoEyAz0++1AIwJ5CMr+Fk3nDmg==}
@@ -2655,8 +2625,6 @@ snapshots:
 
   '@types/nprogress@0.2.3': {}
 
-  '@types/web-bluetooth@0.0.21': {}
-
   '@types/ws@8.18.1':
     dependencies:
       '@types/node': 22.16.3
@@ -2950,26 +2918,6 @@ snapshots:
     optionalDependencies:
       typescript: 5.8.3
       vue: 3.5.17(typescript@5.8.3)
-
-  '@vueuse/core@14.2.0(vue@3.5.17(typescript@5.8.3))':
-    dependencies:
-      '@types/web-bluetooth': 0.0.21
-      '@vueuse/metadata': 14.2.0
-      '@vueuse/shared': 14.2.0(vue@3.5.17(typescript@5.8.3))
-      vue: 3.5.17(typescript@5.8.3)
-
-  '@vueuse/metadata@14.2.0': {}
-
-  '@vueuse/shared@14.2.0(vue@3.5.17(typescript@5.8.3))':
-    dependencies:
-      vue: 3.5.17(typescript@5.8.3)
-
-  '@wemt/vue3-auto-router@1.0.25(glob@10.4.5)(vite@7.0.4(@types/node@22.16.3)(jiti@1.21.7)(lightningcss@1.30.1)(yaml@2.8.0))(vue-router@4.5.1(vue@3.5.17(typescript@5.8.3)))(vue@3.5.17(typescript@5.8.3))':
-    dependencies:
-      glob: 10.4.5
-      vite: 7.0.4(@types/node@22.16.3)(jiti@1.21.7)(lightningcss@1.30.1)(yaml@2.8.0)
-      vue: 3.5.17(typescript@5.8.3)
-      vue-router: 4.5.1(vue@3.5.17(typescript@5.8.3))
 
   alien-signals@1.0.13: {}
 

@@ -132,7 +132,9 @@ async function initRoutes() {
       ) {
         targetNavigation = null;
         updateMenuFromRoutes().finally(() => {
-          router.replace(restorePath).catch(() => {});
+          router.replace(restorePath).catch(e => {
+            console.warn('[Router] 路由恢复失败:', restorePath, e);
+          });
         });
         return;
       }
@@ -142,7 +144,9 @@ async function initRoutes() {
       if (currentPath === '/404' || currentPath === '/:pathMatch(.*)*') {
         targetNavigation = null;
         updateMenuFromRoutes().finally(() => {
-          router.replace('/').catch(() => {});
+          router.replace('/').catch(e => {
+            console.warn('[Router] 回首页失败:', e);
+          });
         });
         return;
       }
@@ -242,6 +246,11 @@ async function updateMenuFromRoutes() {
 
 // 重置并重新加载动态路由（登录成功后调用）
 export async function reloadDynamicRoutes(): Promise<void> {
+  // 等待当前正在进行的路由加载完成，避免并发重置导致状态不一致
+  if (routesLoadPromise) {
+    await routesLoadPromise.catch(() => {});
+  }
+
   // 1. 清除本地缓存
   clearDynamicRoutesCache();
 

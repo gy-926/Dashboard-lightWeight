@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { useMenuStore } from '../global-menu/store'
+import { useMenuStore } from '@/layouts/modules/global-menu/store'
 
 const props = withDefaults(defineProps<{
   modelValue: boolean

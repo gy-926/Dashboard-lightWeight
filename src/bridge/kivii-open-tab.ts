@@ -70,8 +70,6 @@ export class KiviiOpenTab {
    */
   async open(url: string, options?: OpenTabOptions): Promise<boolean> {
     try {
-
-
       // 判断是否为外部 URL（http/https 开头）
       if (this.isExternalUrl(url)) {
         // 外部链接：使用 window.open
@@ -94,8 +92,6 @@ export class KiviiOpenTab {
    */
   async openPath(path: string, options?: OpenTabOptions): Promise<boolean> {
     try {
-
-
       if (!path) {
         console.warn('[KiviiOpenTab] 路径为空');
         return false;
@@ -118,7 +114,7 @@ export class KiviiOpenTab {
         };
         // 存储额外信息到 meta
         if (pathInfo.kvid || pathInfo.url || pathInfo.type) {
-          (tab as any).meta = {
+          tab.meta = {
             kvid: pathInfo.kvid,
             url: pathInfo.url,
             type: pathInfo.type,
@@ -144,8 +140,6 @@ export class KiviiOpenTab {
    */
   async openByKvid(kvid: string, options?: OpenTabOptions): Promise<boolean> {
     try {
-
-
       // 查找 kvid 对应的路径信息
       const pathInfo = this.findPathInfoByKvid(kvid);
 
@@ -266,10 +260,9 @@ export class KiviiOpenTab {
  * 快捷函数：打开 URL 或路径
  */
 export function openTab(url: string, options?: OpenTabOptions): Promise<boolean> {
-  if (typeof window !== 'undefined' && (window as any).kivii) {
-    return (window as any).kivii.openTab.open(url, options);
+  if (typeof window !== 'undefined' && window.kivii) {
+    return window.kivii.openTab.open(url, options);
   }
-  // 如果 kivii 未初始化，返回失败
   console.warn('[KiviiOpenTab] kivii 未初始化');
   return Promise.resolve(false);
 }
@@ -285,8 +278,8 @@ export function openTabPath(path: string, options?: OpenTabOptions): Promise<boo
  * 快捷函数：通过 kvid 打开
  */
 export function openTabByKvid(kvid: string, options?: OpenTabOptions): Promise<boolean> {
-  if (typeof window !== 'undefined' && (window as any).kivii) {
-    return (window as any).kivii.openTab.openByKvid(kvid, options);
+  if (typeof window !== 'undefined' && window.kivii) {
+    return window.kivii.openTab.openByKvid(kvid, options);
   }
   console.warn('[KiviiOpenTab] kivii 未初始化');
   return Promise.resolve(false);

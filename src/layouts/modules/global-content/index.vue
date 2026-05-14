@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { computed, h, watch } from 'vue';
   import { useRoute } from 'vue-router';
-  import { useMenuStore } from '../global-menu/store';
+  import { useMenuStore } from '@/layouts/modules/global-menu/store';
   import { useTeleportManager } from '@/store/modules/teleport-manager';
 
   const props = withDefaults(

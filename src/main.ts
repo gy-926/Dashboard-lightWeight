@@ -27,38 +27,30 @@ const initApp = async () => {
   app.use(pinia);
 
   // 注册 kiviiBridge 自定义实现（在挂载前）
-  if ((window as any).kivii) {
-    (window as any).kivii.register(new KiviiOpenTab(pinia));
-    console.log('[KiviiBridge] 自定义 OpenTab 实现已注册');
+  if (window.kivii) {
+    window.kivii.register(new KiviiOpenTab(pinia));
   } else {
     console.warn('[KiviiBridge] kivii 未初始化，无法注册自定义实现');
   }
 
-  // 动态加载远程组件 (改为后台加载，不阻塞应用挂载)
-  // 如果处于未登录状态，且当前路由是登录页，则不加载 UMD 组件，避免重复加载
+  // 动态加载远程组件（后台加载，不阻塞应用挂载）
+  // 登录页且未认证时跳过，避免重复加载
   const isLoginPage =
-    window.location.hash.includes('/login') ||
-    window.location.hash.includes('/SpringLogin');
-  const uiConfig = (window as any).uiGlobalConfig || {};
-  const isAuthenticated = uiConfig.IsAuthenticated === true;
+    window.location.hash.includes('/login') || window.location.hash.includes('/SpringLogin');
+  const isAuthenticated = window.uiGlobalConfig?.IsAuthenticated === true;
 
   if (isAuthenticated || !isLoginPage) {
-    try {
-      console.log('Start loading remote components in background...');
-      registerRemoteComponents(
-        app,
-        '/Restful/Kivii.Storages.Entities.DbFile/Query.json?FolderPath=/Umd/File'
-      ).catch(e => {
-        console.error('Remote components loading error (non-fatal):', e);
-      });
-    } catch (e) {
-      console.error('Remote components loading setup error:', e);
-    }
+    registerRemoteComponents(
+      app,
+      '/Restful/Kivii.Storages.Entities.DbFile/Query.json?FolderPath=/Umd/File'
+    ).catch(e => {
+      console.error('[UMD] 远程组件加载失败:', e);
+    });
   } else {
-    console.log('On login page and not authenticated, skipping UMD component loading.');
-    // 如果不加载 UMD 组件，我们需要触发一个空的执行，以正确 resolve umdComponentsReady
-    // 否则会导致路由系统一直死锁等待
-    registerRemoteComponents(app, 'empty_skip_load').catch(e => {});
+    // 未认证的登录页：触发空执行以正确 resolve umdComponentsReady，避免路由死锁
+    registerRemoteComponents(app, 'empty_skip_load').catch(e => {
+      console.warn('[UMD] empty_skip_load 异常:', e);
+    });
   }
 
   // 安装路由 (放在远程组件加载之后，避免潜在的冲突)

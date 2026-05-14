@@ -3,8 +3,6 @@ import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 // import vueDevTools from "vite-plugin-vue-devtools";
-// 禁用 vue-auto-router，使用手动路由配置
-// import vueAutoRouter from "@wemt/vue3-auto-router";
 
 export default defineConfig({
   plugins: [
@@ -26,7 +24,6 @@ export default defineConfig({
         assetFileNames: 'Content/UmdDashboard/assets/[name].[hash].[ext]',
         manualChunks: {
           'vendor-vue': ['vue', 'vue-router', 'pinia'],
-          'vendor-vueuse': ['@vueuse/core'],
           'vendor-sfc-loader': ['vue3-sfc-loader'],
           'vendor-kivii': ['@kivii.com/bridge'],
         },

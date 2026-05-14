@@ -14,7 +14,6 @@
     "@fortawesome/fontawesome-free": "^7.2.0",
     "@kivii.com/bridge": "^1.1.11",
     "@supabase/supabase-js": "^2.102.1",
-    "@vueuse/core": "^14.2.0",
     "nprogress": "^0.2.0",
     "pinia": "^2.3.0",
     "vue": "^3.5.17",
@@ -27,7 +26,6 @@
     "@types/nprogress": "^0.2.3",
     "@vitejs/plugin-vue": "^6.0.0",
     "@vue/tsconfig": "^0.7.0",
-    "@wemt/vue3-auto-router": "^1.0.25",
     "autoprefixer": "^10.4.21",
     "npm-run-all2": "^8.0.4",
     "postcss": "^8.4.35",
@@ -36,5 +34,6 @@
     "vite": "^7.0.0",
     "vite-plugin-vue-devtools": "^7.7.7",
     "vue-tsc": "^2.2.12"
-  }
+  },
+  "packageManager": "pnpm@10.28.1+sha1.20817ab95fb7f61154ba5ff3bcb61f27defb6142"
 }

@@ -1,9 +1,9 @@
 <script setup lang="ts">
   import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
   import { useRouter, useRoute } from 'vue-router';
-  import { useMenuStore } from '../global-menu/store';
+  import { useMenuStore } from '@/layouts/modules/global-menu/store';
   import GlobalTopMenu from '../global-menu/GlobalTopMenu.vue';
-  import type { MenuItem } from '../global-menu/types';
+  import type { MenuItem } from '@/layouts/modules/global-menu/types';
   import { kivii } from '@kivii.com/bridge';
   import { supabase } from '@/utils/supabase';
 

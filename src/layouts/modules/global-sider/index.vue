@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { computed } from 'vue';
-  import { useMenuStore } from '../global-menu/store';
-  import type { MenuItem } from '../global-menu/types';
+  import { useMenuStore } from '@/layouts/modules/global-menu/store';
+  import type { MenuItem } from '@/layouts/modules/global-menu/types';
   import { useUmdMenuConfigStore } from '@/store/modules/umd-menu-config';
 
   const menuStore = useMenuStore();

@@ -1,7 +1,7 @@
 import type { MenuApiResponse } from './types';
+import { isMockMode } from '@/api/mock-mode';
 
-// [MOCK MODE] 已注释掉后端请求依赖，使用本地 Mock 数据
-// 恢复后端连接时，取消下方 import 注释，并恢复 fetchMenuData 中的实际请求代码
+// 恢复后端连接时，取消下方 import 注释
 // import { kivii } from '@kivii.com/bridge';
 
 // 401 未授权错误（供上层识别并跳转登录页）
@@ -48,20 +48,22 @@ const MOCK_MENU_DATA: MenuApiResponse = {
 
 // 从接口获取菜单数据
 export async function fetchMenuData(_internalCode: string): Promise<MenuApiResponse> {
-  // [MOCK MODE] 直接返回本地 Mock 菜单数据，跳过后端请求
-  // 恢复后端连接时，注释掉下面这行，取消注释下方的实际请求代码
-  return MOCK_MENU_DATA;
+  if (isMockMode) {
+    return MOCK_MENU_DATA;
+  }
 
-  // ── 原始后端请求（恢复时取消注释）──
+  // ── 真实后端请求（设置 VITE_API_MODE=real 后生效）──
   // try {
   //   const response = await kivii.request.get<MenuApiResponse>(
   //     `/Restful/Kivii.Basic.Entities.Menu/Show.json?RootInternalCode=${_internalCode}`
   //   );
   //   return response.data;
-  // } catch (error: any) {
-  //   if (error?.status === 401 || error?.response?.status === 401) {
+  // } catch (error: unknown) {
+  //   const err = error as { status?: number; response?: { status: number } };
+  //   if (err?.status === 401 || err?.response?.status === 401) {
   //     throw new UnauthorizedError();
   //   }
   //   throw error;
   // }
+  return MOCK_MENU_DATA; // fallback，真实请求取消注释后删除此行
 }
