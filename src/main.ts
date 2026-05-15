@@ -44,31 +44,30 @@ const initApp = async () => {
     console.warn('[KiviiBridge] kivii 未初始化，无法注册自定义实现');
   }
 
-  // 动态加载远程组件 (改为后台加载，不阻塞应用挂载)
-  // 如果处于未登录状态，且当前路由是登录页，则不加载 UMD 组件，避免重复加载
-  const isLoginPage =
-    window.location.hash.includes('/login') || window.location.hash.includes('/SpringLogin');
-  const uiConfig = (window as any).uiGlobalConfig || {};
-  const isAuthenticated = uiConfig.IsAuthenticated === true;
+  // UMD 全量预加载已禁用 —— 改为按菜单标签懒加载
+  // const isLoginPage =
+  //   window.location.hash.includes('/login') || window.location.hash.includes('/SpringLogin');
+  // const uiConfig = (window as any).uiGlobalConfig || {};
+  // const isAuthenticated = uiConfig.IsAuthenticated === true;
+  //
+  // if (isAuthenticated || !isLoginPage) {
+  //   try {
+  //     console.log('Start loading remote components in background...');
+  //     registerRemoteComponents(
+  //       app,
+  //       '/Restful/Kivii.Storages.Entities.DbFile/Query.json?FolderPath=/Umd/File'
+  //     ).catch(e => {
+  //       console.error('Remote components loading error (non-fatal):', e);
+  //     });
+  //   } catch (e) {
+  //     console.error('Remote components loading setup error:', e);
+  //   }
+  // } else {
+  //   registerRemoteComponents(app, 'empty_skip_load').catch(e => {});
+  // }
 
-  if (isAuthenticated || !isLoginPage) {
-    try {
-      console.log('Start loading remote components in background...');
-      registerRemoteComponents(
-        app,
-        '/Restful/Kivii.Storages.Entities.DbFile/Query.json?FolderPath=/Umd/File'
-      ).catch(e => {
-        console.error('Remote components loading error (non-fatal):', e);
-      });
-    } catch (e) {
-      console.error('Remote components loading setup error:', e);
-    }
-  } else {
-    console.log('On login page and not authenticated, skipping UMD component loading.');
-    // 如果不加载 UMD 组件，我们需要触发一个空的执行，以正确 resolve umdComponentsReady
-    // 否则会导致路由系统一直死锁等待
-    registerRemoteComponents(app, 'empty_skip_load').catch(e => {});
-  }
+  // 解除路由守卫对 umdComponentsReady 的等待（不实际加载任何 UMD 文件）
+  registerRemoteComponents(app, 'empty_skip_load').catch(_e => {});
 
   // 安装路由 (放在远程组件加载之后，避免潜在的冲突)
   app.use(router);
