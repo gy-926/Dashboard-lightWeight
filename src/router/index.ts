@@ -96,7 +96,7 @@ async function initRoutes() {
       // 优先使用 targetNavigation（来自 guards），否则使用当前路由
       const restorePath = targetNavigation || router.currentRoute.value.path;
 
-      const { constantRoutes, authRoutes } = await generateDynamicRoutes();
+      const { constantRoutes, authRoutes, initialRedirect } = await generateDynamicRoutes();
 
       // 保存原始路由树，用于构建菜单
       originalAuthRoutes = authRoutes;
@@ -122,7 +122,14 @@ async function initRoutes() {
 
       dynamicRoutesLoaded = true;
 
+      // 默认跳转目标：有 AutoStartup 菜单时使用它，否则回到 /home
+      const defaultHome = initialRedirect || '/home';
+
+      // 判断路径是否属于"默认首页"（需要被 AutoStartup 替换）
+      const isDefaultHomePath = (p: string) => !p || p === '/' || p === '/home';
+
       // 如果有待恢复的导航路径，先更新菜单，再恢复导航
+      // 若恢复路径本身就是 /home，则替换为 AutoStartup 目标
       if (
         restorePath &&
         restorePath !== '/' &&
@@ -130,25 +137,32 @@ async function initRoutes() {
         restorePath !== '/SpringLogin' &&
         restorePath !== '/404'
       ) {
+        const target = isDefaultHomePath(restorePath) ? defaultHome : restorePath;
         targetNavigation = null;
         updateMenuFromRoutes().finally(() => {
-          router.replace(restorePath).catch(() => {});
+          router.replace(target).catch(() => {});
         });
         return;
       }
 
-      // 如果当前在 404 页，尝试回到主页
+      // 如果当前在 404 页，尝试回到首页
       const currentPath = router.currentRoute.value.path;
       if (currentPath === '/404' || currentPath === '/:pathMatch(.*)*') {
         targetNavigation = null;
         updateMenuFromRoutes().finally(() => {
-          router.replace('/').catch(() => {});
+          router.replace(defaultHome).catch(() => {});
         });
         return;
       }
 
-      // 正常情况，更新菜单
+      // 正常情况（当前停在 / 或 /home）：跳转到 defaultHome，更新菜单
       targetNavigation = null;
+      if (initialRedirect && isDefaultHomePath(currentPath)) {
+        updateMenuFromRoutes().finally(() => {
+          router.replace(initialRedirect).catch(() => {});
+        });
+        return;
+      }
       updateMenuFromRoutes();
     } catch (error) {
       // 401：权限不足，跳转到登录页

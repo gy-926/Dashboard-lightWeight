@@ -14,6 +14,42 @@ export class UnauthorizedError extends Error {
   }
 }
 
+// 解析菜单项的 Parameters 字段（可能是 JSON 字符串或对象）
+function parseParameters(raw: any): Record<string, any> {
+  if (!raw) return {};
+  if (typeof raw === 'string') {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return {};
+    }
+  }
+  if (typeof raw === 'object') return raw;
+  return {};
+}
+
+// 查询 menuRoot 的直接子菜单，找到 Parameters.AutoStartup 为真的项
+// 返回该菜单项的 Kvid，找不到则返回 null
+export async function fetchAutoStartupKvid(menuRootKvid: string): Promise<string | null> {
+  try {
+    const response = await kivii.request.get<{ Results: any[] }>(
+      `/Restful/Kivii.Basic.Entities.Menu/Query.json?ParentKvid=${menuRootKvid}&isRelateFunction=true`
+    );
+    const results: any[] = response.data?.Results ?? [];
+
+    const item = results.find(m => {
+      const params = parseParameters(m.Parameters);
+      const val = params.AutoStartup;
+      // 兼容 boolean true、字符串 "true"、数字 1
+      return val === true || val === 'true' || val === 1;
+    });
+
+    return item?.Kvid ?? null;
+  } catch {
+    return null;
+  }
+}
+
 // 从接口获取菜单数据
 export async function fetchMenuData(internalCode: string): Promise<MenuApiResponse> {
   try {
