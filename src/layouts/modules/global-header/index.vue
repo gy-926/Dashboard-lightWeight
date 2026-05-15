@@ -5,6 +5,8 @@
   import GlobalTopMenu from '../global-menu/GlobalTopMenu.vue';
   import type { MenuItem } from '../global-menu/types';
   import { kivii } from '@kivii.com/bridge';
+  import { setGlobalConfig } from '@/router/routes';
+  import { reloadDynamicRoutes } from '@/router';
 
   defineProps<{
     showSiderToggle?: boolean;
@@ -91,13 +93,21 @@
     } catch (error) {
       console.error('Logout failed:', error);
     } finally {
-      // Clear store state (tabs, etc.)
-      menuStore.resetState();
+      // 更新响应式全局配置，使路由守卫立即感知未登录状态
+      // 仅设置 window.uiGlobalConfig 不够，因为 globalConfig ref 不跟踪该对象
+      setGlobalConfig({ IsAuthenticated: false });
+      if ((window as any).uiGlobalConfig) {
+        (window as any).uiGlobalConfig.IsAuthenticated = false;
+      }
 
-      // Clear all caches
+      // 重置动态路由状态，确保下次登录后重新加载菜单和路由
+      await reloadDynamicRoutes();
+
+      // 清理 store 和缓存
+      menuStore.resetState();
       localStorage.clear();
       sessionStorage.clear();
-      // Redirect to login
+
       router.replace('/login');
     }
   }
