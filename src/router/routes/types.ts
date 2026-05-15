@@ -71,6 +71,7 @@ export interface CachedRoutes {
   timestamp: number;
   userCode: string;
   internalCode: string;
+  menuRootKvid?: string;
 }
 
 // Elegant 路由格式（字符串形式的组件路径）
