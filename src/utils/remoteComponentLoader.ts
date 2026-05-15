@@ -415,6 +415,86 @@ export function generateUmdRoutes(): ElegantRoute[] {
   return routes;
 }
 
+// 加载单个 UMD 文件，注册组件并写入 remoteLibraries，使其出现在菜单中
+export const loadSingleUmdFile = async (app: App, url: string): Promise<void> => {
+  if (!(window as any).Vue) (window as any).Vue = Vue;
+
+  const EXCLUDED_KEYS = new Set([
+    'default',
+    'install',
+    'manifest',
+    'componentsMap',
+    'componentsDetailed',
+    'version',
+    '__esModule',
+    'VueDemoComponent',
+  ]);
+
+  const name = url.split('/').pop()?.replace(/\.js$/i, '') ?? url;
+  remoteLibraries.value.push({ name, url, status: 'loading' });
+  const libIndex = remoteLibraries.value.length - 1;
+
+  try {
+    const remoteComponent = await loadUMDComponent(url);
+
+    if (typeof remoteComponent !== 'object' || remoteComponent === null) {
+      remoteLibraries.value[libIndex].status = 'error';
+      remoteLibraries.value[libIndex].error = '加载结果不是对象';
+      return;
+    }
+
+    const lib = remoteLibraries.value[libIndex];
+    lib.status = 'success';
+    lib.componentKeys = Object.keys(remoteComponent).filter(k => !EXCLUDED_KEYS.has(k));
+    if (remoteComponent.manifest) {
+      lib.manifest = remoteComponent.manifest;
+      if (remoteComponent.manifest.componentsDetailed)
+        lib.componentsDetailed = remoteComponent.manifest.componentsDetailed;
+    }
+    if (remoteComponent.componentsDetailed)
+      lib.componentsDetailed = remoteComponent.componentsDetailed;
+
+    // CSS 注入
+    const cssInjectors = [
+      'injectStyles',
+      '__inject_styles',
+      'injectCss',
+      '_injectStyles',
+      'applyStyles',
+      'install_styles',
+    ];
+    for (const cssKey of cssInjectors) {
+      if (typeof remoteComponent[cssKey] === 'function') {
+        try {
+          remoteComponent[cssKey]();
+        } catch (_) {
+          /* ignore */
+        }
+      }
+    }
+
+    // 注册组件到 app
+    if (remoteComponent.install) {
+      app.use(remoteComponent);
+    } else {
+      for (const key of lib.componentKeys) {
+        const component = remoteComponent[key];
+        if (component && (typeof component === 'object' || typeof component === 'function')) {
+          if (!Object.prototype.hasOwnProperty.call(app._context.components, key)) {
+            app.component(key, component);
+          }
+        }
+      }
+    }
+  } catch (e) {
+    remoteLibraries.value[libIndex].status = 'error';
+    remoteLibraries.value[libIndex].error = String(e);
+    console.error('[UMD] 单文件加载失败:', e);
+  } finally {
+    _resolveUmdReady();
+  }
+};
+
 // 按需加载单个 UMD 文件并注册到 app（懒加载 / remark 路径场景）
 export const loadUmdOnDemand = async (app: App, scriptPath: string): Promise<void> => {
   const EXCLUDED_KEYS = new Set([

@@ -13,7 +13,7 @@ import 'kivii-public-components/style';
 // 引入自定义 OpenTab 实现
 import { KiviiOpenTab } from './bridge/kivii-open-tab';
 // 引入远程组件加载器
-import { registerRemoteComponents } from '@/utils/remoteComponentLoader';
+import { registerRemoteComponents, loadSingleUmdFile } from '@/utils/remoteComponentLoader';
 
 const initApp = async () => {
   const app = createApp(App);
@@ -66,8 +66,17 @@ const initApp = async () => {
   //   registerRemoteComponents(app, 'empty_skip_load').catch(e => {});
   // }
 
-  // 解除路由守卫对 umdComponentsReady 的等待（不实际加载任何 UMD 文件）
-  registerRemoteComponents(app, 'empty_skip_load').catch(_e => {});
+  // 单独加载指定 UMD 文件并注册到菜单
+  // loadSingleUmdFile 加载完成后会 resolve umdComponentsReady，路由守卫才能感知到新菜单
+  // URL 为空时降级为空 resolve，不加载任何文件
+  const UMD_FILE_URL = '/Content/UmdDashboard/UmdResources/kivii-component-System.umd.js'; // ← UMD 文件地址
+  if (UMD_FILE_URL) {
+    loadSingleUmdFile(app, UMD_FILE_URL).catch((e: unknown) => {
+      console.error('[UMD] 单文件加载失败:', e);
+    });
+  } else {
+    registerRemoteComponents(app, 'empty_skip_load').catch(_e => {});
+  }
 
   // 安装路由 (放在远程组件加载之后，避免潜在的冲突)
   app.use(router);
