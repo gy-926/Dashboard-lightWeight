@@ -15,13 +15,22 @@ export class UnauthorizedError extends Error {
 }
 
 // 解析菜单项的 Parameters 字段（可能是 JSON 字符串或对象）
+// 兼容非标准格式：{AutoStartup:true}（key 未加引号）
 function parseParameters(raw: any): Record<string, any> {
   if (!raw) return {};
   if (typeof raw === 'string') {
+    // 先尝试标准 JSON
     try {
       return JSON.parse(raw);
     } catch {
-      return {};
+      // 将未加引号的 key 转为合法 JSON，再解析一次
+      // {AutoStartup:true} → {"AutoStartup":true}
+      try {
+        const fixed = raw.replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":');
+        return JSON.parse(fixed);
+      } catch {
+        return {};
+      }
     }
   }
   if (typeof raw === 'object') return raw;

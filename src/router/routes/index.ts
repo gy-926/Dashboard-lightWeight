@@ -170,7 +170,8 @@ export function restoreDynamicRoutesFromCache(): RouteRecordRaw[] | null {
 let _menuRootKvid: string | null = null;
 
 // AutoStartup 菜单项的 Kvid（响应式），home.vue 监听此值决定渲染方式
-export const autoStartupKvid = ref<string | null>(null);
+// undefined = 接口尚未返回（保持 loading）；null = 无 AutoStartup 配置；string = 有配置
+export const autoStartupKvid = ref<string | null | undefined>(undefined);
 
 export async function getRootMenu(): Promise<MenuItem[]> {
   const config = getGlobalConfig();
