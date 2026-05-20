@@ -276,6 +276,22 @@ export async function reloadDynamicRoutes(): Promise<void> {
   await initRoutes();
 }
 
+// 清除动态路由状态（仅用于退出登录，不重新请求菜单接口）
+export function clearDynamicRoutesState(): void {
+  clearDynamicRoutesCache();
+
+  dynamicRouteNames.forEach(name => {
+    if (router.hasRoute(name)) {
+      router.removeRoute(name);
+    }
+  });
+  dynamicRouteNames = [];
+  originalAuthRoutes = [];
+
+  dynamicRoutesLoaded = false;
+  routesLoadPromise = null;
+}
+
 // 设置路由守卫
 setupRouteGuards(router);
 

@@ -6,7 +6,7 @@
   import type { MenuItem } from '../global-menu/types';
   import { kivii } from '@kivii.com/bridge';
   import { setGlobalConfig } from '@/router/routes';
-  import { reloadDynamicRoutes } from '@/router';
+  import { clearDynamicRoutesState } from '@/router';
 
   defineProps<{
     showSiderToggle?: boolean;
@@ -100,8 +100,8 @@
         (window as any).uiGlobalConfig.IsAuthenticated = false;
       }
 
-      // 重置动态路由状态，确保下次登录后重新加载菜单和路由
-      await reloadDynamicRoutes();
+      // 清除动态路由状态（不重新请求菜单接口），确保下次登录后重新加载
+      clearDynamicRoutesState();
 
       // 清理 store 和缓存
       menuStore.resetState();
