@@ -3,65 +3,43 @@ import * as Vue from 'vue';
 import type { ComponentConfig, Config } from './umd/types';
 import { remoteLibraries, umdComponentsReady, resolveUmdReady } from './umd/state';
 import { loadComponent, loadUMDComponent } from './umd/loader';
+import { supabase } from '@/utils/supabase';
 
 // 公共 re-exports（维持现有外部导入路径不变）
 export type { RemoteLibraryInfo, ComponentConfig, Config } from './umd/types';
 export { remoteLibraries, umdComponentsReady } from './umd/state';
 export { generateUmdRoutes } from './umd/routes';
 
-// [MOCK MODE] 硬编码配置；恢复后端时替换为实际请求
-// import { kivii } from '@kivii.com/bridge';
-const loadConfig = async (_configPath: string): Promise<Config> => {
-  return {
-    components: [
-      {
-        name: 'KiviiCrmUmd',
-        type: 'umd',
-        version: '1.0.0',
-        path: '/umd/kivii-component-crmUmd.umd.js',
-        globalName: 'VueComponent',
-        autoRegister: true,
-        metadata: { zhName: 'CRM 业务套件' },
-      },
-      {
-        name: 'KiviiDashboardStandards',
-        type: 'umd',
-        version: '1.0.0',
-        path: '/umd/kivii-dashboard-umd-standards.js',
-        globalName: 'VueComponent',
-        autoRegister: true,
-        metadata: { zhName: '仪表盘标准组件' },
-      },
-    ],
-  };
+// 从 Supabase 存储桶中加载 UMD 组件配置
+// configPath 格式：'supabase:<BucketName>'
+const loadConfig = async (configPath: string): Promise<Config> => {
+  if (configPath.startsWith('supabase:')) {
+    const bucketName = configPath.slice('supabase:'.length);
+    const { data: files, error } = await supabase.storage.from(bucketName).list();
+    if (error) throw error;
 
-  // ── 原始后端请求（恢复时取消注释，删除上方 return）──
-  // try {
-  //   const response = await kivii.request.get<any>(_configPath);
-  //   const data = response.data;
-  //   if (data.components && Array.isArray(data.components)) return data;
-  //   let items: any[] = [];
-  //   if (Array.isArray(data)) items = data;
-  //   else if (data.data && Array.isArray(data.data)) items = data.data;
-  //   else if (data.items && Array.isArray(data.items)) items = data.items;
-  //   else if (data.Results && Array.isArray(data.Results)) items = data.Results;
-  //   if (items.length > 0) {
-  //     const components: ComponentConfig[] = items
-  //       .filter((item: any) => item.Path)
-  //       .map((item: any) => {
-  //         const fileName = item.Path.split('/').pop() || 'UnknownComponent';
-  //         let name = item.Name || fileName;
-  //         name = name.replace(/(\.umd)?(\.min)?\.js$/i, '');
-  //         return { name, type: 'umd', version: item.Version || '1.0.0',
-  //                  path: item.Path, globalName: item.GlobalName, autoRegister: true };
-  //       });
-  //     return { components };
-  //   }
-  //   return { components: [] };
-  // } catch (error) {
-  //   console.error('Failed to load config:', error);
-  //   throw error;
-  // }
+    const components: ComponentConfig[] = (files ?? [])
+      .filter(f => f.name.endsWith('.js'))
+      .map(f => {
+        const name = f.name.replace(/(\.umd)?(\.min)?\.js$/i, '');
+        const { data } = supabase.storage.from(bucketName).getPublicUrl(f.name);
+        return {
+          name,
+          type: 'umd' as const,
+          version: '1.0.0',
+          path: data.publicUrl,
+          globalName: 'VueComponent',
+          autoRegister: true,
+        };
+      });
+    return { components };
+  }
+
+  // ── Kivii 后端请求（使用 Kivii 存储时恢复）──
+  // import { kivii } from '@kivii.com/bridge';
+  // const response = await kivii.request.get<any>(configPath);
+  // ...
+  return { components: [] };
 };
 
 const CSS_INJECTORS = [

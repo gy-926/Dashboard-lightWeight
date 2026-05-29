@@ -52,7 +52,7 @@ const initApp = async () => {
   if (isAuthenticated || !isLoginPage) {
     registerRemoteComponents(
       app,
-      '/Restful/Kivii.Storages.Entities.DbFile/Query.json?FolderPath=/Umd/File'
+      'supabase:UmdTempleate'
     ).catch(e => {
       console.error('[UMD] 远程组件加载失败:', e);
     });
