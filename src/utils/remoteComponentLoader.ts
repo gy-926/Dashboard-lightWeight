@@ -3,6 +3,7 @@ import * as Vue from 'vue';
 import type { ComponentConfig, Config } from './umd/types';
 import { remoteLibraries, umdComponentsReady, resolveUmdReady } from './umd/state';
 import { loadComponent, loadUMDComponent } from './umd/loader';
+import { supabase } from '@/utils/supabase';
 
 // 公共 re-exports（维持现有外部导入路径不变）
 export type { RemoteLibraryInfo, ComponentConfig, Config } from './umd/types';
@@ -11,37 +12,26 @@ export { generateUmdRoutes } from './umd/routes';
 
 // 从 Supabase 存储桶中加载 UMD 组件配置
 // configPath 格式：'supabase:<BucketName>'
-// 依赖 bucket 根目录下的 manifest.json 文件，格式：
-// [{ "name": "ComponentName", "file": "xxx.umd.js", "globalName": "VueComponent" }]
 const loadConfig = async (configPath: string): Promise<Config> => {
   if (configPath.startsWith('supabase:')) {
     const bucketName = configPath.slice('supabase:'.length);
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const manifestUrl = `${supabaseUrl}/storage/v1/object/public/${bucketName}/manifest.json`;
+    const { data: files, error } = await supabase.storage.from(bucketName).list();
+    if (error) throw error;
 
-    const res = await fetch(manifestUrl);
-    if (!res.ok) {
-      console.warn(`[UMD] 未找到 manifest.json (${res.status})，跳过组件加载`);
-      return { components: [] };
-    }
-
-    const manifest: Array<{
-      name: string;
-      file: string;
-      version?: string;
-      globalName?: string;
-      metadata?: Record<string, unknown>;
-    }> = await res.json();
-
-    const components: ComponentConfig[] = manifest.map(item => ({
-      name: item.name,
-      type: 'umd' as const,
-      version: item.version ?? '1.0.0',
-      path: `${supabaseUrl}/storage/v1/object/public/${bucketName}/${item.file}`,
-      globalName: item.globalName ?? 'VueComponent',
-      autoRegister: true,
-      metadata: item.metadata,
-    }));
+    const components: ComponentConfig[] = (files ?? [])
+      .filter(f => f.name.endsWith('.js'))
+      .map(f => {
+        const name = f.name.replace(/(\.umd)?(\.min)?\.js$/i, '');
+        const { data } = supabase.storage.from(bucketName).getPublicUrl(f.name);
+        return {
+          name,
+          type: 'umd' as const,
+          version: '1.0.0',
+          path: data.publicUrl,
+          globalName: 'VueComponent',
+          autoRegister: true,
+        };
+      });
 
     return { components };
   }
