@@ -15,8 +15,8 @@ export class UnauthorizedError extends Error {
 const MOCK_MENU_DATA: MenuApiResponse = {
   MenuRoot: {
     Kvid: 'root-mock',
-    Title: 'Kivii Dashboard',
-    DisplayName: 'Kivii Dashboard',
+    Title: 'GavinYin Dashboard',
+    DisplayName: 'GavinYin Dashboard',
   },
   MenusMain: {
     Total: 2,

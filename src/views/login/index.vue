@@ -297,7 +297,7 @@
           </svg>
         </div>
         <div class="brand-text">
-          <h1 class="brand-name">Kivii Dashboard</h1>
+          <h1 class="brand-name">GavinYin Dashboard</h1>
           <p class="brand-tagline">企业级后台管理系统</p>
         </div>
       </div>
@@ -647,7 +647,7 @@
     </div>
 
     <!-- 页脚版权 -->
-    <div class="page-footer">© 2025 Kivii · 保留所有权利</div>
+    <div class="page-footer">© 2026 GavinYin Dashboard · 保留所有权利</div>
   </div>
 </template>
 
