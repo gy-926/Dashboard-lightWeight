@@ -58,6 +58,8 @@ export interface GlobalConfig {
   /** 是否已认证 */
   IsAuthenticated?: boolean;
   PublicLoginUrl?: string; // 公共登录页URL
+  ShowWatermark?: boolean; // 水印开关
+  WatermarkText?: string; // 水印内容
   customRouteManager?: {
     getRoutes: () => any[];
   };
@@ -69,6 +71,7 @@ export interface CachedRoutes {
   timestamp: number;
   userCode: string;
   internalCode: string;
+  menuRootKvid?: string;
 }
 
 // Elegant 路由格式（字符串形式的组件路径）

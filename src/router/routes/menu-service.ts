@@ -1,8 +1,6 @@
 import type { MenuApiResponse } from './types';
 import { isMockMode } from '@/api/mock-mode';
-
-// 恢复后端连接时，取消下方 import 注释
-// import { kivii } from '@kivii.com/bridge';
+import { kivii } from '@kivii.com/bridge';
 
 // 401 未授权错误（供上层识别并跳转登录页）
 export class UnauthorizedError extends Error {
@@ -14,8 +12,6 @@ export class UnauthorizedError extends Error {
 }
 
 // ==================== Mock 菜单数据 ====================
-// 这是一份本地演示菜单，用于开箱即用体验。
-// 接入真实后端后，删除此 mock 数据，恢复下方 fetchMenuData 中的接口请求。
 const MOCK_MENU_DATA: MenuApiResponse = {
   MenuRoot: {
     Kvid: 'root-mock',
@@ -25,7 +21,6 @@ const MOCK_MENU_DATA: MenuApiResponse = {
   MenusMain: {
     Total: 2,
     Results: [
-      // ── 功能演示（保留一个 iframe 嵌入示例） ──
       {
         Kvid: 'mock-demo',
         Title: '功能演示',
@@ -45,6 +40,40 @@ const MOCK_MENU_DATA: MenuApiResponse = {
     ],
   },
 };
+
+// 解析菜单项的 Parameters 字段（可能是 JSON 字符串或对象）
+function parseParameters(raw: any): Record<string, any> {
+  if (!raw) return {};
+  if (typeof raw === 'string') {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return {};
+    }
+  }
+  if (typeof raw === 'object') return raw;
+  return {};
+}
+
+// 查询 menuRoot 的直接子菜单，找到 Parameters.AutoStartup 为真的项
+export async function fetchAutoStartupKvid(menuRootKvid: string): Promise<string | null> {
+  try {
+    const response = await kivii.request.get<{ Results: any[] }>(
+      `/Restful/Kivii.Basic.Entities.Menu/Query.json?ParentKvid=${menuRootKvid}&isRelateFunction=true`
+    );
+    const results: any[] = response.data?.Results ?? [];
+
+    const item = results.find(m => {
+      const params = parseParameters(m.Parameters);
+      const val = params.AutoStartup;
+      return val === true || val === 'true' || val === 1;
+    });
+
+    return item?.Kvid ?? null;
+  } catch {
+    return null;
+  }
+}
 
 // 从接口获取菜单数据
 export async function fetchMenuData(_internalCode: string): Promise<MenuApiResponse> {

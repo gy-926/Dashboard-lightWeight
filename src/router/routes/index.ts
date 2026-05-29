@@ -2,7 +2,7 @@ import { ref, computed } from 'vue';
 import type { RouteRecordRaw } from 'vue-router';
 import { autoRoutes } from '../auto/routes';
 import type { MenuItem, GlobalConfig, CachedRoutes, ElegantRoute } from './types';
-import { fetchMenuData } from './menu-service';
+import { fetchMenuData, fetchAutoStartupKvid } from './menu-service';
 import { generateUmdRoutes, umdComponentsReady } from '@/utils/remoteComponentLoader';
 
 // ==================== 全局配置 ====================
@@ -30,6 +30,8 @@ const defaultGlobalConfig: GlobalConfig = {
   Parameters: uiConfig.Parameters || {},
   IsAuthenticated: uiConfig.IsAuthenticated !== undefined ? uiConfig.IsAuthenticated : false,
   PublicLoginUrl: uiConfig.PublicLoginUrl || '',
+  ShowWatermark: uiConfig.ShowWatermark !== undefined ? uiConfig.ShowWatermark : false,
+  WatermarkText: uiConfig.WatermarkText || 'Dashboard',
 };
 
 // 当前全局配置
@@ -59,6 +61,7 @@ export function cacheDynamicRoutes(routes: ElegantRoute[]): void {
       timestamp: Date.now(),
       userCode: globalConfig.value.UserCode || '',
       internalCode: globalConfig.value.InternalCode,
+      menuRootKvid: _menuRootKvid ?? undefined,
       version: CACHE_VERSION,
     };
     localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
@@ -101,6 +104,11 @@ export function restoreDynamicRoutesFromCache(): RouteRecordRaw[] | null {
     // 检查 InternalCode 是否一致
     if (cacheData.internalCode !== globalConfig.value.InternalCode) {
       return null;
+    }
+
+    // 恢复 menuRootKvid，供 AutoStartup 查询使用
+    if (cacheData.menuRootKvid) {
+      _menuRootKvid = cacheData.menuRootKvid;
     }
 
     // 递归验证和清理路由数据
@@ -158,10 +166,25 @@ export function restoreDynamicRoutesFromCache(): RouteRecordRaw[] | null {
 // ==================== 菜单数据获取 ====================
 
 // 获取根菜单
+// 保存 menuRoot.Kvid，供 AutoStartup 查询使用
+let _menuRootKvid: string | null = null;
+
+// AutoStartup 菜单项的 Kvid（响应式），home.vue 监听此值决定渲染方式
+export const autoStartupKvid = ref<string | null>(null);
+
 export async function getRootMenu(): Promise<MenuItem[]> {
   const config = getGlobalConfig();
   const response = await fetchMenuData(config.InternalCode);
-  return response.MenusMain.Results;
+
+  // 保存 menuRoot.Kvid
+  _menuRootKvid = response.MenuRoot?.Kvid ?? null;
+
+  // 过滤掉类型为 System 的菜单
+  const filteredMenus = response.MenusMain.Results.filter(
+    (item: MenuItem) => item.Type !== 'System'
+  );
+
+  return filteredMenus;
 }
 
 // ==================== 菜单树构建 ====================
@@ -534,6 +557,7 @@ export function getStaticRoutes(): RouteRecordRaw[] {
 export async function generateDynamicRoutes(): Promise<{
   constantRoutes: RouteRecordRaw[];
   authRoutes: RouteRecordRaw[];
+  initialRedirect: string | null;
 }> {
   // 等待后台 UMD 组件加载完成，确保能正确生成 UMD 路由
   await umdComponentsReady;
@@ -543,33 +567,37 @@ export async function generateDynamicRoutes(): Promise<{
 
   // 1. 尝试从缓存恢复（后端菜单路由）
   const cachedRoutes = restoreDynamicRoutesFromCache();
+
+  let authRoutes: RouteRecordRaw[];
   if (cachedRoutes) {
-    return {
-      constantRoutes: getStaticRoutes(),
-      authRoutes: [...autoRoutes, ...cachedRoutes, ...umdVueRoutes],
-    };
+    authRoutes = [...autoRoutes, ...cachedRoutes, ...umdVueRoutes];
+  } else {
+    // 2. 获取菜单数据
+    const menuItems = await getRootMenu();
+
+    // 3. 构建菜单树
+    const menuTree = getMenuTree(menuItems);
+
+    // 4. 生成路由
+    const elegantRoutes = generateRoutes(menuTree);
+
+    // 5. 转换为 Vue 路由
+    const vueRoutes = transformRoutesToVueRoutes(elegantRoutes);
+
+    // 6. 缓存（含 menuRootKvid，供下次从缓存恢复时使用）
+    cacheDynamicRoutes(elegantRoutes);
+
+    authRoutes = [...autoRoutes, ...vueRoutes, ...umdVueRoutes];
   }
 
-  // 2. 获取菜单数据
-  const menuItems = await getRootMenu();
+  // 7. 查询 AutoStartup 菜单项：写入响应式 ref 供 home.vue 监听；initialRedirect 仅作备用
+  const kvid = _menuRootKvid ? await fetchAutoStartupKvid(_menuRootKvid) : null;
+  autoStartupKvid.value = kvid;
 
-  // 3. 构建菜单树
-  const menuTree = getMenuTree(menuItems);
-
-  // 4. 生成路由
-  const elegantRoutes = generateRoutes(menuTree);
-
-  // 5. 转换为 Vue 路由
-  const vueRoutes = transformRoutesToVueRoutes(elegantRoutes);
-
-  // 6. 缓存动态路由（只缓存后端菜单路由，UMD 路由每次从已注册组件实时生成）
-  // 注意：缓存 elegantRoutes（转换前），避免生产构建压缩代码导致反向序列化失败
-  cacheDynamicRoutes(elegantRoutes);
-
-  // 7. 合并本地自动路由、后端动态路由、UMD 组件路由
   return {
     constantRoutes: getStaticRoutes(),
-    authRoutes: [...autoRoutes, ...vueRoutes, ...umdVueRoutes],
+    authRoutes,
+    initialRedirect: null, // home.vue 通过 autoStartupKvid ref 内嵌 IframePage，无需路由跳转
   };
 }
 

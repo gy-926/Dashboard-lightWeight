@@ -1,6 +1,14 @@
 <script setup lang="ts">
   defineOptions({ name: 'IframePage' });
-  import { ref, onMounted, onUnmounted, onActivated, computed, watch } from 'vue';
+  import {
+    ref,
+    onMounted,
+    onUnmounted,
+    onActivated,
+    computed,
+    watch,
+    getCurrentInstance,
+  } from 'vue';
   import { useRoute } from 'vue-router';
   import {
     useTeleportManager,
@@ -9,9 +17,10 @@
   } from '@/store/modules/teleport-manager';
   import WebviewComponent from './webview.vue';
   import VueComponent from './vueComponent.vue';
-  // [MOCK MODE] 已注释掉后端请求依赖
-  // import { kivii } from '@kivii.com/bridge';
+  import UmdComponentPage from '../umd-component/index.vue';
+  import { kivii } from '@kivii.com/bridge';
   import { getGlobalConfig } from '@/router/routes';
+  import { loadUmdOnDemand } from '@/utils/remoteComponentLoader';
 
   // 路由 props
   const props = defineProps<{
@@ -24,6 +33,7 @@
   }>();
 
   const route = useRoute();
+  const instance = getCurrentInstance();
   const { registerPage, unregisterPage, updatePageStatus, requestActivation, forceActivate } =
     useTeleportManager();
 
@@ -41,12 +51,16 @@
       return dynamicRenderType.value;
     }
     const type = props.type?.toLowerCase() as PageType;
-    if (type === 'vue') {
+    if (type === 'vue' || type === 'umd') {
       return type;
     }
     // 如果 URL 以 .vue 结尾，识别为 Vue 组件
     if (props.url?.endsWith('.vue') || props.functionKvid?.endsWith('.vue')) {
       return 'vue';
+    }
+    // 如果 URL 是以 < 开头且包含 > 的标签形式，识别为 UMD 组件
+    if (props.url?.startsWith('<') && props.url?.includes('>')) {
+      return 'umd';
     }
     return 'webview';
   });
@@ -79,7 +93,19 @@
       return 'vue';
     }
 
+    // 包含 < 和 > 的标签形式，作为 UMD 组件
+    if (handler.startsWith('<') && handler.includes('>')) {
+      return 'umd';
+    }
+
     return 'webview';
+  }
+
+  // 从类似 <SmartStandardLibrary> 的标签中提取组件名
+  function extractComponentName(tag: string): string {
+    if (!tag) return '';
+    const match = tag.match(/<([a-zA-Z0-9-]+)[^>]*>/);
+    return match ? match[1] : tag;
   }
 
   // 获取功能访问权限并决定渲染方式
@@ -89,42 +115,49 @@
       return;
     }
 
-    // [MOCK MODE] 返回本地演示页面，跳过后端权限请求
-    // 恢复后端连接时，注释掉下面的 mock 逻辑，取消注释下方原始请求代码
-    dynamicHandler.value = window.location.origin + '/mock-demo.html';
-    dynamicRenderType.value = 'webview';
-    isLoading.value = false;
-    return;
+    try {
+      const response = await kivii.request.get<any>(
+        `/Restful/Kivii.Basic.Entities.Function/Access.json?MenuKvids=${props.kvid}`
+      );
+      const data = response.data;
 
-    // ── 原始后端请求（恢复时取消注释）──
-    // try {
-    //   const response = await kivii.request.get<any>(
-    //     `/Restful/Kivii.Basic.Entities.Function/Access.json?MenuKvids=${props.kvid}`
-    //   );
-    //   const data = response.data;
-    //
-    //   const config = getGlobalConfig();
-    //   let origin = config.Origin || '';
-    //   if (!origin && config.UseWindowOrigin) {
-    //     origin = window.location.origin;
-    //   }
-    //
-    //   if (data?.Results && data.Results.length > 0) {
-    //     const handler = data.Results[0].Handler;
-    //     if (handler) {
-    //       if (handler.startsWith('http')) {
-    //         dynamicHandler.value = handler;
-    //       } else {
-    //         dynamicHandler.value = origin + handler;
-    //       }
-    //       dynamicRenderType.value = determineRenderTypeByHandler(handler);
-    //     }
-    //   }
-    // } catch (error) {
-    //   console.error('[IframePage] 获取功能权限失败:', error);
-    // } finally {
-    //   isLoading.value = false;
-    // }
+      const config = getGlobalConfig();
+      let origin = config.Origin || '';
+      if (!origin && config.UseWindowOrigin) {
+        origin = window.location.origin;
+      }
+
+      if (data?.Results && data.Results.length > 0) {
+        const handler = data.Results[0].Handler;
+
+        if (handler) {
+          dynamicRenderType.value = determineRenderTypeByHandler(handler);
+          if (handler.startsWith('http')) {
+            dynamicHandler.value = handler;
+          } else if (dynamicRenderType.value === 'umd') {
+            const compName = extractComponentName(handler);
+            dynamicHandler.value = compName;
+
+            const scriptPath: string | undefined = data.Results[0].Remark;
+            if (scriptPath && instance) {
+              const isRegistered = Object.prototype.hasOwnProperty.call(
+                instance.appContext.components,
+                compName
+              );
+              if (!isRegistered) {
+                await loadUmdOnDemand(instance.appContext.app, scriptPath);
+              }
+            }
+          } else {
+            dynamicHandler.value = origin + handler;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('[IframePage] 获取功能权限失败:', error);
+    } finally {
+      isLoading.value = false;
+    }
   }
 
   // 生成页面实例 ID
@@ -161,7 +194,26 @@
 
   // 选择渲染组件
   const CurrentComponent = computed(() => {
-    return renderType.value === 'vue' ? VueComponent : WebviewComponent;
+    if (renderType.value === 'vue') {
+      return VueComponent;
+    }
+    if (renderType.value === 'umd') {
+      return UmdComponentPage;
+    }
+    return WebviewComponent;
+  });
+
+  // UMD 组件参数处理
+  const umdComponentProps = computed(() => {
+    if (renderType.value === 'umd') {
+      // 这里的 renderUrl.value 应该已经是通过 extractComponentName 处理过的组件名
+      const compName = renderUrl.value;
+      return {
+        componentName: compName,
+        // 这里可以继续向下透传需要的参数
+      };
+    }
+    return {};
   });
 
   // 组件就绪回调
@@ -249,6 +301,7 @@
       :page-id="pageId"
       :route-query="routeQuery"
       :backend-origin="backendOrigin"
+      v-bind="umdComponentProps"
       @ready="handleComponentReady"
       @cleanup="handleComponentCleanup"
     />

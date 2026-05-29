@@ -2,7 +2,7 @@ import type { App } from 'vue';
 import * as Vue from 'vue';
 import type { ComponentConfig, Config } from './umd/types';
 import { remoteLibraries, umdComponentsReady, resolveUmdReady } from './umd/state';
-import { loadComponent } from './umd/loader';
+import { loadComponent, loadUMDComponent } from './umd/loader';
 
 // 公共 re-exports（维持现有外部导入路径不变）
 export type { RemoteLibraryInfo, ComponentConfig, Config } from './umd/types';
@@ -138,6 +138,41 @@ const registerComponent = async (app: App, config: ComponentConfig): Promise<voi
     app.component(config.name, remoteComponent[config.name]);
   } else {
     app.component(config.name, remoteComponent);
+  }
+};
+
+// 按需加载单个 UMD 文件并注册到 app
+export const loadUmdOnDemand = async (app: App, scriptPath: string): Promise<void> => {
+  const EXCLUDED_KEYS = new Set([
+    'default',
+    'install',
+    'manifest',
+    'componentsMap',
+    'componentsDetailed',
+    'version',
+    '__esModule',
+    'VueDemoComponent',
+  ]);
+
+  const remoteComponent = await loadUMDComponent(scriptPath);
+
+  if (typeof remoteComponent !== 'object' || remoteComponent === null) return;
+
+  if (remoteComponent.install) {
+    app.use(remoteComponent);
+    return;
+  }
+
+  runCssInjectors(remoteComponent);
+
+  for (const key in remoteComponent) {
+    if (EXCLUDED_KEYS.has(key)) continue;
+    const component = remoteComponent[key];
+    if (component && (typeof component === 'object' || typeof component === 'function')) {
+      if (!Object.prototype.hasOwnProperty.call(app._context.components, key)) {
+        app.component(key, component);
+      }
+    }
   }
 };
 

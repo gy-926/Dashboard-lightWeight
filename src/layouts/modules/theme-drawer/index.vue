@@ -259,42 +259,6 @@ function toggleCustomColor() {
             </div>
           </div>
 
-          <!-- 水印设置 -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-              全屏水印
-            </label>
-            <div class="space-y-3">
-              <label class="flex items-center justify-between cursor-pointer">
-                <span class="text-sm text-gray-600 dark:text-gray-400">启用水印</span>
-                <div
-                  class="relative w-11 h-6 rounded-full transition-colors cursor-pointer"
-                  :class="localTheme.showWatermark ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'"
-                  @click="localTheme.showWatermark = !localTheme.showWatermark"
-                >
-                  <div
-                    class="absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform"
-                    :class="localTheme.showWatermark ? 'translate-x-5' : 'translate-x-0'"
-                  />
-                </div>
-              </label>
-
-              <div>
-                <input
-                  v-model="localTheme.watermarkText"
-                  type="text"
-                  maxlength="40"
-                  class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-700 dark:text-gray-200 placeholder:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                  placeholder="请输入水印内容"
-                  :disabled="!localTheme.showWatermark"
-                />
-                <p class="mt-2 text-xs text-gray-400">
-                  水印会覆盖整个工作区，但不会影响点击操作。
-                </p>
-              </div>
-            </div>
-          </div>
-
           <!-- 标签设置 -->
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">

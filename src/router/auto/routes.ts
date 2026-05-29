@@ -20,12 +20,13 @@ export const autoRoutes: RouteRecordRaw[] = [
           icon: 'fa-home',
         },
       },
+
       {
         path: 'dashboard',
         name: 'dashboard',
         component: () => import('../../views/dashboard/index.vue'),
         meta: {
-          title: 'UMD文件配置页面',
+          title: '图表展示',
           icon: 'fa-chart-line',
         },
       },
@@ -39,6 +40,15 @@ export const autoRoutes: RouteRecordRaw[] = [
         },
       },
       {
+        path: 'umd-management',
+        name: 'umd-management',
+        component: () => import('../../views/umd-management/index.vue'),
+        meta: {
+          title: 'UMD模块管理',
+          icon: 'fa-cubes',
+        },
+      },
+      {
         path: 'umd-menu-config',
         name: 'umd-menu-config',
         component: () => import('../../views/umd-menu-config/index.vue'),
@@ -48,21 +58,21 @@ export const autoRoutes: RouteRecordRaw[] = [
         },
       },
       {
-        path: 'server-info',
-        name: 'server-info',
-        component: () => import('../../views/server-info/index.vue'),
-        meta: {
-          title: '服务器信息',
-          icon: 'fa-server',
-        },
-      },
-      {
         path: 'blank',
         name: 'blank',
         component: () => import('../../views/blank.vue'),
         meta: {
           title: '暂无内容',
           hidden: true,
+        },
+      },
+      {
+        path: 'test-table',
+        name: 'test-table',
+        component: () => import('../../views/test-table/index.vue'),
+        meta: {
+          title: '表格组件',
+          icon: 'fa-table',
         },
       },
       {
