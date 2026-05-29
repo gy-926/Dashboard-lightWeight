@@ -44,24 +44,10 @@ const initApp = async () => {
   }
 
   // 动态加载远程组件（后台加载，不阻塞应用挂载）
-  // 登录页且未认证时跳过，避免重复加载
-  const isLoginPage =
-    window.location.hash.includes('/login') || window.location.hash.includes('/SpringLogin');
-  const isAuthenticated = window.uiGlobalConfig?.IsAuthenticated === true;
-
-  if (isAuthenticated || !isLoginPage) {
-    registerRemoteComponents(
-      app,
-      'supabase:UmdTempleate'
-    ).catch(e => {
-      console.error('[UMD] 远程组件加载失败:', e);
-    });
-  } else {
-    // 未认证的登录页：触发空执行以正确 resolve umdComponentsReady，避免路由死锁
-    registerRemoteComponents(app, 'empty_skip_load').catch(e => {
-      console.warn('[UMD] empty_skip_load 异常:', e);
-    });
-  }
+  // Supabase 存储使用匿名 key 访问，无需登录即可加载，始终在启动时触发
+  registerRemoteComponents(app, 'supabase:UmdTempleate').catch(e => {
+    console.error('[UMD] 远程组件加载失败:', e);
+  });
 
   // 安装路由 (放在远程组件加载之后，避免潜在的冲突)
   app.use(router);

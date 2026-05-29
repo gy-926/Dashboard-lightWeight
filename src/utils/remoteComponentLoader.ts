@@ -3,7 +3,7 @@ import * as Vue from 'vue';
 import type { ComponentConfig, Config } from './umd/types';
 import { remoteLibraries, umdComponentsReady, resolveUmdReady } from './umd/state';
 import { loadComponent, loadUMDComponent } from './umd/loader';
-import { supabase } from '@/utils/supabase';
+import { storageClient } from '@/utils/supabase';
 
 // 公共 re-exports（维持现有外部导入路径不变）
 export type { RemoteLibraryInfo, ComponentConfig, Config } from './umd/types';
@@ -15,14 +15,14 @@ export { generateUmdRoutes } from './umd/routes';
 const loadConfig = async (configPath: string): Promise<Config> => {
   if (configPath.startsWith('supabase:')) {
     const bucketName = configPath.slice('supabase:'.length);
-    const { data: files, error } = await supabase.storage.from(bucketName).list();
+    const { data: files, error } = await storageClient.storage.from(bucketName).list();
     if (error) throw error;
 
     const components: ComponentConfig[] = (files ?? [])
       .filter(f => f.name.endsWith('.js'))
       .map(f => {
         const name = f.name.replace(/(\.umd)?(\.min)?\.js$/i, '');
-        const { data } = supabase.storage.from(bucketName).getPublicUrl(f.name);
+        const { data } = storageClient.storage.from(bucketName).getPublicUrl(f.name);
         return {
           name,
           type: 'umd' as const,
