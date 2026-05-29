@@ -2,6 +2,7 @@
   import { ref } from 'vue';
   import { remoteLibraries } from '@/utils/remoteComponentLoader';
   import { kivii } from '@kivii.com/bridge';
+  import { supabase } from '@/utils/supabase';
 
   // 定义分析结果的数据结构，与原页面类似
   export interface AnalyzedLibrary {
@@ -23,6 +24,25 @@
   const remoteUrl = ref('');
   const fileInput = ref<HTMLInputElement | null>(null);
   const isProcessing = ref(false);
+
+  // 已勾选的组件名称集合（默认全选）
+  const selectedComponents = ref<Set<string>>(new Set());
+
+  function initSelectedComponents(lib: AnalyzedLibrary) {
+    const keys = lib.componentsDetailed?.map((c: any) => c.name as string) ?? lib.componentKeys ?? [];
+    selectedComponents.value = new Set(keys);
+  }
+
+  function toggleComponent(compName: string) {
+    const s = selectedComponents.value;
+    if (s.has(compName)) {
+      s.delete(compName);
+    } else {
+      s.add(compName);
+    }
+    // 触发响应式更新
+    selectedComponents.value = new Set(s);
+  }
 
   const openModal = () => {
     isModalOpen.value = true;
@@ -136,6 +156,7 @@
     try {
       const result = await analyzeUmdScript(url, name);
       updateAnalyzingCard(card, result);
+      initSelectedComponents(analyzedLibraries.value[0]);
     } catch (error: any) {
       updateAnalyzingCard(card, {
         status: 'error',
@@ -164,6 +185,7 @@
       // 更新本地文件标识
       result.url = '本地文件: ' + file.name;
       updateAnalyzingCard(card, result);
+      initSelectedComponents(analyzedLibraries.value[0]);
     } catch (error: any) {
       updateAnalyzingCard(card, {
         status: 'error',
@@ -177,32 +199,69 @@
   };
 
   const uploadAnalyzedFile = async (lib: AnalyzedLibrary) => {
-    // 如果是本地上传的文件，直接调用文件上传接口
-    if (lib.rawFile) {
-      const formData = new FormData();
-      formData.append('file', lib.rawFile);
-
-      updateAnalyzingCard(lib, { isUploading: true });
-
-      try {
-        await kivii.request.post('/storages.json?FolderPath=/Umd/File', formData, {
-          header: {},
-        });
-        alert(`文件 ${lib.rawFile.name} 上传成功！`);
-      } catch (error) {
-        console.error('Upload error:', error);
-        alert(`文件 ${lib.rawFile.name} 上传失败，请重试。`);
-      } finally {
-        updateAnalyzingCard(lib, { isUploading: false });
-      }
-    } else {
-      // 如果是通过远程 URL 分析得到的，这里可以调用相关的接口将其注册到系统中
-      // 注意：根据后端实际支持的能力，这部分可能需要更换为特定的 URL 注册接口
-      // 这里先作为保留提示，供演示逻辑连通性
-      alert(
-        `对于远程 URL [${lib.url}] 的分析记录，当前操作无需再上传物理文件。\n如需将此URL注册进系统，请联调相应的后端配置更新接口。`
-      );
+    const selected = selectedComponents.value;
+    if (selected.size === 0) {
+      alert('请至少勾选一个组件');
+      return;
     }
+
+    // 判断 link_url：本地文件无有效 URL，置为 null
+    const linkUrl = lib.rawFile ? null : lib.url;
+
+    // 构造候选行
+    const candidates = (lib.componentsDetailed ?? [])
+      .filter((comp: any) => selected.has(comp.name as string))
+      .map((comp: any, idx: number) => ({
+        name: (comp.zhName || comp.displayName || comp.name) as string,
+        is_enabled: true,
+        icon: (comp.icon as string | undefined) || null,
+        entry: comp.name as string,
+        link_url: linkUrl,
+        sort_order: idx,
+      }));
+
+    updateAnalyzingCard(lib, { isUploading: true });
+
+    // 查询已存在的记录（相同 entry + 相同 link_url）
+    const entryValues = candidates.map(r => r.entry);
+    const dupQuery = supabase
+      .from('feature_list')
+      .select('entry')
+      .in('entry', entryValues);
+
+    const { data: existing, error: fetchErr } = await (
+      linkUrl !== null ? dupQuery.eq('link_url', linkUrl) : dupQuery.is('link_url', null)
+    );
+
+    if (fetchErr) {
+      updateAnalyzingCard(lib, { isUploading: false });
+      alert('检查重复记录失败：' + fetchErr.message);
+      return;
+    }
+
+    const existingEntries = new Set((existing ?? []).map((r: any) => r.entry as string));
+    const newRows = candidates.filter(r => !existingEntries.has(r.entry));
+    const skippedCount = candidates.length - newRows.length;
+
+    if (newRows.length === 0) {
+      updateAnalyzingCard(lib, { isUploading: false });
+      alert(`所选的 ${candidates.length} 个组件均已存在，无需重复导入。`);
+      return;
+    }
+
+    const { error } = await supabase.from('feature_list').insert(newRows);
+
+    updateAnalyzingCard(lib, { isUploading: false });
+
+    if (error) {
+      alert('导入失败：' + error.message);
+      return;
+    }
+
+    const msg = skippedCount > 0
+      ? `成功导入 ${newRows.length} 个组件，跳过 ${skippedCount} 个已存在的组件。`
+      : `已成功将 ${newRows.length} 个组件导入到功能列表！`;
+    alert(msg);
   };
 </script>
 
@@ -367,7 +426,7 @@
 
                     <!-- Right: Manifest Info -->
                     <div
-                      class="flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px] bg-gray-50 dark:bg-gray-700/30 px-4 py-2.5 rounded-lg border border-gray-100 dark:border-gray-700 flex-1 max-w-2xl"
+                      class="flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px] bg-gray-50 dark:bg-gray-700/30 px-4 py-2.5 rounded-lg border border-gray-100 dark:border-gray-700 flex-1 min-w-0 max-w-2xl overflow-hidden"
                     >
                       <div class="flex items-center whitespace-nowrap">
                         <span class="text-gray-500 dark:text-gray-400 mr-1.5">版本:</span>
@@ -383,10 +442,10 @@
                         }}</span>
                       </div>
                       <div class="hidden sm:block w-px h-3.5 bg-gray-300 dark:bg-gray-600"></div>
-                      <div class="flex items-center flex-1 min-w-0">
+                      <div class="flex items-center min-w-0 flex-[2]">
                         <span class="text-gray-500 dark:text-gray-400 mr-1.5 shrink-0">描述:</span>
                         <span
-                          class="font-medium text-gray-800 dark:text-gray-200 truncate"
+                          class="font-medium text-gray-800 dark:text-gray-200 truncate min-w-0"
                           :title="lib.manifest?.description"
                           >{{ lib.manifest?.description || '-' }}</span
                         >
@@ -396,18 +455,41 @@
 
                   <!-- Components List -->
                   <div v-if="lib.componentsDetailed && lib.componentsDetailed.length > 0">
-                    <h3
-                      class="font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-1.5 text-[13px] uppercase"
-                    >
-                      <i class="fas fa-layer-group text-gray-400"></i> 组件列表
-                    </h3>
+                    <div class="flex items-center justify-between mb-3">
+                      <h3 class="font-bold text-gray-800 dark:text-white flex items-center gap-1.5 text-[13px] uppercase">
+                        <i class="fas fa-layer-group text-gray-400"></i> 组件列表
+                      </h3>
+                      <div class="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+                        <span>已选 {{ selectedComponents.size }} / {{ lib.componentsDetailed.length }}</span>
+                        <button
+                          class="text-blue-600 dark:text-blue-400 hover:underline"
+                          @click="lib.componentsDetailed.forEach((c: any) => selectedComponents.add(c.name)); selectedComponents = new Set(selectedComponents)"
+                        >全选</button>
+                        <span>|</span>
+                        <button
+                          class="text-gray-500 dark:text-gray-400 hover:underline"
+                          @click="selectedComponents = new Set()"
+                        >全不选</button>
+                      </div>
+                    </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
                       <div
                         v-for="comp in lib.componentsDetailed"
                         :key="comp.name"
-                        class="group relative border border-gray-200 dark:border-gray-700 rounded-lg p-2.5 bg-white dark:bg-gray-800 hover:shadow-md hover:border-blue-400 dark:hover:border-blue-500 transition-all flex flex-col"
+                        class="group relative border rounded-lg p-2.5 transition-all flex flex-col cursor-pointer select-none"
+                        :class="selectedComponents.has(comp.name)
+                          ? 'border-blue-400 dark:border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-sm'
+                          : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 opacity-60'"
+                        @click="toggleComponent(comp.name)"
                       >
                         <div class="flex items-center gap-2 mb-1.5">
+                          <input
+                            type="checkbox"
+                            class="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer flex-shrink-0"
+                            :checked="selectedComponents.has(comp.name)"
+                            @click.stop
+                            @change="toggleComponent(comp.name)"
+                          />
                           <i
                             :class="comp.icon || 'fas fa-chart-pie'"
                             class="text-gray-400 text-[13px]"
@@ -472,16 +554,19 @@
             v-if="analyzedLibraries.length > 0 && analyzedLibraries[0].status === 'success'"
             class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/80 flex justify-end shrink-0"
           >
+            <span class="text-sm text-gray-500 dark:text-gray-400 mr-2">
+              已选 {{ selectedComponents.size }} 个组件
+            </span>
             <button
               @click="uploadAnalyzedFile(analyzedLibraries[0])"
-              :disabled="analyzedLibraries[0].isUploading"
+              :disabled="analyzedLibraries[0].isUploading || selectedComponents.size === 0"
               class="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
             >
               <i
                 class="fas fa-cloud-upload-alt"
                 :class="{ 'animate-bounce': analyzedLibraries[0].isUploading }"
               ></i>
-              {{ analyzedLibraries[0].isUploading ? '上传中...' : '上传至服务器' }}
+              {{ analyzedLibraries[0].isUploading ? '导入中...' : '导入到功能列表' }}
             </button>
           </div>
         </div>

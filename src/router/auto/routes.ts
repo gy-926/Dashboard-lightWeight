@@ -76,6 +76,27 @@ export const autoRoutes: RouteRecordRaw[] = [
         },
       },
       {
+        path: 'system',
+        name: 'system',
+        component: () => import('../../layouts/passthrough-layout/index.vue'),
+        redirect: '/system/feature-list',
+        meta: {
+          title: '系统功能',
+          icon: 'fa-cog',
+        },
+        children: [
+          {
+            path: 'feature-list',
+            name: 'feature-list',
+            component: () => import('../../views/feature-list/index.vue'),
+            meta: {
+              title: '功能列表',
+              icon: 'fa-list-alt',
+            },
+          },
+        ],
+      },
+      {
         path: 'iframe-page',
         name: 'iframe-page',
         component: () => import('../../views/_builtin/iframe-page/index.vue'),
