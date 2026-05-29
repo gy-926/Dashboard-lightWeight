@@ -62,7 +62,7 @@
 
   // 判断是否需要全宽布局（带内边距的页面）
   const isFullWidthLayout = computed(() => {
-    return ['home', 'umd-management', 'umd-menu-config', 'feature-list'].includes(String(route.name));
+    return ['home', 'umd-management', 'umd-menu-config', 'feature-list', 'menu-config'].includes(String(route.name));
   });
 
   // 判断是否需要无内边距的全屏布局

@@ -1,8 +1,6 @@
-import type { MenuApiResponse } from './types';
-import { isMockMode } from '@/api/mock-mode';
-import { kivii } from '@kivii.com/bridge';
+import type { MenuApiResponse, MenuItem } from './types';
+import { adminSupabase } from '@/utils/supabase-admin';
 
-// 401 未授权错误（供上层识别并跳转登录页）
 export class UnauthorizedError extends Error {
   readonly status = 401;
   constructor() {
@@ -11,88 +9,75 @@ export class UnauthorizedError extends Error {
   }
 }
 
-// ==================== Mock 菜单数据 ====================
-const MOCK_MENU_DATA: MenuApiResponse = {
-  MenuRoot: {
-    Kvid: 'root-mock',
-    Title: 'GavinYin Dashboard',
-    DisplayName: 'GavinYin Dashboard',
-  },
-  MenusMain: {
-    Total: 2,
-    Results: [
-      {
-        Kvid: 'mock-demo',
-        Title: '功能演示',
-        Type: 'Folder',
-        Icon: 'fas fa-flask',
-        Order: 1,
-      },
-      {
-        Kvid: 'mock-demo-iframe',
-        ParentKvid: 'mock-demo',
-        Title: 'iframe 嵌入示例',
-        Type: 'Page',
-        Icon: 'fas fa-window-restore',
-        Order: 1,
-        FunctionKvid: 'func-demo-iframe',
-      },
-    ],
-  },
-};
-
-// 解析菜单项的 Parameters 字段（可能是 JSON 字符串或对象）
 function parseParameters(raw: any): Record<string, any> {
   if (!raw) return {};
   if (typeof raw === 'string') {
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return {};
-    }
+    try { return JSON.parse(raw); } catch { return {}; }
   }
   if (typeof raw === 'object') return raw;
   return {};
 }
 
-// 查询 menuRoot 的直接子菜单，找到 Parameters.AutoStartup 为真的项
 export async function fetchAutoStartupKvid(menuRootKvid: string): Promise<string | null> {
   try {
-    const response = await kivii.request.get<{ Results: any[] }>(
-      `/Restful/Kivii.Basic.Entities.Menu/Query.json?ParentKvid=${menuRootKvid}&isRelateFunction=true`
-    );
-    const results: any[] = response.data?.Results ?? [];
+    const { data, error } = await adminSupabase
+      .from('menus')
+      .select('kvid, parameters')
+      .eq('parent_kvid', menuRootKvid)
+      .eq('is_active', true);
 
-    const item = results.find(m => {
-      const params = parseParameters(m.Parameters);
-      const val = params.AutoStartup;
+    if (error || !data) return null;
+
+    const item = data.find(m => {
+      const val = parseParameters(m.parameters).AutoStartup;
       return val === true || val === 'true' || val === 1;
     });
 
-    return item?.Kvid ?? null;
+    return item?.kvid ?? null;
   } catch {
     return null;
   }
 }
 
-// 从接口获取菜单数据
-export async function fetchMenuData(_internalCode: string): Promise<MenuApiResponse> {
-  if (isMockMode) {
-    return MOCK_MENU_DATA;
+export async function fetchMenuData(internalCode: string): Promise<MenuApiResponse> {
+  const { data: root, error: rootErr } = await adminSupabase
+    .from('menu_roots')
+    .select('kvid, title, display_name')
+    .eq('internal_code', internalCode)
+    .single();
+
+  if (rootErr || !root) {
+    console.warn('[MenuService] 未找到菜单根节点:', internalCode, rootErr?.message);
+    return { MenuRoot: { Kvid: '', Title: '' }, MenusMain: { Results: [], Total: 0 } };
   }
 
-  // ── 真实后端请求（设置 VITE_API_MODE=real 后生效）──
-  // try {
-  //   const response = await kivii.request.get<MenuApiResponse>(
-  //     `/Restful/Kivii.Basic.Entities.Menu/Show.json?RootInternalCode=${_internalCode}`
-  //   );
-  //   return response.data;
-  // } catch (error: unknown) {
-  //   const err = error as { status?: number; response?: { status: number } };
-  //   if (err?.status === 401 || err?.response?.status === 401) {
-  //     throw new UnauthorizedError();
-  //   }
-  //   throw error;
-  // }
-  return MOCK_MENU_DATA; // fallback，真实请求取消注释后删除此行
+  const { data: items, error: itemsErr } = await adminSupabase
+    .from('menus')
+    .select('kvid, parent_kvid, title, display_name, type, icon, sort_order, remark, function_kvid, parameters')
+    .eq('menu_root_kvid', root.kvid)
+    .eq('is_active', true)
+    .order('sort_order');
+
+  if (itemsErr) {
+    console.warn('[MenuService] 获取菜单列表失败:', itemsErr.message);
+    return { MenuRoot: { Kvid: root.kvid, Title: root.title }, MenusMain: { Results: [], Total: 0 } };
+  }
+
+  const results: MenuItem[] = (items ?? []).map(r => ({
+    Kvid:         r.kvid,
+    ParentKvid:   r.parent_kvid,
+    Title:        r.title,
+    DisplayName:  r.display_name,
+    Type:         r.type,
+    Icon:         r.icon,
+    Order:        r.sort_order,
+    Remark:       r.remark,
+    FunctionKvid: r.function_kvid,
+    Parameters:   r.parameters,
+  }));
+
+  return {
+    MenuRoot:  { Kvid: root.kvid, Title: root.title, DisplayName: root.display_name ?? undefined },
+    MenusMain: { Results: results, Total: results.length },
+  };
 }

@@ -94,6 +94,15 @@ export const autoRoutes: RouteRecordRaw[] = [
               icon: 'fa-list-alt',
             },
           },
+          {
+            path: 'menu-config',
+            name: 'menu-config',
+            component: () => import('../../views/menu-config/index.vue'),
+            meta: {
+              title: '菜单配置',
+              icon: 'fa-sitemap',
+            },
+          },
         ],
       },
       {
