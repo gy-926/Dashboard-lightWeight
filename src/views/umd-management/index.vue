@@ -1,8 +1,7 @@
 <script setup lang="ts">
   import { ref } from 'vue';
   import { remoteLibraries } from '@/utils/remoteComponentLoader';
-  import { kivii } from '@kivii.com/bridge';
-  import { supabase } from '@/utils/supabase';
+  import { adminSupabase } from '@/utils/supabase-admin';
 
   // 定义分析结果的数据结构，与原页面类似
   export interface AnalyzedLibrary {
@@ -25,11 +24,24 @@
   const fileInput = ref<HTMLInputElement | null>(null);
   const isProcessing = ref(false);
 
+  function generateId(): string {
+    return crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36);
+  }
+
+  function formatSupabaseError(message: string, phase: 'select' | 'insert'): string {
+    if (message.includes('row-level security policy')) {
+      const action = phase === 'select' ? '查询功能表' : '导入到功能表';
+      return `${action}被 Supabase RLS 拒绝，请先执行 scripts/setup-dashboard-rls.sql 中的策略 SQL。原始错误：${message}`;
+    }
+    return message;
+  }
+
   // 已勾选的组件名称集合（默认全选）
   const selectedComponents = ref<Set<string>>(new Set());
 
   function initSelectedComponents(lib: AnalyzedLibrary) {
-    const keys = lib.componentsDetailed?.map((c: any) => c.name as string) ?? lib.componentKeys ?? [];
+    const keys =
+      lib.componentsDetailed?.map((c: any) => c.name as string) ?? lib.componentKeys ?? [];
     selectedComponents.value = new Set(keys);
   }
 
@@ -205,42 +217,51 @@
       return;
     }
 
-    // 判断 link_url：本地文件无有效 URL，置为 null
-    const linkUrl = lib.rawFile ? null : lib.url;
+    // 本地文件当前仅支持分析；若要按需加载，后续需补充可访问的 source_url
+    const sourceUrl = lib.rawFile ? null : lib.url;
+    const sourceModule = lib.manifest?.name || lib.name;
 
-    // 构造候选行
+    // 构造候选功能记录
     const candidates = (lib.componentsDetailed ?? [])
       .filter((comp: any) => selected.has(comp.name as string))
       .map((comp: any, idx: number) => ({
-        name: (comp.zhName || comp.displayName || comp.name) as string,
-        is_enabled: true,
+        kvid: generateId(),
+        title: (comp.zhName || comp.displayName || comp.name) as string,
+        handler: `<${comp.name as string}>`,
+        render_type: 'umd',
+        source_type: 'umd',
+        source_module: sourceModule,
+        source_url: sourceUrl,
+        source_component: comp.name as string,
         icon: (comp.icon as string | undefined) || null,
-        entry: comp.name as string,
-        link_url: linkUrl,
         sort_order: idx,
+        is_active: true,
+        remark: sourceUrl,
+        parameters: {},
       }));
 
     updateAnalyzingCard(lib, { isUploading: true });
 
-    // 查询已存在的记录（相同 entry + 相同 link_url）
-    const entryValues = candidates.map(r => r.entry);
-    const dupQuery = supabase
-      .from('feature_list')
-      .select('entry')
-      .in('entry', entryValues);
-
-    const { data: existing, error: fetchErr } = await (
-      linkUrl !== null ? dupQuery.eq('link_url', linkUrl) : dupQuery.is('link_url', null)
-    );
+    // 查询已存在功能（相同组件名 + 相同来源地址）
+    const componentValues = candidates.map(r => r.source_component);
+    const { data: existing, error: fetchErr } = await adminSupabase
+      .from('functions')
+      .select('source_component, source_url')
+      .eq('render_type', 'umd')
+      .in('source_component', componentValues);
 
     if (fetchErr) {
       updateAnalyzingCard(lib, { isUploading: false });
-      alert('检查重复记录失败：' + fetchErr.message);
+      alert('检查重复记录失败：' + formatSupabaseError(fetchErr.message, 'select'));
       return;
     }
 
-    const existingEntries = new Set((existing ?? []).map((r: any) => r.entry as string));
-    const newRows = candidates.filter(r => !existingEntries.has(r.entry));
+    const existingKeys = new Set(
+      (existing ?? []).map((row: any) => `${row.source_component}::${row.source_url || ''}`)
+    );
+    const newRows = candidates.filter(
+      row => !existingKeys.has(`${row.source_component}::${row.source_url || ''}`)
+    );
     const skippedCount = candidates.length - newRows.length;
 
     if (newRows.length === 0) {
@@ -249,18 +270,22 @@
       return;
     }
 
-    const { error } = await supabase.from('feature_list').insert(newRows);
+    const { error } = await adminSupabase.from('functions').insert(newRows);
 
     updateAnalyzingCard(lib, { isUploading: false });
 
     if (error) {
-      alert('导入失败：' + error.message);
+      alert('导入失败：' + formatSupabaseError(error.message, 'insert'));
       return;
     }
 
-    const msg = skippedCount > 0
-      ? `成功导入 ${newRows.length} 个组件，跳过 ${skippedCount} 个已存在的组件。`
-      : `已成功将 ${newRows.length} 个组件导入到功能列表！`;
+    const suffix = sourceUrl
+      ? ''
+      : ' 当前为本地分析导入，请在功能列表中补充可访问的来源地址后再用于运行时按需加载。';
+    const msg =
+      skippedCount > 0
+        ? `成功注册 ${newRows.length} 个功能，跳过 ${skippedCount} 个已存在的组件。${suffix}`
+        : `已成功将 ${newRows.length} 个组件注册到功能列表！${suffix}`;
     alert(msg);
   };
 </script>
@@ -456,20 +481,34 @@
                   <!-- Components List -->
                   <div v-if="lib.componentsDetailed && lib.componentsDetailed.length > 0">
                     <div class="flex items-center justify-between mb-3">
-                      <h3 class="font-bold text-gray-800 dark:text-white flex items-center gap-1.5 text-[13px] uppercase">
+                      <h3
+                        class="font-bold text-gray-800 dark:text-white flex items-center gap-1.5 text-[13px] uppercase"
+                      >
                         <i class="fas fa-layer-group text-gray-400"></i> 组件列表
                       </h3>
                       <div class="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
-                        <span>已选 {{ selectedComponents.size }} / {{ lib.componentsDetailed.length }}</span>
+                        <span
+                          >已选 {{ selectedComponents.size }} /
+                          {{ lib.componentsDetailed.length }}</span
+                        >
                         <button
                           class="text-blue-600 dark:text-blue-400 hover:underline"
-                          @click="lib.componentsDetailed.forEach((c: any) => selectedComponents.add(c.name)); selectedComponents = new Set(selectedComponents)"
-                        >全选</button>
+                          @click="
+                            lib.componentsDetailed.forEach((c: any) =>
+                              selectedComponents.add(c.name)
+                            );
+                            selectedComponents = new Set(selectedComponents);
+                          "
+                        >
+                          全选
+                        </button>
                         <span>|</span>
                         <button
                           class="text-gray-500 dark:text-gray-400 hover:underline"
                           @click="selectedComponents = new Set()"
-                        >全不选</button>
+                        >
+                          全不选
+                        </button>
                       </div>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
@@ -477,9 +516,11 @@
                         v-for="comp in lib.componentsDetailed"
                         :key="comp.name"
                         class="group relative border rounded-lg p-2.5 transition-all flex flex-col cursor-pointer select-none"
-                        :class="selectedComponents.has(comp.name)
-                          ? 'border-blue-400 dark:border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-sm'
-                          : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 opacity-60'"
+                        :class="
+                          selectedComponents.has(comp.name)
+                            ? 'border-blue-400 dark:border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-sm'
+                            : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 opacity-60'
+                        "
                         @click="toggleComponent(comp.name)"
                       >
                         <div class="flex items-center gap-2 mb-1.5">

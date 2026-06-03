@@ -21,6 +21,7 @@
   import { kivii } from '@kivii.com/bridge';
   import { getGlobalConfig } from '@/router/routes';
   import { loadUmdOnDemand } from '@/utils/remoteComponentLoader';
+  import { adminSupabase } from '@/utils/supabase-admin';
 
   // 路由 props
   const props = defineProps<{
@@ -101,6 +102,16 @@
     return 'webview';
   }
 
+  function normalizeRenderType(
+    renderType?: string | null,
+    handler?: string | null
+  ): PageType {
+    if (renderType === 'umd' || renderType === 'vue' || renderType === 'webview') {
+      return renderType;
+    }
+    return determineRenderTypeByHandler(handler || '');
+  }
+
   // 从类似 <SmartStandardLibrary> 的标签中提取组件名
   function extractComponentName(tag: string): string {
     if (!tag) return '';
@@ -108,50 +119,98 @@
     return match ? match[1] : tag;
   }
 
+  async function applyFunctionDefinition(definition: {
+    handler?: string | null;
+    remark?: string | null;
+    renderType?: string | null;
+    sourceUrl?: string | null;
+  }) {
+    const handler = definition.handler || '';
+    if (!handler) return;
+
+    const config = getGlobalConfig();
+    let origin = config.Origin || '';
+    if (!origin && config.UseWindowOrigin) {
+      origin = window.location.origin;
+    }
+
+    dynamicRenderType.value = normalizeRenderType(definition.renderType, handler);
+
+    if (handler.startsWith('http')) {
+      dynamicHandler.value = handler;
+      return;
+    }
+
+    if (dynamicRenderType.value === 'umd') {
+      const compName = extractComponentName(handler);
+      dynamicHandler.value = compName;
+
+      const scriptPath = definition.sourceUrl || definition.remark || '';
+      if (scriptPath && instance) {
+        const isRegistered = Object.prototype.hasOwnProperty.call(
+          instance.appContext.components,
+          compName
+        );
+        if (!isRegistered) {
+          await loadUmdOnDemand(instance.appContext.app, scriptPath);
+        }
+      }
+      return;
+    }
+
+    dynamicHandler.value = handler.startsWith('/') ? origin + handler : handler;
+  }
+
+  async function fetchFunctionDefinitionFromSupabase(): Promise<boolean> {
+    if (!props.functionKvid) return false;
+
+    const { data, error } = await adminSupabase
+      .from('functions')
+      .select('handler, remark, render_type, source_url, is_active')
+      .eq('kvid', props.functionKvid)
+      .single();
+
+    if (error || !data || data.is_active === false) {
+      return false;
+    }
+
+    await applyFunctionDefinition({
+      handler: data.handler,
+      remark: data.remark,
+      renderType: data.render_type,
+      sourceUrl: data.source_url,
+    });
+
+    return true;
+  }
+
+  async function fetchLegacyFunctionAccess(): Promise<void> {
+    if (!props.kvid) return;
+
+    const response = await kivii.request.get<any>(
+      `/Restful/Kivii.Basic.Entities.Function/Access.json?MenuKvids=${props.kvid}`
+    );
+    const data = response.data;
+
+    if (data?.Results && data.Results.length > 0) {
+      await applyFunctionDefinition({
+        handler: data.Results[0].Handler,
+        remark: data.Results[0].Remark,
+      });
+    }
+  }
+
   // 获取功能访问权限并决定渲染方式
   async function fetchFunctionAccess() {
-    if (!props.kvid) {
+    if (!props.kvid && !props.functionKvid) {
       isLoading.value = false;
       return;
     }
 
     try {
-      const response = await kivii.request.get<any>(
-        `/Restful/Kivii.Basic.Entities.Function/Access.json?MenuKvids=${props.kvid}`
-      );
-      const data = response.data;
-
-      const config = getGlobalConfig();
-      let origin = config.Origin || '';
-      if (!origin && config.UseWindowOrigin) {
-        origin = window.location.origin;
-      }
-
-      if (data?.Results && data.Results.length > 0) {
-        const handler = data.Results[0].Handler;
-
-        if (handler) {
-          dynamicRenderType.value = determineRenderTypeByHandler(handler);
-          if (handler.startsWith('http')) {
-            dynamicHandler.value = handler;
-          } else if (dynamicRenderType.value === 'umd') {
-            const compName = extractComponentName(handler);
-            dynamicHandler.value = compName;
-
-            const scriptPath: string | undefined = data.Results[0].Remark;
-            if (scriptPath && instance) {
-              const isRegistered = Object.prototype.hasOwnProperty.call(
-                instance.appContext.components,
-                compName
-              );
-              if (!isRegistered) {
-                await loadUmdOnDemand(instance.appContext.app, scriptPath);
-              }
-            }
-          } else {
-            dynamicHandler.value = origin + handler;
-          }
-        }
+      const loadedFromSupabase = await fetchFunctionDefinitionFromSupabase();
+      if (!loadedFromSupabase) {
+        await fetchLegacyFunctionAccess();
       }
     } catch (error) {
       console.error('[IframePage] 获取功能权限失败:', error);

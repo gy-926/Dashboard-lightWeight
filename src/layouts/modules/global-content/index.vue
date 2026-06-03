@@ -19,6 +19,22 @@
   const teleportManager = useTeleportManager();
   const route = useRoute();
 
+  const currentViewRecord = computed(() => {
+    const passthroughRecord = route.matched.find(record => record.meta?.passthrough === true);
+    return passthroughRecord ?? route.matched[route.matched.length - 1];
+  });
+
+  const currentViewName = computed(() => {
+    return String(currentViewRecord.value?.name || route.name || '');
+  });
+
+  const currentViewKey = computed(() => {
+    if (currentViewRecord.value?.meta?.passthrough) {
+      return String(currentViewRecord.value.name || currentViewRecord.value.path || route.fullPath);
+    }
+    return route.fullPath;
+  });
+
   // 监听路由变化，非动态组件路由时隐藏所有动态组件
   watch(
     () => route.name,
@@ -62,7 +78,9 @@
 
   // 判断是否需要全宽布局（带内边距的页面）
   const isFullWidthLayout = computed(() => {
-    return ['home', 'umd-management', 'umd-menu-config', 'feature-list', 'menu-config'].includes(String(route.name));
+    return ['home', 'umd-management', 'umd-menu-config', 'feature-list', 'menu-config'].includes(
+      String(route.name)
+    );
   });
 
   // 判断是否需要无内边距的全屏布局
@@ -140,7 +158,7 @@
         ]"
       >
         <template v-if="shouldKeepAlive">
-          <router-view v-slot="{ Component, route }">
+          <router-view v-slot="{ Component }">
             <transition
               enter-active-class="tab-enter-active"
               enter-from-class="tab-enter-from"
@@ -151,8 +169,8 @@
             >
               <keep-alive :include="cachedViews">
                 <component
-                  :is="wrapComponent(Component, route.name as string)"
-                  :key="route.fullPath"
+                  :is="wrapComponent(Component, currentViewName)"
+                  :key="currentViewKey"
                 />
               </keep-alive>
             </transition>
@@ -160,7 +178,7 @@
         </template>
 
         <template v-else>
-          <router-view v-slot="{ Component, route }">
+          <router-view v-slot="{ Component }">
             <transition
               enter-active-class="tab-enter-active"
               enter-from-class="tab-enter-from"
@@ -171,7 +189,7 @@
             >
               <component
                 :is="Component"
-                :key="route.fullPath"
+                :key="currentViewKey"
               />
             </transition>
           </router-view>

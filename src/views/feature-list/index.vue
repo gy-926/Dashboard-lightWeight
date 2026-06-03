@@ -1,137 +1,206 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { supabase } from '@/utils/supabase';
+  import { computed, onMounted, ref } from 'vue';
+  import { adminSupabase } from '@/utils/supabase-admin';
 
-interface FeatureItem {
-  id: string;
-  name: string;
-  is_enabled: boolean;
-  icon: string | null;
-  entry: string | null;
-  link_url: string | null;
-  sort_order: number;
-  created_at: string;
-}
+  defineOptions({ name: 'FeatureListPage' });
 
-type FeatureForm = Omit<FeatureItem, 'id' | 'created_at'>;
+  type RenderType = 'webview' | 'vue' | 'umd';
+  type SourceType = 'manual' | 'umd' | 'system';
 
-const features = ref<FeatureItem[]>([]);
-const loading = ref(false);
-const error = ref<string | null>(null);
-
-const isModalOpen = ref(false);
-const isSaving = ref(false);
-const editingId = ref<string | null>(null);
-
-const emptyForm = (): FeatureForm => ({
-  name: '',
-  is_enabled: true,
-  icon: '',
-  entry: '',
-  link_url: '',
-  sort_order: 0,
-});
-
-const form = ref<FeatureForm>(emptyForm());
-
-async function loadFeatures() {
-  loading.value = true;
-  error.value = null;
-  const { data, error: err } = await supabase
-    .from('feature_list')
-    .select('*')
-    .order('sort_order', { ascending: true });
-  loading.value = false;
-  if (err) {
-    error.value = err.message;
-    return;
+  interface FunctionItem {
+    kvid: string;
+    title: string | null;
+    handler: string;
+    remark: string | null;
+    parameters: Record<string, any> | null;
+    render_type: RenderType;
+    source_type: SourceType;
+    source_module: string | null;
+    source_url: string | null;
+    source_component: string | null;
+    icon: string | null;
+    sort_order: number;
+    is_active: boolean;
   }
-  features.value = data ?? [];
-}
 
-function openCreate() {
-  editingId.value = null;
-  form.value = emptyForm();
-  isModalOpen.value = true;
-}
+  interface FunctionForm {
+    title: string;
+    handler: string;
+    remark: string;
+    parameters: Record<string, any>;
+    render_type: RenderType;
+    source_type: SourceType;
+    source_module: string;
+    source_url: string;
+    source_component: string;
+    icon: string;
+    sort_order: number;
+    is_active: boolean;
+  }
 
-function openEdit(item: FeatureItem) {
-  editingId.value = item.id;
-  form.value = {
-    name: item.name,
-    is_enabled: item.is_enabled,
-    icon: item.icon ?? '',
-    entry: item.entry ?? '',
-    link_url: item.link_url ?? '',
-    sort_order: item.sort_order,
+  const functions = ref<FunctionItem[]>([]);
+  const loading = ref(false);
+  const error = ref<string | null>(null);
+  const isModalOpen = ref(false);
+  const isSaving = ref(false);
+  const editingKvid = ref<string | null>(null);
+
+  const emptyForm = (): FunctionForm => ({
+    title: '',
+    handler: '',
+    remark: '',
+    parameters: {},
+    render_type: 'webview',
+    source_type: 'manual',
+    source_module: '',
+    source_url: '',
+    source_component: '',
+    icon: '',
+    sort_order: 0,
+    is_active: true,
+  });
+
+  const form = ref<FunctionForm>(emptyForm());
+
+  const parametersText = computed({
+    get: () => {
+      try {
+        return JSON.stringify(form.value.parameters ?? {}, null, 2);
+      } catch {
+        return '{}';
+      }
+    },
+    set: value => {
+      try {
+        form.value.parameters = JSON.parse(value || '{}');
+      } catch {
+        // ignore invalid json while typing
+      }
+    },
+  });
+
+  const renderTypeLabel: Record<RenderType, string> = {
+    webview: 'WebView',
+    vue: 'Vue',
+    umd: 'UMD',
   };
-  isModalOpen.value = true;
-}
 
-function closeModal() {
-  isModalOpen.value = false;
-}
-
-async function saveFeature() {
-  if (!form.value.name.trim()) return;
-  isSaving.value = true;
-  const payload = {
-    name: form.value.name.trim(),
-    is_enabled: form.value.is_enabled,
-    icon: form.value.icon?.trim() || null,
-    entry: form.value.entry?.trim() || null,
-    link_url: form.value.link_url?.trim() || null,
-    sort_order: form.value.sort_order,
+  const renderTypeCls: Record<RenderType, string> = {
+    webview: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+    vue: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+    umd: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
   };
 
-  let err;
-  if (editingId.value) {
-    ({ error: err } = await supabase
-      .from('feature_list')
-      .update(payload)
-      .eq('id', editingId.value));
-  } else {
-    ({ error: err } = await supabase.from('feature_list').insert(payload));
+  function generateId(): string {
+    return crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36);
   }
 
-  isSaving.value = false;
-  if (err) {
-    alert('保存失败：' + err.message);
-    return;
+  async function loadFunctions() {
+    loading.value = true;
+    error.value = null;
+    const { data, error: err } = await adminSupabase
+      .from('functions')
+      .select('*')
+      .order('sort_order', { ascending: true })
+      .order('title', { ascending: true });
+    loading.value = false;
+    if (err) {
+      error.value = err.message;
+      return;
+    }
+    functions.value = (data ?? []) as FunctionItem[];
   }
-  closeModal();
-  await loadFeatures();
-}
 
-async function deleteFeature(id: string, name: string) {
-  if (!confirm(`确认删除「${name}」？`)) return;
-  const { error: err } = await supabase.from('feature_list').delete().eq('id', id);
-  if (err) {
-    alert('删除失败：' + err.message);
-    return;
+  function openCreate() {
+    editingKvid.value = null;
+    form.value = emptyForm();
+    isModalOpen.value = true;
   }
-  await loadFeatures();
-}
 
-async function toggleEnabled(item: FeatureItem) {
-  await supabase
-    .from('feature_list')
-    .update({ is_enabled: !item.is_enabled })
-    .eq('id', item.id);
-  await loadFeatures();
-}
+  function openEdit(item: FunctionItem) {
+    editingKvid.value = item.kvid;
+    form.value = {
+      title: item.title ?? '',
+      handler: item.handler,
+      remark: item.remark ?? '',
+      parameters: item.parameters ?? {},
+      render_type: item.render_type,
+      source_type: item.source_type,
+      source_module: item.source_module ?? '',
+      source_url: item.source_url ?? '',
+      source_component: item.source_component ?? '',
+      icon: item.icon ?? '',
+      sort_order: item.sort_order ?? 0,
+      is_active: item.is_active,
+    };
+    isModalOpen.value = true;
+  }
 
-onMounted(loadFeatures);
+  function closeModal() {
+    isModalOpen.value = false;
+  }
+
+  async function saveFunction() {
+    if (!form.value.title?.trim() || !form.value.handler?.trim()) return;
+    isSaving.value = true;
+    const payload: FunctionItem = {
+      kvid: editingKvid.value || generateId(),
+      title: form.value.title.trim(),
+      handler: form.value.handler.trim(),
+      remark: form.value.remark?.trim() || null,
+      parameters: form.value.parameters ?? {},
+      render_type: form.value.render_type,
+      source_type: form.value.source_type,
+      source_module: form.value.source_module?.trim() || null,
+      source_url: form.value.source_url?.trim() || null,
+      source_component: form.value.source_component?.trim() || null,
+      icon: form.value.icon?.trim() || null,
+      sort_order: form.value.sort_order ?? 0,
+      is_active: form.value.is_active,
+    };
+
+    const { error: err } = await adminSupabase.from('functions').upsert(payload);
+    isSaving.value = false;
+    if (err) {
+      alert('保存失败：' + err.message);
+      return;
+    }
+    closeModal();
+    await loadFunctions();
+  }
+
+  async function deleteFunction(item: FunctionItem) {
+    if (!confirm(`确认删除「${item.title || item.handler}」？`)) return;
+    const { error: err } = await adminSupabase.from('functions').delete().eq('kvid', item.kvid);
+    if (err) {
+      alert('删除失败：' + err.message);
+      return;
+    }
+    await loadFunctions();
+  }
+
+  async function toggleEnabled(item: FunctionItem) {
+    const { error: err } = await adminSupabase
+      .from('functions')
+      .update({ is_active: !item.is_active })
+      .eq('kvid', item.kvid);
+    if (err) {
+      alert('更新状态失败：' + err.message);
+      return;
+    }
+    await loadFunctions();
+  }
+
+  onMounted(loadFunctions);
 </script>
 
 <template>
   <div class="space-y-6">
-    <!-- 页头 -->
     <div class="flex items-center justify-between">
       <h1 class="text-2xl font-bold text-gray-800 dark:text-white">功能列表</h1>
       <div class="flex items-center gap-3">
         <span class="text-sm text-gray-500 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">
-          共 {{ features.length }} 项
+          共 {{ functions.length }} 项
         </span>
         <button
           class="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
@@ -143,7 +212,6 @@ onMounted(loadFeatures);
       </div>
     </div>
 
-    <!-- 错误提示 -->
     <div
       v-if="error"
       class="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-4 rounded-xl border border-red-100 dark:border-red-900/50 flex items-center gap-3"
@@ -152,7 +220,6 @@ onMounted(loadFeatures);
       {{ error }}
     </div>
 
-    <!-- 加载中 -->
     <div
       v-if="loading"
       class="bg-white dark:bg-gray-800 rounded-xl p-12 shadow-sm text-center text-gray-400"
@@ -161,90 +228,122 @@ onMounted(loadFeatures);
       <p class="text-sm">加载中...</p>
     </div>
 
-    <!-- 空状态 -->
     <div
-      v-else-if="features.length === 0 && !error"
+      v-else-if="functions.length === 0 && !error"
       class="bg-white dark:bg-gray-800 rounded-xl p-12 shadow-sm text-center text-gray-500"
     >
       <i class="fas fa-inbox text-4xl mb-4 text-gray-300" />
       <p>暂无功能记录</p>
-      <p class="text-sm text-gray-400 mt-1">点击右上角「新增功能」添加第一条记录</p>
+      <p class="text-sm text-gray-400 mt-1">可从 UMD 模块管理导入，也可手动新建</p>
     </div>
 
-    <!-- 功能列表 -->
-    <div v-else class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
+    <div
+      v-else
+      class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden"
+    >
       <table class="w-full text-sm">
         <thead>
           <tr class="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
-            <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">显示名称</th>
-            <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">图标</th>
-            <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">执行入口</th>
-            <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">链接地址</th>
-            <th class="text-center px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">排序</th>
-            <th class="text-center px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">启用</th>
-            <th class="text-right px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">操作</th>
+            <th
+              class="text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+            >
+              功能
+            </th>
+            <th
+              class="text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+            >
+              类型
+            </th>
+            <th
+              class="text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+            >
+              组件/入口
+            </th>
+            <th
+              class="text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+            >
+              来源地址
+            </th>
+            <th
+              class="text-center px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+            >
+              排序
+            </th>
+            <th
+              class="text-center px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+            >
+              启用
+            </th>
+            <th
+              class="text-right px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+            >
+              操作
+            </th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
           <tr
-            v-for="item in features"
-            :key="item.id"
+            v-for="item in functions"
+            :key="item.kvid"
             class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
           >
-            <!-- 显示名称 -->
             <td class="px-6 py-4">
               <div class="flex items-center gap-3">
                 <div
-                  v-if="item.icon"
-                  class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center flex-shrink-0"
+                  class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                  :class="
+                    item.icon ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-gray-100 dark:bg-gray-700'
+                  "
                 >
-                  <i :class="[item.icon, 'text-blue-600 dark:text-blue-400 text-sm']" />
+                  <i
+                    :class="item.icon || 'fas fa-puzzle-piece'"
+                    class="text-sm"
+                    :style="{ color: item.icon ? '' : '#9ca3af' }"
+                  />
                 </div>
-                <div
-                  v-else
-                  class="w-8 h-8 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center flex-shrink-0"
-                >
-                  <i class="fas fa-puzzle-piece text-gray-400 text-sm" />
+                <div class="min-w-0">
+                  <div class="font-medium text-gray-800 dark:text-white truncate">
+                    {{ item.title || item.handler }}
+                  </div>
+                  <div class="text-xs text-gray-400 font-mono truncate">{{ item.kvid }}</div>
                 </div>
-                <span class="font-medium text-gray-800 dark:text-white">{{ item.name }}</span>
               </div>
             </td>
-
-            <!-- 图标 -->
-            <td class="px-6 py-4 text-gray-500 dark:text-gray-400 font-mono text-xs">
-              {{ item.icon || '—' }}
+            <td class="px-6 py-4">
+              <span
+                class="text-xs px-2 py-1 rounded font-medium"
+                :class="renderTypeCls[item.render_type]"
+              >
+                {{ renderTypeLabel[item.render_type] }}
+              </span>
             </td>
-
-            <!-- 执行入口 -->
-            <td class="px-6 py-4 text-gray-500 dark:text-gray-400 font-mono text-xs max-w-[160px] truncate" :title="item.entry ?? ''">
-              {{ item.entry || '—' }}
+            <td
+              class="px-6 py-4 text-gray-500 dark:text-gray-400 font-mono text-xs max-w-[220px] truncate"
+              :title="item.source_component || item.handler"
+            >
+              {{ item.source_component || item.handler }}
             </td>
-
-            <!-- 链接地址 -->
-            <td class="px-6 py-4 text-gray-500 dark:text-gray-400 font-mono text-xs max-w-[160px] truncate" :title="item.link_url ?? ''">
-              {{ item.link_url || '—' }}
+            <td
+              class="px-6 py-4 text-gray-500 dark:text-gray-400 font-mono text-xs max-w-[220px] truncate"
+              :title="item.source_url || item.remark || ''"
+            >
+              {{ item.source_url || item.remark || '—' }}
             </td>
-
-            <!-- 排序 -->
             <td class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
               {{ item.sort_order }}
             </td>
-
-            <!-- 启用开关 -->
             <td class="px-6 py-4 text-center">
               <div
                 class="relative w-11 h-6 rounded-full transition-colors cursor-pointer inline-flex"
-                :class="item.is_enabled ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'"
+                :class="item.is_active ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'"
                 @click="toggleEnabled(item)"
               >
                 <div
                   class="absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform"
-                  :class="item.is_enabled ? 'translate-x-5' : 'translate-x-0'"
+                  :class="item.is_active ? 'translate-x-5' : 'translate-x-0'"
                 />
               </div>
             </td>
-
-            <!-- 操作 -->
             <td class="px-6 py-4 text-right">
               <div class="flex items-center justify-end gap-2">
                 <button
@@ -255,7 +354,7 @@ onMounted(loadFeatures);
                 </button>
                 <button
                   class="px-3 py-1.5 text-xs text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                  @click="deleteFeature(item.id, item.name)"
+                  @click="deleteFunction(item)"
                 >
                   <i class="fas fa-trash-alt mr-1" />删除
                 </button>
@@ -266,19 +365,21 @@ onMounted(loadFeatures);
       </table>
     </div>
 
-    <!-- 新增/编辑弹窗 -->
     <Teleport to="body">
       <div
         v-if="isModalOpen"
         class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
         @click.self="closeModal"
       >
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg mx-4 animate-fade-in-up">
-          <!-- 弹窗头部 -->
-          <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+        <div
+          class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-3xl mx-4 animate-fade-in-up"
+        >
+          <div
+            class="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700"
+          >
             <h3 class="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
               <i class="fas fa-list-alt text-blue-600" />
-              {{ editingId ? '编辑功能' : '新增功能' }}
+              {{ editingKvid ? '编辑功能' : '新增功能' }}
             </h3>
             <button
               class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
@@ -288,106 +389,182 @@ onMounted(loadFeatures);
             </button>
           </div>
 
-          <!-- 表单 -->
-          <div class="px-6 py-5 space-y-4">
-            <!-- 显示名称 -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                显示名称 <span class="text-red-500">*</span>
-              </label>
-              <input
-                v-model="form.name"
-                type="text"
-                placeholder="请输入功能显示名称"
-                class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5"
-              />
-            </div>
-
-            <!-- 图标 -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                图标
-                <span class="text-xs text-gray-400 font-normal ml-1">Font Awesome 类名，如 fas fa-home</span>
-              </label>
-              <div class="flex gap-2">
+          <div class="px-6 py-5 space-y-4 max-h-[75vh] overflow-y-auto">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                  功能名称 <span class="text-red-500">*</span>
+                </label>
                 <input
-                  v-model="form.icon"
+                  v-model="form.title"
                   type="text"
-                  placeholder="fas fa-star"
-                  class="flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5"
+                  placeholder="请输入功能名称"
+                  class="w-full form-input"
                 />
-                <div class="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-lg">
-                  <i :class="form.icon || 'fas fa-question'" class="text-gray-500 dark:text-gray-400" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                  图标
+                </label>
+                <div class="flex gap-2">
+                  <input
+                    v-model="form.icon"
+                    type="text"
+                    placeholder="fas fa-star"
+                    class="flex-1 form-input"
+                  />
+                  <div
+                    class="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-lg"
+                  >
+                    <i
+                      :class="form.icon || 'fas fa-question'"
+                      class="text-gray-500 dark:text-gray-400"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
 
-            <!-- 执行入口 -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                执行入口
-              </label>
-              <input
-                v-model="form.entry"
-                type="text"
-                placeholder="如 openPlugin 或 /route/path"
-                class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5"
-              />
-            </div>
-
-            <!-- 链接地址 -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                链接地址
-              </label>
-              <input
-                v-model="form.link_url"
-                type="text"
-                placeholder="https://example.com"
-                class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5"
-              />
-            </div>
-
-            <!-- 排序 & 启用 -->
-            <div class="flex items-center gap-4">
-              <div class="flex-1">
+            <div class="grid grid-cols-3 gap-4">
+              <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  排序权重
+                  渲染类型
+                </label>
+                <select
+                  v-model="form.render_type"
+                  class="w-full form-input"
+                >
+                  <option value="webview">WebView</option>
+                  <option value="vue">Vue</option>
+                  <option value="umd">UMD</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                  来源类型
+                </label>
+                <select
+                  v-model="form.source_type"
+                  class="w-full form-input"
+                >
+                  <option value="manual">手工维护</option>
+                  <option value="umd">UMD 导入</option>
+                  <option value="system">系统功能</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                  排序
                 </label>
                 <input
                   v-model.number="form.sort_order"
                   type="number"
                   min="0"
-                  class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5"
+                  class="w-full form-input"
                 />
               </div>
-              <div class="flex-1">
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Handler <span class="text-red-500">*</span>
+              </label>
+              <input
+                v-model="form.handler"
+                type="text"
+                placeholder="<MyUmdComponent> / /path/to/page.vue / https://example.com"
+                class="w-full form-input font-mono"
+              />
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  是否启用
+                  来源模块
                 </label>
+                <input
+                  v-model="form.source_module"
+                  type="text"
+                  placeholder="如 kivii-dashboard-umd-standards"
+                  class="w-full form-input"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                  组件名
+                </label>
+                <input
+                  v-model="form.source_component"
+                  type="text"
+                  placeholder="如 SmartStandardLibrary"
+                  class="w-full form-input font-mono"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                来源地址
+              </label>
+              <input
+                v-model="form.source_url"
+                type="text"
+                placeholder="UMD 类型建议填写可访问脚本地址"
+                class="w-full form-input font-mono"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                备注
+              </label>
+              <input
+                v-model="form.remark"
+                type="text"
+                placeholder="补充说明或兼容旧字段"
+                class="w-full form-input"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                扩展参数 (JSON)
+              </label>
+              <textarea
+                v-model="parametersText"
+                rows="5"
+                spellcheck="false"
+                class="w-full form-input font-mono text-xs resize-none"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                启用状态
+              </label>
+              <div
+                class="flex items-center gap-3 cursor-pointer select-none"
+                @click="form.is_active = !form.is_active"
+              >
                 <div
-                  class="flex items-center gap-3 cursor-pointer select-none"
-                  @click="form.is_enabled = !form.is_enabled"
+                  class="relative w-11 h-6 rounded-full transition-colors"
+                  :class="form.is_active ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'"
                 >
                   <div
-                    class="relative w-11 h-6 rounded-full transition-colors"
-                    :class="form.is_enabled ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'"
-                  >
-                    <div
-                      class="absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform"
-                      :class="form.is_enabled ? 'translate-x-5' : 'translate-x-0'"
-                    />
-                  </div>
-                  <span class="text-sm text-gray-600 dark:text-gray-400">
-                    {{ form.is_enabled ? '已启用' : '已禁用' }}
-                  </span>
+                    class="absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform"
+                    :class="form.is_active ? 'translate-x-5' : 'translate-x-0'"
+                  />
                 </div>
+                <span class="text-sm text-gray-600 dark:text-gray-400">
+                  {{ form.is_active ? '已启用' : '已禁用' }}
+                </span>
               </div>
             </div>
           </div>
 
-          <!-- 弹窗底部 -->
-          <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/80 rounded-b-xl">
+          <div
+            class="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/80 rounded-b-xl"
+          >
             <button
               class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
               @click="closeModal"
@@ -395,11 +572,14 @@ onMounted(loadFeatures);
               取消
             </button>
             <button
-              :disabled="!form.name.trim() || isSaving"
+              :disabled="!form.title.trim() || !form.handler.trim() || isSaving"
               class="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              @click="saveFeature"
+              @click="saveFunction"
             >
-              <i class="fas fa-save" :class="{ 'animate-spin fa-spinner': isSaving }" />
+              <i
+                class="fas fa-save"
+                :class="{ 'animate-spin fa-spinner': isSaving }"
+              />
               {{ isSaving ? '保存中...' : '保存' }}
             </button>
           </div>
@@ -410,11 +590,22 @@ onMounted(loadFeatures);
 </template>
 
 <style scoped>
-.animate-fade-in-up {
-  animation: fadeInUp 0.25s ease-out forwards;
-}
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(8px) scale(0.98); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
+  .form-input {
+    @apply bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5;
+  }
+
+  .animate-fade-in-up {
+    animation: fadeInUp 0.25s ease-out forwards;
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
 </style>

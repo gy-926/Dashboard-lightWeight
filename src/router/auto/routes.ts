@@ -83,6 +83,7 @@ export const autoRoutes: RouteRecordRaw[] = [
         meta: {
           title: '系统功能',
           icon: 'fa-cog',
+          passthrough: true,
         },
         children: [
           {
