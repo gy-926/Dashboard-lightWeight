@@ -1,6 +1,6 @@
 import type { Router } from 'vue-router';
 import { waitForRoutesReady, isDynamicRoutesReady, setTargetNavigation } from './index';
-import { getGlobalConfig } from '@/router/routes';
+import { getGlobalConfig, syncInternalCodeToEntryPath } from '@/router/routes';
 import NProgress from 'nprogress';
 import 'nprogress/nprogress.css';
 
@@ -18,7 +18,7 @@ export function setupRouteGuards(router: Router) {
     return;
   }
 
-  router.beforeEach(async (to, from, next) => {
+  router.beforeEach(async (to, _from, next) => {
     // 开始进度条
     NProgress.start();
 
@@ -35,24 +35,24 @@ export function setupRouteGuards(router: Router) {
     } catch (e) {
       // ignore
     }
-    // 检查是否已登录
     const config = getGlobalConfig();
+    syncInternalCodeToEntryPath(config.InternalCode);
     const loginPaths = ['/login', '/SpringLogin'];
-    
+
     // 如果未登录且当前访问的不是登录页面
     if (!config.IsAuthenticated && !loginPaths.includes(to.path)) {
       // 1. 如果配置了公共登录页（PublicLoginUrl），则跳往公共登录页
       if (config.PublicLoginUrl) {
         // 构造带回跳地址的公共登录页 URL，便于公共登录成功后能跳回本系统
         const redirectUrl = encodeURIComponent(window.location.href);
-        const targetUrl = config.PublicLoginUrl.includes('?') 
-          ? `${config.PublicLoginUrl}&redirect=${redirectUrl}` 
+        const targetUrl = config.PublicLoginUrl.includes('?')
+          ? `${config.PublicLoginUrl}&redirect=${redirectUrl}`
           : `${config.PublicLoginUrl}?redirect=${redirectUrl}`;
-          
+
         window.location.href = targetUrl;
         return;
       }
-      
+
       // 2. 否则按原有流程，跳转到系统自带的登录页
       next('/login');
       return;
@@ -91,8 +91,12 @@ export function setupRouteGuards(router: Router) {
       document.title = title;
     }
 
-    const { useMenuStore } = await import('@/layouts/modules/global-menu/store');
-    const menuStore = useMenuStore();
+    const menuStoreModule = await import('@/layouts/modules/global-menu/store');
+    const menuStore = (menuStoreModule as any).useMenuStore?.();
+    if (!menuStore) {
+      next();
+      return;
+    }
 
     menuStore.setSelectedKey(to.path);
 
@@ -107,7 +111,7 @@ export function setupRouteGuards(router: Router) {
     next();
   });
 
-  router.afterEach((to, from) => {
+  router.afterEach(() => {
     // 路由切换完成后的处理
     NProgress.done();
   });

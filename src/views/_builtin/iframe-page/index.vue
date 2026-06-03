@@ -102,10 +102,7 @@
     return 'webview';
   }
 
-  function normalizeRenderType(
-    renderType?: string | null,
-    handler?: string | null
-  ): PageType {
+  function normalizeRenderType(renderType?: string | null, handler?: string | null): PageType {
     if (renderType === 'umd' || renderType === 'vue' || renderType === 'webview') {
       return renderType;
     }

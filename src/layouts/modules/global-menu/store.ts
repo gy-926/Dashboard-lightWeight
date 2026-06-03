@@ -1,526 +1,292 @@
 import { defineStore } from 'pinia';
-import { ref, computed, watch } from 'vue';
-import { getGlobalConfig } from '@/router/routes';
-import type { MenuItem, ThemeConfig, MenuConfig } from './types';
-import { transformRouteToMenu } from './types';
-import { lightenColor, darkenColor, hexToRgba } from '@/utils/color';
+import { computed, ref } from 'vue';
+import type { RouteRecordRaw } from 'vue-router';
+import type { MenuItem, ThemeConfig } from './types';
+import { findMenuParents, transformRouteToMenu } from './types';
+import { useTeleportManager } from '@/store/modules/teleport-manager';
 
-const HOME_TAB_PATH = '/home';
-const DEFAULT_HOME_TAB: MenuItem = {
-  key: 'home',
-  path: HOME_TAB_PATH,
-  title: '首页',
-  icon: 'fa-home',
+const THEME_STORAGE_KEY = 'kivii-theme';
+
+const defaultTheme: ThemeConfig = {
+  layout: 'side',
+  primaryColor: '#3b82f6',
+  darkMode: false,
+  siderWidth: 220,
+  showTabs: true,
+  showBreadcrumb: true,
+  showFooter: false,
+  showWatermark: false,
+  watermarkText: 'Dashboard',
+  preserveHomeTab: true,
 };
 
-// 从本地存储读取保存的主题设置
-function loadThemeFromStorage(): Partial<ThemeConfig> {
+function loadThemeConfig(): ThemeConfig {
   try {
-    const saved = localStorage.getItem('kivii-theme');
-    if (saved) {
-      return JSON.parse(saved);
-    }
-  } catch (e) {
-    console.warn('Failed to load theme from storage:', e);
-  }
-  return {};
-}
-
-// 从本地存储读取标签页
-function loadTabsFromStorage(): MenuItem[] {
-  try {
-    const saved = localStorage.getItem('kivii-tabs');
-    if (saved) {
-      return JSON.parse(saved);
-    }
-  } catch (e) {
-    console.warn('Failed to load tabs from storage:', e);
-  }
-  return [];
-}
-
-// 应用暗色模式到 DOM
-function applyDarkMode(darkMode: boolean) {
-  if (darkMode) {
-    document.documentElement.classList.add('dark');
-  } else {
-    document.documentElement.classList.remove('dark');
+    const saved = localStorage.getItem(THEME_STORAGE_KEY);
+    if (!saved) return { ...defaultTheme };
+    const parsed = JSON.parse(saved);
+    return {
+      ...defaultTheme,
+      ...(parsed && typeof parsed === 'object' ? parsed : {}),
+    };
+  } catch {
+    return { ...defaultTheme };
   }
 }
 
-// 应用主题色到 CSS 变量
-function applyThemeColor(color: string) {
+function persistTheme(theme: ThemeConfig) {
+  localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(theme));
+}
+
+function applyTheme(theme: ThemeConfig) {
   const root = document.documentElement;
-  root.style.setProperty('--color-primary', color);
-
-  // 计算 lighten 颜色
-  const lightColor = lightenColor(color, 40);
-  root.style.setProperty('--color-primary-light', lightColor);
-
-  // 计算 darker 颜色
-  const darkColor = darkenColor(color, 10);
-  root.style.setProperty('--color-primary-dark', darkColor);
-
-  // 计算 hover 颜色
-  const hoverColor = darkenColor(color, 5);
-  root.style.setProperty('--color-primary-hover', hoverColor);
-
-  // 计算半透明背景色
-  root.style.setProperty('--color-primary-bg', hexToRgba(color, 0.1));
-
-  // 计算暗色模式下的颜色变体
-  const darkModeLight = hexToRgba(color, 0.15);
-  const darkModeBg = hexToRgba(color, 0.1);
-  const darkModeHover = hexToRgba(color, 0.25);
-  root.style.setProperty('--color-primary-dark-mode-light', darkModeLight);
-  root.style.setProperty('--color-primary-dark-mode-bg', darkModeBg);
-  root.style.setProperty('--color-primary-dark-mode-hover', darkModeHover);
+  root.style.setProperty('--ui-primary-color', theme.primaryColor);
+  root.style.setProperty('--nprogress-color', theme.primaryColor);
+  if (theme.darkMode) {
+    root.classList.add('dark');
+  } else {
+    root.classList.remove('dark');
+  }
 }
 
-function isHomeTab(path: string) {
-  return path === HOME_TAB_PATH;
+function cloneTab(item: MenuItem): MenuItem {
+  return {
+    key: item.key,
+    path: item.path,
+    title: item.title,
+    icon: item.icon,
+    description: item.description,
+    hidden: item.hidden,
+    alwaysShow: item.alwaysShow,
+    parentPath: item.parentPath,
+    meta: item.meta ? { ...item.meta } : undefined,
+    redirect: item.redirect,
+    kvid: item.kvid,
+    children: [],
+  };
 }
 
-export const useMenuStore = defineStore('menu', () => {
-  // 加载保存的设置
-  const savedTheme = loadThemeFromStorage();
-  const uiConfig = getGlobalConfig();
+function findMenuByPath(menu: MenuItem[], path: string): MenuItem | null {
+  for (const item of menu) {
+    if (item.path === path) return item;
+    if (item.children?.length) {
+      const child = findMenuByPath(item.children, path);
+      if (child) return child;
+    }
+  }
+  return null;
+}
 
-  // 菜单列表
+function getRootMenuByPath(menu: MenuItem[], path: string): MenuItem | null {
+  for (const item of menu) {
+    if (item.path === path) return item;
+    if (item.children?.length) {
+      const child = findMenuByPath(item.children, path);
+      if (child) return item;
+    }
+  }
+  return null;
+}
+
+function getTabKvid(tab: MenuItem): string | undefined {
+  const meta = tab.meta as Record<string, unknown> | undefined;
+  const metaKvid = typeof meta?.kvid === 'string' ? meta.kvid : undefined;
+  return tab.kvid || metaKvid;
+}
+
+export const useMenuStore = defineStore('global-menu', () => {
+  const teleportManager = useTeleportManager();
+
   const menuList = ref<MenuItem[]>([]);
-  // 展开的菜单 keys
+  const tabsList = ref<MenuItem[]>([]);
   const openKeys = ref<string[]>([]);
-  // 选中的菜单 key
-  const selectedKey = ref<string>('');
-  // 标签页列表
-  const tabsList = ref<MenuItem[]>(loadTabsFromStorage());
-  // 主题配置（优先读取本地缓存）
-  const theme = ref<ThemeConfig>({
-    layout: savedTheme.layout || 'side',
-    primaryColor: savedTheme.primaryColor || '#3b82f6',
-    darkMode: savedTheme.darkMode !== undefined ? savedTheme.darkMode : false,
-    siderWidth: 220,
-    showTabs: savedTheme.showTabs !== undefined ? savedTheme.showTabs : true,
-    showBreadcrumb: savedTheme.showBreadcrumb !== undefined ? savedTheme.showBreadcrumb : true,
-    showFooter: savedTheme.showFooter !== undefined ? savedTheme.showFooter : false,
-    showWatermark: uiConfig.ShowWatermark ?? false,
-    watermarkText: uiConfig.WatermarkText ?? 'Kivii 内部系统',
-    preserveHomeTab: savedTheme.preserveHomeTab !== undefined ? savedTheme.preserveHomeTab : true,
-  });
-  // 菜单配置
-  const menuConfig = ref<MenuConfig>({
-    showFullPath: false,
-    accordion: true,
-    defaultOpenKeys: [],
-    defaultSelectedKey: '',
-    collapsed: false,
-  });
-  // 侧边栏折叠状态
+  const selectedKey = ref('');
   const siderCollapsed = ref(false);
+  const mixActiveRootKey = ref('');
+  const theme = ref<ThemeConfig>(loadThemeConfig());
 
-  // 混合模式下激活的一级菜单 Key
-  const mixActiveRootKey = ref<string>('');
+  applyTheme(theme.value);
 
-  // 辅助函数：查找菜单根节点
-  function findMenuRoot(list: MenuItem[], path: string): MenuItem | null {
-    for (const item of list) {
-      if (item.path === path) return item;
-      if (item.children) {
-        if (findMenuInTree(item.children, path)) return item;
-      }
-    }
-    return null;
-  }
-
-  function findMenuInTree(list: MenuItem[], path: string): boolean {
-    for (const item of list) {
-      if (item.path === path) return true;
-      if (item.children && findMenuInTree(item.children, path)) return true;
-    }
-    return false;
-  }
-
-  // 混合模式下的顶部菜单（根目录 - 一级菜单，不带子菜单下拉）
-  const mixHeaderMenuList = computed(() => {
-    if (theme.value.layout !== 'mix') return [];
-    return menuList.value
-      .filter(item => !item.hidden)
-      .map(item => ({ ...item, children: undefined }));
-  });
-
-  // 混合模式下的侧边菜单（激活根节点的子菜单）
+  const mixHeaderMenuList = computed(() => menuList.value.filter(item => !item.hidden));
   const mixSiderMenuList = computed(() => {
-    if (theme.value.layout !== 'mix') return [];
+    if (!mixActiveRootKey.value) return [];
     const root = menuList.value.find(item => item.key === mixActiveRootKey.value);
-    return root?.children || [];
+    return root?.children ?? [];
   });
 
-  // 初始化时应用主题
-  applyDarkMode(theme.value.darkMode);
-  applyThemeColor(theme.value.primaryColor);
-
-  // 监听主题变化并保存到本地存储
-  watch(
-    theme,
-    val => {
-      try {
-        localStorage.setItem(
-          'kivii-theme',
-          JSON.stringify({
-            layout: val.layout,
-            primaryColor: val.primaryColor,
-            darkMode: val.darkMode,
-            showTabs: val.showTabs,
-            showBreadcrumb: val.showBreadcrumb,
-            showFooter: val.showFooter,
-            preserveHomeTab: val.preserveHomeTab,
-          })
-        );
-      } catch (e) {
-        console.warn('Failed to save theme:', e);
-      }
-    },
-    { deep: true }
-  );
-
-  // 监听标签页变化并保存到本地存储（浅监听，仅数组引用/长度变化时触发，避免深遍历开销）
-  watch(
-    () => tabsList.value.map(t => `${t.path}|${t.key}|${t.title}|${t.icon || ''}`).join(','),
-    () => {
-      try {
-        localStorage.setItem('kivii-tabs', JSON.stringify(tabsList.value));
-      } catch (e) {
-        console.warn('Failed to save tabs:', e);
-      }
-    }
-  );
-
-  // 计算面包屑
   const breadcrumbs = computed(() => {
-    const selectedMenu = findMenuByKey(menuList.value, selectedKey.value);
-    if (!selectedMenu) return [];
-
-    const breads: MenuItem[] = [];
-    breads.push(selectedMenu);
-
-    let parent = findMenuParent(menuList.value, selectedMenu.path);
-    while (parent) {
-      breads.unshift(parent);
-      parent = findMenuParent(menuList.value, parent.path);
-    }
-
-    return breads;
+    const path = selectedKey.value;
+    if (!path) return [];
+    const parents = findMenuParents(menuList.value, path);
+    const current = findMenuByPath(menuList.value, path);
+    return current ? [...parents, current] : parents;
   });
 
-  // 设置路由转换的菜单
-  function setMenuFromRoutes(routes: any[]) {
-    menuList.value = transformRouteToMenu(routes);
-    // 菜单加载完成后，用已保存的 selectedKey 重新推导 mixActiveRootKey
-    // 解决：路由守卫设置菜单前 setSelectedKey 已被调用，导致 mix 模式侧边为空的问题
-    if (theme.value.layout === 'mix' && selectedKey.value) {
-      const root = findMenuRoot(menuList.value, selectedKey.value);
-      if (root) {
-        mixActiveRootKey.value = root.key;
-      }
-    }
-  }
-
-  // 设置选中的菜单
-  function setSelectedKey(path: string) {
-    selectedKey.value = path;
-
-    // 如果是混合布局，更新 mixActiveRootKey
-    if (theme.value.layout === 'mix') {
-      const root = findMenuRoot(menuList.value, path);
-      if (root) {
-        mixActiveRootKey.value = root.key;
-      }
-    }
-
-    // 自动展开父级
-    const parents = findAllParents(menuList.value, path);
-    openKeys.value = parents.map(p => p.key);
-  }
-
-  // 添加标签页
-  function addTab(menu: MenuItem) {
-    // 过滤掉空白页
-    if (menu.path === '/blank' || menu.key === 'blank') return;
-
-    const index = tabsList.value.findIndex(t => t.path === menu.path);
-    if (index === -1) {
-      tabsList.value.push({ ...menu });
-      return;
-    }
-
-    const existing = tabsList.value[index];
-    tabsList.value[index] = {
-      ...existing,
-      ...menu,
-      key: menu.key || existing.key,
-      title: menu.title || existing.title,
-      icon: menu.icon || existing.icon,
+  function setTheme(nextTheme: Partial<ThemeConfig>) {
+    theme.value = {
+      ...theme.value,
+      ...nextTheme,
     };
+    persistTheme(theme.value);
+    applyTheme(theme.value);
   }
 
-  function getHomeTab(): MenuItem {
-    const existing = tabsList.value.find(tab => isHomeTab(tab.path));
-    if (existing) return existing;
-
-    const findInMenu = (list: MenuItem[]): MenuItem | null => {
-      for (const item of list) {
-        if (isHomeTab(item.path)) return item;
-        if (item.children?.length) {
-          const found = findInMenu(item.children);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-
-    const menuHome = findInMenu(menuList.value);
-    if (menuHome) {
-      return { ...menuHome };
-    }
-
-    return { ...DEFAULT_HOME_TAB };
+  function toggleDarkMode() {
+    setTheme({ darkMode: !theme.value.darkMode });
   }
 
-  function ensureHomeTab() {
-    if (!theme.value.preserveHomeTab) return;
-    if (tabsList.value.some(tab => isHomeTab(tab.path))) return;
-    tabsList.value.unshift(getHomeTab());
-  }
-
-  function getProtectedPaths(paths: string[], preserveHome = false) {
-    if (!preserveHome || !theme.value.preserveHomeTab) return paths;
-    return paths.filter(path => !isHomeTab(path));
-  }
-
-  // 移除标签页
-  async function removeTab(path: string) {
-    const index = tabsList.value.findIndex(t => t.path === path);
-    if (index > -1) {
-      const tab = tabsList.value[index];
-      tabsList.value.splice(index, 1);
-      // 清理对应的组件缓存（teleportManager 已在 main 中注册，直接取实例，无需重复 import）
-      try {
-        const { useTeleportManager } = await import('@/store/modules/teleport-manager');
-        const teleportManager = useTeleportManager();
-        teleportManager.removeComponentCacheByPath(path, tab.kvid);
-      } catch (e) {
-        // 忽略导入错误
-      }
-    }
-  }
-
-  // 批量移除（先从列表中移除，再并行清理缓存）
-  async function removeTabs(paths: string[], options?: { preserveHome?: boolean }) {
-    if (paths.length === 0) return;
-    const removablePaths = getProtectedPaths(paths, options?.preserveHome);
-    if (removablePaths.length === 0) return;
-
-    const tabsToRemove = removablePaths
-      .map(p => {
-        const idx = tabsList.value.findIndex(t => t.path === p);
-        return idx > -1 ? tabsList.value.splice(idx, 1)[0] : null;
-      })
-      .filter(Boolean) as typeof tabsList.value;
-
-    // 并行清理缓存
-    try {
-      const { useTeleportManager } = await import('@/store/modules/teleport-manager');
-      const teleportManager = useTeleportManager();
-      await Promise.all(
-        tabsToRemove.map(tab =>
-          Promise.resolve(teleportManager.removeComponentCacheByPath(tab.path, tab.kvid))
-        )
-      );
-    } catch (e) {
-      // 忽略导入错误
-    }
-  }
-
-  // 关闭其他标签页
-  async function removeOtherTabs(path: string) {
-    const paths = tabsList.value.filter(t => t.path !== path).map(t => t.path);
-    await removeTabs(paths);
-  }
-
-  // 关闭左侧标签页
-  async function removeLeftTabs(path: string) {
-    const index = tabsList.value.findIndex(t => t.path === path);
-    if (index > 0) {
-      const paths = tabsList.value.slice(0, index).map(t => t.path);
-      await removeTabs(paths, { preserveHome: true });
-      ensureHomeTab();
-    }
-  }
-
-  // 关闭右侧标签页
-  async function removeRightTabs(path: string) {
-    const index = tabsList.value.findIndex(t => t.path === path);
-    if (index > -1 && index < tabsList.value.length - 1) {
-      const paths = tabsList.value.slice(index + 1).map(t => t.path);
-      await removeTabs(paths, { preserveHome: true });
-      ensureHomeTab();
-    }
-  }
-
-  // 关闭所有标签页
-  async function removeAllTabs() {
-    const paths = tabsList.value.map(t => t.path);
-    await removeTabs(paths, { preserveHome: true });
-    ensureHomeTab();
-  }
-
-  // 设置侧边栏折叠
-  function setSiderCollapsed(collapsed: boolean) {
-    siderCollapsed.value = collapsed;
-  }
-
-  // 切换侧边栏折叠
   function toggleSider() {
     siderCollapsed.value = !siderCollapsed.value;
   }
 
-  // 直接设置混合模式激活的根节点 key（顶部菜单点击时立即更新侧边）
-  function setMixActiveRoot(key: string) {
-    mixActiveRootKey.value = key;
-  }
-
-  // 切换主题
-  function toggleDarkMode() {
-    theme.value.darkMode = !theme.value.darkMode;
-    applyDarkMode(theme.value.darkMode);
-  }
-
-  // 更新主题配置
-  function setTheme(config: Partial<ThemeConfig>) {
-    theme.value = { ...theme.value, ...config };
-
-    // 切换为混合布局时，立即从当前路由推导 mixActiveRootKey
-    if (config.layout === 'mix' && selectedKey.value) {
-      const root = findMenuRoot(menuList.value, selectedKey.value);
-      if (root) {
-        mixActiveRootKey.value = root.key;
-      }
+  function setMenuFromRoutes(routes: RouteRecordRaw[]) {
+    menuList.value = transformRouteToMenu(routes);
+    if (!mixActiveRootKey.value && menuList.value.length > 0) {
+      mixActiveRootKey.value = menuList.value[0].key;
     }
-
-    // 处理暗色模式
-    if (config.darkMode !== undefined) {
-      applyDarkMode(config.darkMode);
-    }
-
-    // 更新 CSS 变量
-    if (config.primaryColor) {
-      applyThemeColor(config.primaryColor);
+    if (selectedKey.value) {
+      setSelectedKey(selectedKey.value);
     }
   }
 
-  // 更新主题色 CSS 变量
-  function updateColorVariables(color: string) {
-    applyThemeColor(color);
-  }
-
-  // 展开/收起菜单
-  function toggleOpenKey(key: string) {
-    const index = openKeys.value.indexOf(key);
-    if (index > -1) {
-      openKeys.value.splice(index, 1);
-    } else {
-      openKeys.value.push(key);
-    }
-  }
-
-  // 展开菜单（用于 hover）
   function openKey(key: string) {
     if (!openKeys.value.includes(key)) {
-      openKeys.value.push(key);
+      openKeys.value = [...openKeys.value, key];
     }
   }
 
-  // 关闭所有菜单（用于 hover 离开）
   function closeAllKeys() {
     openKeys.value = [];
   }
 
-  // 重置菜单状态
+  function toggleOpenKey(key: string) {
+    if (openKeys.value.includes(key)) {
+      openKeys.value = openKeys.value.filter(item => item !== key);
+      return;
+    }
+    openKeys.value = [...openKeys.value, key];
+  }
+
+  function setMixActiveRoot(key: string) {
+    mixActiveRootKey.value = key;
+  }
+
+  function setSelectedKey(path: string) {
+    selectedKey.value = path;
+
+    const parents = findMenuParents(menuList.value, path);
+    openKeys.value = Array.from(new Set(parents.map(item => item.key)));
+
+    const root = getRootMenuByPath(menuList.value, path);
+    if (root) {
+      mixActiveRootKey.value = root.key;
+    }
+  }
+
+  function addTab(item: MenuItem) {
+    if (!item?.path) return;
+
+    const existingIndex = tabsList.value.findIndex(tab => tab.path === item.path);
+    if (existingIndex !== -1) {
+      const existing = tabsList.value[existingIndex];
+      tabsList.value.splice(existingIndex, 1, {
+        ...existing,
+        ...cloneTab(item),
+      });
+      return;
+    }
+
+    tabsList.value.push(cloneTab(item));
+  }
+
+  function cleanupTabCache(tab: MenuItem) {
+    teleportManager.removeComponentCacheByPath(tab.path, getTabKvid(tab));
+  }
+
+  function isProtectedHomeTab(tab: MenuItem) {
+    return theme.value.preserveHomeTab && tab.path === '/home';
+  }
+
+  async function removeTab(path: string) {
+    const target = tabsList.value.find(tab => tab.path === path);
+    if (!target) return;
+    if (isProtectedHomeTab(target)) return;
+
+    tabsList.value = tabsList.value.filter(tab => tab.path !== path);
+    cleanupTabCache(target);
+  }
+
+  async function removeOtherTabs(targetPath: string) {
+    const removed = tabsList.value.filter(tab => {
+      if (tab.path === targetPath) return false;
+      if (isProtectedHomeTab(tab)) return false;
+      return true;
+    });
+    tabsList.value = tabsList.value.filter(tab => {
+      if (tab.path === targetPath) return true;
+      return isProtectedHomeTab(tab);
+    });
+    removed.forEach(cleanupTabCache);
+  }
+
+  async function removeLeftTabs(targetPath: string) {
+    const targetIndex = tabsList.value.findIndex(tab => tab.path === targetPath);
+    if (targetIndex <= 0) return;
+
+    const removed = tabsList.value.slice(0, targetIndex).filter(tab => !isProtectedHomeTab(tab));
+    tabsList.value = [
+      ...tabsList.value.slice(0, targetIndex).filter(isProtectedHomeTab),
+      ...tabsList.value.slice(targetIndex),
+    ];
+    removed.forEach(cleanupTabCache);
+  }
+
+  async function removeRightTabs(targetPath: string) {
+    const targetIndex = tabsList.value.findIndex(tab => tab.path === targetPath);
+    if (targetIndex === -1) return;
+
+    const removed = tabsList.value.slice(targetIndex + 1).filter(tab => !isProtectedHomeTab(tab));
+    tabsList.value = [
+      ...tabsList.value.slice(0, targetIndex + 1),
+      ...tabsList.value.slice(targetIndex + 1).filter(isProtectedHomeTab),
+    ];
+    removed.forEach(cleanupTabCache);
+  }
+
+  async function removeAllTabs() {
+    const removed = tabsList.value.filter(tab => !isProtectedHomeTab(tab));
+    tabsList.value = tabsList.value.filter(isProtectedHomeTab);
+    removed.forEach(cleanupTabCache);
+  }
+
   function resetState() {
+    menuList.value = [];
+    tabsList.value = [];
     openKeys.value = [];
     selectedKey.value = '';
-    tabsList.value = [];
     siderCollapsed.value = false;
-  }
-
-  // 查找菜单项
-  function findMenuByKey(menu: MenuItem[], key: string): MenuItem | undefined {
-    for (const item of menu) {
-      if (item.key === key) return item;
-      if (item.children) {
-        const found = findMenuByKey(item.children, key);
-        if (found) return found;
-      }
-    }
-    return undefined;
-  }
-
-  // 查找菜单父级
-  function findMenuParent(menu: MenuItem[], path: string): MenuItem | undefined {
-    for (const item of menu) {
-      if (item.children?.some(c => c.path === path)) return item;
-      if (item.children) {
-        const found = findMenuParent(item.children, path);
-        if (found) return found;
-      }
-    }
-    return undefined;
-  }
-
-  // 查找所有父级
-  function findAllParents(
-    menu: MenuItem[],
-    path: string,
-    visited: Set<string> = new Set()
-  ): MenuItem[] {
-    // 防止循环引用
-    if (visited.has(path)) return [];
-
-    const result: MenuItem[] = [];
-    for (const item of menu) {
-      if (item.path === path) {
-        return result;
-      }
-      if (item.children) {
-        visited.add(item.path);
-        const found = findAllParents(item.children, path, visited);
-        if (found.length >= 0) {
-          // 如果找到或者还需要继续查找
-          if (item.children.some(c => c.path === path)) {
-            return [item, ...result];
-          }
-          if (found.length > 0) {
-            return [item, ...found];
-          }
-        }
-      }
-    }
-    return result;
+    mixActiveRootKey.value = '';
   }
 
   return {
     menuList,
+    tabsList,
     openKeys,
     selectedKey,
-    tabsList,
-    theme,
-    menuConfig,
     siderCollapsed,
     mixActiveRootKey,
+    theme,
     mixHeaderMenuList,
     mixSiderMenuList,
     breadcrumbs,
+    setTheme,
+    toggleDarkMode,
+    toggleSider,
     setMenuFromRoutes,
+    openKey,
+    closeAllKeys,
+    toggleOpenKey,
+    setMixActiveRoot,
     setSelectedKey,
     addTab,
     removeTab,
@@ -528,15 +294,6 @@ export const useMenuStore = defineStore('menu', () => {
     removeLeftTabs,
     removeRightTabs,
     removeAllTabs,
-    setSiderCollapsed,
-    toggleSider,
-    setMixActiveRoot,
-    toggleDarkMode,
-    setTheme,
-    updateColorVariables,
-    toggleOpenKey,
-    openKey,
-    closeAllKeys,
     resetState,
   };
 });
