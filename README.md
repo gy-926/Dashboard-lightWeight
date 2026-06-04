@@ -2,6 +2,12 @@
 
 一个基于 Vue 3 + TypeScript + Vite + Tailwind CSS 的现代化前端开发模板，集成了自动路由、FontAwesome 图标库等开箱即用的功能。
 
+## 🌐 在线体验
+
+- 项目地址: [https://www.gavinyin.online/entry/umdDashboard](https://www.gavinyin.online/entry/umdDashboard)
+- 登录账号: `admin@example.com`
+- 登录密码: `admin@123456`
+
 ## ✨ 特性
 
 - 🚀 **Vue 3** - 使用最新的 Vue 3 Composition API
@@ -71,6 +77,12 @@ pnpm dev
 ```
 
 访问 [http://localhost:5173](http://localhost:5173) 查看应用。
+
+### 在线项目地址
+
+- 项目地址: [https://www.gavinyin.online/entry/umdDashboard](https://www.gavinyin.online/entry/umdDashboard)
+- 演示账号: `admin@example.com`
+- 演示密码: `admin@123456`
 
 ### 构建生产版本
 
