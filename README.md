@@ -17,6 +17,12 @@
 
 ---
 
+## 🌐 在线地址 / Online Demo
+
+- 项目地址 / Demo URL: [https://www.gavinyin.online/entry/umdDashboard](https://www.gavinyin.online/entry/umdDashboard)
+- 登录账号 / Username: `admin@example.com`
+- 登录密码 / Password: `admin@123456`
+
 ## ✨ 核心特性 / Features
 
 - 🚀 **现代技术栈** — Vue 3.5 + TypeScript 5.8 + Vite 7.0 + Pinia
@@ -30,16 +36,16 @@
 
 ## 🛠️ 技术栈 / Tech Stack
 
-| 类别 | 技术 | 版本 |
-|------|------|------|
-| 前端框架 | Vue | 3.5.17 |
-| 构建工具 | Vite | 7.0.0 |
-| 类型系统 | TypeScript | 5.8.0 |
-| 状态管理 | Pinia | 2.3.0 |
-| 路由管理 | Vue Router | 4.5.1 |
-| 样式框架 | Tailwind CSS | 3.4.1 |
-| 远程加载 | vue3-sfc-loader | 0.9.5 |
-| 包管理器 | pnpm | ≥ 8.0.0 |
+| 类别     | 技术            | 版本    |
+| -------- | --------------- | ------- |
+| 前端框架 | Vue             | 3.5.17  |
+| 构建工具 | Vite            | 7.0.0   |
+| 类型系统 | TypeScript      | 5.8.0   |
+| 状态管理 | Pinia           | 2.3.0   |
+| 路由管理 | Vue Router      | 4.5.1   |
+| 样式框架 | Tailwind CSS    | 3.4.1   |
+| 远程加载 | vue3-sfc-loader | 0.9.5   |
+| 包管理器 | pnpm            | ≥ 8.0.0 |
 
 ## 📁 项目结构 / Project Structure
 
@@ -88,6 +94,12 @@ pnpm dev
 
 访问 [http://localhost:5173](http://localhost:5173) 查看应用。
 
+### 在线体验 / Live Access
+
+- 项目地址 / Demo URL: [https://www.gavinyin.online/entry/umdDashboard](https://www.gavinyin.online/entry/umdDashboard)
+- 演示账号 / Username: `admin@example.com`
+- 演示密码 / Password: `admin@123456`
+
 ### 构建 / Build
 
 ```bash
@@ -107,6 +119,7 @@ pnpm preview
 ### 远程组件加载 (UMD)
 
 无需重新构建主应用即可扩展功能：
+
 - 使用 `vue3-sfc-loader` 动态编译 `.vue` 文件
 - 通过 `<script>` 标签加载 UMD 库
 - 使用 `Teleport` 技术渲染远程组件到指定 DOM 节点
@@ -121,12 +134,12 @@ pnpm preview
 
 通过 `window.uiGlobalConfig` 进行运行时配置：
 
-| 字段 | 说明 |
-|------|------|
-| `Origin` | 后端 API 地址 |
-| `UserCode` | 当前用户编码 |
-| `IsAuthenticated` | 认证状态 |
-| `DisplayName` | 系统名称 |
+| 字段              | 说明          |
+| ----------------- | ------------- |
+| `Origin`          | 后端 API 地址 |
+| `UserCode`        | 当前用户编码  |
+| `IsAuthenticated` | 认证状态      |
+| `DisplayName`     | 系统名称      |
 
 ## 🤝 贡献指南 / Contributing
 
@@ -139,6 +152,7 @@ pnpm preview
 5. 提交 Pull Request
 
 **Commit 规范** 参考 [Conventional Commits](https://www.conventionalcommits.org/)：
+
 - `feat:` 新功能
 - `fix:` Bug 修复
 - `docs:` 文档变更
