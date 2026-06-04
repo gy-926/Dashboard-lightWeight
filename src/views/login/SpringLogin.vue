@@ -3,7 +3,7 @@
   import { useRouter, useRoute } from 'vue-router';
   import { reloadDynamicRoutes } from '@/router';
   import { kivii } from '@kivii.com/bridge';
-  import { setGlobalConfig } from '@/router/routes';
+  import { setAuthenticatedFlag } from '@/utils/auth-state';
 
   const router = useRouter();
   const route = useRoute();
@@ -30,9 +30,7 @@
 
       console.log('登录成功:', data);
 
-      setGlobalConfig({ IsAuthenticated: true });
-      if (!(window as any).uiGlobalConfig) (window as any).uiGlobalConfig = {};
-      (window as any).uiGlobalConfig.IsAuthenticated = true;
+      setAuthenticatedFlag(true);
 
       await reloadDynamicRoutes();
 

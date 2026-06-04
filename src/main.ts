@@ -14,6 +14,7 @@ import 'kivii-public-components/style';
 import { KiviiOpenTab } from './bridge/kivii-open-tab';
 // 引入远程组件加载器
 import { registerRemoteComponents } from '@/utils/remoteComponentLoader';
+import { initializeAuthState, setupSupabaseAuthSync } from '@/utils/auth-state';
 
 const initApp = async () => {
   const app = createApp(App);
@@ -35,6 +36,10 @@ const initApp = async () => {
   // 安装 Pinia
   const pinia = createPinia();
   app.use(pinia);
+
+  // 在路由守卫执行前先根据 Supabase session 初始化登录状态
+  await initializeAuthState();
+  setupSupabaseAuthSync({ router, pinia });
 
   // 注册 kiviiBridge 自定义实现（在挂载前）
   if (window.kivii) {

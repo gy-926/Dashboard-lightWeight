@@ -6,8 +6,8 @@
   import type { MenuItem } from '@/layouts/modules/global-menu/types';
   import { kivii } from '@kivii.com/bridge';
   import { supabase } from '@/utils/supabase';
-  import { setGlobalConfig } from '@/router/routes';
   import { reloadDynamicRoutes } from '@/router';
+  import { setAuthenticatedFlag } from '@/utils/auth-state';
 
   defineProps<{
     showSiderToggle?: boolean;
@@ -99,12 +99,8 @@
     } catch (error) {
       console.error('Logout failed:', error);
     } finally {
-      // 更新响应式全局配置，使路由守卫立即感知未登录状态
-      // 仅设置 window.uiGlobalConfig 不够，因为 globalConfig ref 不跟踪该对象
-      setGlobalConfig({ IsAuthenticated: false });
-      if ((window as any).uiGlobalConfig) {
-        (window as any).uiGlobalConfig.IsAuthenticated = false;
-      }
+      // 退出登录后立即同步全局登录标记，保持现有守卫逻辑可用
+      setAuthenticatedFlag(false);
 
       // 重置动态路由状态，确保下次登录后重新加载菜单和路由
       await reloadDynamicRoutes();
@@ -142,7 +138,12 @@
   });
 
   const currentUserName = computed(() => {
-    return (window as any).KiviiContext?.CurrentMember?.DisplayName || 'Admin';
+    return (
+      window.uiGlobalConfig?.CurrentUser?.displayName ||
+      window.uiGlobalConfig?.CurrentUser?.email ||
+      (window as any).KiviiContext?.CurrentMember?.DisplayName ||
+      'Admin'
+    );
   });
 </script>
 

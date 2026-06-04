@@ -44,6 +44,28 @@ interface KiviiBridge {
 interface Window {
   /** 宿主系统注入的全局配置（来自 HTML） */
   uiGlobalConfig?: {
+    CurrentUser?: {
+      id: string;
+      email: string;
+      displayName: string;
+      appRole: string;
+      roleCodes: string[];
+      roles: Array<{
+        kvid: string;
+        code: string;
+        name: string;
+      }>;
+    } | null;
+    CurrentRole?: {
+      kvid: string;
+      code: string;
+      name: string;
+    } | null;
+    CurrentRoles?: Array<{
+      kvid: string;
+      code: string;
+      name: string;
+    }>;
     InternalCode?: string;
     UserCode?: string;
     UserName?: string;

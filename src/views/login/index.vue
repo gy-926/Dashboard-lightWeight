@@ -4,9 +4,9 @@
   import { reloadDynamicRoutes } from '@/router';
   // [MOCK MODE] 已注释掉后端请求依赖
   // import { kivii } from '@kivii.com/bridge';
-  import { setGlobalConfig } from '@/router/routes';
   import { useMenuStore } from '@/layouts/modules/global-menu/store';
   import { supabase } from '@/utils/supabase';
+  import { syncAuthenticatedFlagFromSession } from '@/utils/auth-state';
 
   const router = useRouter();
   const route = useRoute();
@@ -84,6 +84,8 @@
           isLoading.value = false;
           return;
         }
+
+        syncAuthenticatedFlagFromSession(data.session);
       } else {
         // 登录流程
         const { data, error } = await supabase.auth.signInWithPassword({
@@ -92,13 +94,9 @@
         });
 
         if (error) throw error;
-      }
 
-      setGlobalConfig({ IsAuthenticated: true });
-      if (!(window as any).uiGlobalConfig) {
-        (window as any).uiGlobalConfig = {};
+        syncAuthenticatedFlagFromSession(data.session);
       }
-      (window as any).uiGlobalConfig.IsAuthenticated = true;
 
       await reloadDynamicRoutes();
 
