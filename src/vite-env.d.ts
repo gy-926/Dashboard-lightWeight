@@ -34,6 +34,9 @@ interface CustomRouteParamsManager {
 interface Window {
   customRouteParamsManager?: CustomRouteParamsManager
   currentCustomRouteKey?: string
+  b64_md5?: (value: string) => string
+  hex_md5?: (value: string) => string
+  md5?: (value: string) => string
   Ext?: any
   $pdfjsPreview?: {
     quickPreview: (el: HTMLElement, url: string) => void

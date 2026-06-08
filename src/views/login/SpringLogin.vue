@@ -14,11 +14,29 @@ const showPassword = ref(false);
 const passwordFocused = ref(false);
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 
+function getMd5Password(password: string) {
+  const md5Api = window as Window & {
+    b64_md5?: (value: string) => string;
+    hex_md5?: (value: string) => string;
+    md5?: (value: string) => string;
+  };
+  const encrypt = md5Api.b64_md5 || md5Api.hex_md5 || md5Api.md5;
+  if (typeof encrypt !== 'function') {
+    throw new Error('MD5 加密脚本未加载，请稍后重试');
+  }
+  return encrypt(password);
+}
+
+function buildLoginPayload() {
+  const encryptedPassword = getMd5Password(form.password);
+  return { State: 'SHA1', UserName: form.username, Password: encryptedPassword };
+}
+
 async function handleLogin() {
   if (!form.username || !form.password) { errorMsg.value = '请输入用户名和密码'; return; }
   isLoading.value = true; errorMsg.value = '';
   try {
-    const response = await kivii.request.post<any>('/auth/kivii.json', { username: form.username, password: form.password });
+    const response = await kivii.request.post<any>('/auth/kivii.json', buildLoginPayload());
     const data = response.data;
     
     console.log('登录成功:', data);
