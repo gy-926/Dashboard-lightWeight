@@ -14,6 +14,7 @@ const instance = getCurrentInstance();
 const renderType = ref<RenderType>('loading');
 const renderUrl = ref('');        // webview 用
 const umdComponentName = ref(''); // umd 用
+const umdComponentTag = ref('');  // umd 原始标签
 
 function determineType(handler: string): RenderType {
   if (!handler) return 'webview';
@@ -54,6 +55,7 @@ async function loadAutoStartup(kvid: string) {
     if (type === 'umd') {
       const compName = extractComponentName(handler);
       umdComponentName.value = compName;
+      umdComponentTag.value = handler;
 
       // 从 Remark 字段读取 UMD 文件地址，懒加载（仅首次未注册时加载）
       const scriptPath: string | undefined = results[0].Remark;
@@ -120,6 +122,7 @@ watch(
   <UmdComponentPage
     v-else-if="renderType === 'umd'"
     :component-name="umdComponentName"
+    :component-tag="umdComponentTag"
   />
 
   <!-- 默认欢迎页（无 AutoStartup 配置） -->
