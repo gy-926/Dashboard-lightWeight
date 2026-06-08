@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 
-export type PageType = 'webview' | 'vue';
+export type PageType = 'webview' | 'vue' | 'umd';
 
 export interface PageInfo {
   id: string;

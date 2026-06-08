@@ -10,6 +10,7 @@
   } from '@/store/modules/teleport-manager';
   import WebviewComponent from './webview.vue';
   import VueComponent from './vueComponent.vue';
+  import UmdComponentPage from '../umd-component/index.vue';
 
   // 路由 props
   const props = defineProps<{
@@ -31,6 +32,7 @@
   // 动态渲染类型（由接口决定）
   const dynamicRenderType = ref<PageType>('webview');
   const dynamicHandler = ref<string>('');
+  const dynamicUmdTag = ref<string>('');
   const isLoading = ref(true);
 
   // 最终渲染类型（优先使用动态类型，否则使用 props.type）
@@ -77,9 +79,20 @@
       return 'vue';
     }
 
+    // 以组件标签形式配置的按 UMD 组件处理
+    if (handler.startsWith('<') && handler.includes('>')) {
+      return 'umd';
+    }
+
     return 'webview';
   }
 
+  // 从类似 <SmartStandardLibrary> 的标签中提取组件名
+  function extractComponentName(tag: string): string {
+    if (!tag) return '';
+    const match = tag.match(/<([a-zA-Z0-9-]+)[^>]*>/);
+    return match ? match[1] : tag;
+  }
   // 获取功能访问权限并决定渲染方式
   async function fetchFunctionAccess() {
     if (!props.kvid) {
@@ -98,13 +111,17 @@
         const handler = data.Results[0].Handler;
 
         if (handler) {
-          // 如果 handler 已经是绝对路径，直接使用；否则拼接 origin
-          if (handler.startsWith('http')) {
+          const resolvedType = determineRenderTypeByHandler(handler);
+          dynamicRenderType.value = resolvedType;
+
+          if (resolvedType === 'umd') {
+            dynamicHandler.value = extractComponentName(handler);
+            dynamicUmdTag.value = handler;
+          } else if (handler.startsWith('http')) {
             dynamicHandler.value = handler;
           } else {
             dynamicHandler.value = origin + handler;
           }
-          dynamicRenderType.value = determineRenderTypeByHandler(handler);
         }
       }
     } catch (error) {
@@ -148,7 +165,26 @@
 
   // 选择渲染组件
   const CurrentComponent = computed(() => {
-    return renderType.value === 'vue' ? VueComponent : WebviewComponent;
+    if (renderType.value === 'vue') {
+      return VueComponent;
+    }
+    if (renderType.value === 'umd') {
+      return UmdComponentPage;
+    }
+    return WebviewComponent;
+  });
+
+  // UMD 组件参数处理
+  const umdComponentProps = computed(() => {
+    if (renderType.value === 'umd') {
+      // 这里的 renderUrl.value 应该已经是通过 extractComponentName 处理过的组件名
+      const compName = renderUrl.value;
+      return {
+        componentName: compName,
+        componentTag: dynamicUmdTag.value || undefined,
+      };
+    }
+    return {};
   });
 
   // 组件就绪回调
@@ -213,6 +249,7 @@
     async () => {
       isLoading.value = true;
       dynamicHandler.value = '';
+      dynamicUmdTag.value = '';
       dynamicRenderType.value = 'webview';
 
       await fetchFunctionAccess();
@@ -241,6 +278,7 @@
       v-else
       :is="CurrentComponent"
       ref="currentComponent"
+      v-bind="umdComponentProps"
       :url="renderUrl"
       :kvid="kvid"
       :function-kvid="functionKvid"
