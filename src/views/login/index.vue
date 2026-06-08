@@ -18,6 +18,28 @@
   const isLoading = ref(false);
   const errorMsg = ref('');
 
+  function getMd5Password(password: string) {
+    const md5Api = window as Window & {
+      b64_md5?: (value: string) => string;
+      hex_md5?: (value: string) => string;
+      md5?: (value: string) => string;
+    };
+    const encrypt = md5Api.b64_md5 || md5Api.hex_md5 || md5Api.md5;
+    if (typeof encrypt !== 'function') {
+      throw new Error('MD5 加密脚本未加载，请稍后重试');
+    }
+    return encrypt(password);
+  }
+
+  function buildLoginPayload() {
+    const encryptedPassword = getMd5Password(form.password);
+    return {
+      State: 'SHA1',
+      UserName: form.username,
+      Password: encryptedPassword,
+    };
+  }
+
   // 直接从 Pinia store 读取，与主题侧边栏、顶部切换按钮共享同一状态
   const isDark = computed(() => menuStore.theme.darkMode);
 
@@ -49,10 +71,7 @@
     errorMsg.value = '';
 
     try {
-      const response = await kivii.request.post<any>('/auth/kivii.json', {
-        username: form.username,
-        password: form.password,
-      });
+      const response = await kivii.request.post<any>('/auth/kivii.json', buildLoginPayload());
       const data = response.data;
 
       console.log('登录成功:', data);
