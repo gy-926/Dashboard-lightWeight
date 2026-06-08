@@ -44,6 +44,7 @@
   // 动态渲染类型（由接口决定）
   const dynamicRenderType = ref<PageType>('webview');
   const dynamicHandler = ref<string>('');
+  const dynamicUmdTag = ref<string>('');
   const isLoading = ref(true);
 
   // 最终渲染类型（优先使用动态类型，否则使用 props.type）
@@ -141,6 +142,7 @@
     if (dynamicRenderType.value === 'umd') {
       const compName = extractComponentName(handler);
       dynamicHandler.value = compName;
+      dynamicUmdTag.value = handler;
 
       const scriptPath = definition.sourceUrl || definition.remark || '';
       if (scriptPath && instance) {
@@ -266,6 +268,7 @@
       const compName = renderUrl.value;
       return {
         componentName: compName,
+        componentTag: dynamicUmdTag.value || undefined,
         // 这里可以继续向下透传需要的参数
       };
     }
