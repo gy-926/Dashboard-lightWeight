@@ -1,106 +1,90 @@
-<p align="center">
-  <h1 align="center">Kivii Admin Dashboard</h1>
-  <p align="center">一个基于 Vue 3 + TypeScript + Vite + Tailwind CSS 的轻量级中后台管理系统模板</p>
-  <p align="center">A lightweight admin dashboard template built with Vue 3 + TypeScript + Vite + Tailwind CSS</p>
-</p>
+# Kivii Vue3 模板
 
-<p align="center">
-  <a href="https://github.com/gy-926/Dashboard-lightWeight/blob/main/LICENSE">
-    <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License" />
-  </a>
-  <img src="https://img.shields.io/badge/vue-3.5-42b883.svg" alt="Vue 3" />
-  <img src="https://img.shields.io/badge/vite-7.0-646cff.svg" alt="Vite" />
-  <img src="https://img.shields.io/badge/typescript-5.8-3178c6.svg" alt="TypeScript" />
-  <img src="https://img.shields.io/badge/tailwindcss-3.4-38bdf8.svg" alt="Tailwind CSS" />
-  <img src="https://img.shields.io/badge/pnpm-recommended-f69220.svg" alt="pnpm" />
-</p>
+一个基于 Vue 3 + TypeScript + Vite + Tailwind CSS 的现代化前端开发模板，集成了自动路由、FontAwesome 图标库等开箱即用的功能。
 
----
+## 🌐 在线体验
 
-## 🌐 在线地址 / Online Demo
+- 项目地址: [https://www.gavinyin.online/entry/umdDashboard](https://www.gavinyin.online/entry/umdDashboard)
+- 登录账号: `admin@example.com`
+- 登录密码: `admin@123456`
 
-- 项目地址 / Demo URL: [https://www.gavinyin.online/entry/umdDashboard](https://www.gavinyin.online/entry/umdDashboard)
-- 登录账号 / Username: `admin@example.com`
-- 登录密码 / Password: `admin@123456`
+## ✨ 特性
 
-## ✨ 核心特性 / Features
+- 🚀 **Vue 3** - 使用最新的 Vue 3 Composition API
+- 📦 **TypeScript** - 完整的 TypeScript 支持
+- ⚡ **Vite** - 极速的开发构建工具
+- 🎨 **Tailwind CSS** - 实用优先的 CSS 框架
+- 🛣️ **自动路由** - 基于文件系统的自动路由生成
+- 🎯 **FontAwesome** - 丰富的图标库
+- 🔧 **开发工具** - 集成 Vue DevTools
+- 📱 **响应式设计** - 移动端优先的响应式布局
 
-- 🚀 **现代技术栈** — Vue 3.5 + TypeScript 5.8 + Vite 7.0 + Pinia
-- 🎨 **原子化样式** — Tailwind CSS 3.4 + FontAwesome 6.7
-- 🛣️ **动态路由** — 基于后端接口的动态菜单生成与权限控制
-- 🧩 **远程组件** — 支持 UMD 格式远程组件动态加载（Teleport 方案）
-- 📱 **多布局主题** — 侧边栏、顶部菜单、混合模式，支持暗色模式
-- 📑 **标签页管理** — 多标签页操作 + 右键菜单 + 持久化存储
-- 🔒 **权限控制** — 基于 Token 的登录认证与路由守卫
-- 🔌 **桥接集成** — `@kivii.com/bridge` 宿主环境通信支持
+## 🛠️ 技术栈
 
-## 🛠️ 技术栈 / Tech Stack
+- **前端框架**: Vue 3.5.17
+- **构建工具**: Vite 7.0.0
+- **类型系统**: TypeScript 5.8.0
+- **样式框架**: Tailwind CSS 3.4.1
+- **路由管理**: Vue Router 4.5.1
+- **图标库**: FontAwesome 6.7.2
+- **包管理器**: pnpm
 
-| 类别     | 技术            | 版本    |
-| -------- | --------------- | ------- |
-| 前端框架 | Vue             | 3.5.17  |
-| 构建工具 | Vite            | 7.0.0   |
-| 类型系统 | TypeScript      | 5.8.0   |
-| 状态管理 | Pinia           | 2.3.0   |
-| 路由管理 | Vue Router      | 4.5.1   |
-| 样式框架 | Tailwind CSS    | 3.4.1   |
-| 远程加载 | vue3-sfc-loader | 0.9.5   |
-| 包管理器 | pnpm            | ≥ 8.0.0 |
-
-## 📁 项目结构 / Project Structure
+## 📁 项目结构
 
 ```
-src/
-├── bridge/                 # Kivii Bridge 桥接层
-├── composables/            # 组合式函数 (Hooks)
-├── layouts/                # 布局组件
-│   ├── base-layout/        # 基础布局框架
-│   └── modules/            # 布局模块 (Header, Sider, Tab, Menu)
-├── router/                 # 路由配置
-│   ├── guards.ts           # 路由守卫 (权限控制)
-│   └── routes/             # 动态路由生成逻辑
-├── store/                  # Pinia 状态管理
-│   └── modules/
-│       ├── global-menu/    # 菜单与主题状态
-│       └── teleport-manager.ts  # 远程组件渲染管理器
-├── styles/                 # 全局样式
-├── utils/                  # 工具函数
-└── views/                  # 页面视图
-    ├── _builtin/           # 内置视图 (IframePage, UMD加载器)
-    ├── login/              # 登录页
-    └── ...                 # 业务页面
+kivii-vue3-template/
+├── public/                 # 静态资源
+│   └── favicon.ico
+├── src/
+│   ├── components/         # 组件目录
+│   ├── composables/        # 组合式函数
+│   ├── router/            # 路由配置
+│   │   └── auto/          # 自动生成的路由
+│   ├── styles/            # 样式文件
+│   │   └── tailwind.css   # Tailwind CSS
+│   ├── types/             # TypeScript 类型定义
+│   ├── utils/             # 工具函数
+│   ├── views/             # 页面组件
+│   │   ├── home.vue       # 首页
+│   │   └── 404.vue        # 404 页面
+│   ├── App.vue            # 根组件
+│   └── main.ts            # 应用入口
+├── package.json           # 项目配置
+├── vite.config.ts         # Vite 配置
+├── tailwind.config.js     # Tailwind 配置
+└── tsconfig.json          # TypeScript 配置
 ```
 
-## 🚀 快速开始 / Quick Start
+## 🚀 快速开始
 
-### 环境要求 / Prerequisites
+### 环境要求
 
 - Node.js >= 18.0.0
 - pnpm >= 8.0.0
 
-### 安装与启动 / Install & Run
+### 安装依赖
 
 ```bash
-# 克隆项目
-git clone https://github.com/gy-926/Dashboard-lightWeight.git
-cd Dashboard-lightWeight
-
-# 安装依赖
+# 使用 pnpm 安装依赖
 pnpm install
+```
 
+### 开发模式
+
+```bash
 # 启动开发服务器
 pnpm dev
 ```
 
 访问 [http://localhost:5173](http://localhost:5173) 查看应用。
 
-### 在线体验 / Live Access
+### 在线项目地址
 
-- 项目地址 / Demo URL: [https://www.gavinyin.online/entry/umdDashboard](https://www.gavinyin.online/entry/umdDashboard)
-- 演示账号 / Username: `admin@example.com`
-- 演示密码 / Password: `admin@123456`
+- 项目地址: [https://www.gavinyin.online/entry/umdDashboard](https://www.gavinyin.online/entry/umdDashboard)
+- 演示账号: `admin@example.com`
+- 演示密码: `admin@123456`
 
-### 构建 / Build
+### 构建生产版本
 
 ```bash
 # 构建生产版本
@@ -110,64 +94,39 @@ pnpm build
 pnpm preview
 ```
 
-## 📖 功能说明 / Features Guide
+### 类型检查
 
-### 动态路由与菜单
+```bash
+# 运行 TypeScript 类型检查
+pnpm type-check
+```
 
-登录后请求后端接口获取菜单数据，自动生成路由配置。支持 `Page`（页面）、`Folder`（目录）、`Link`（外链）等类型，菜单数据自动缓存。
+## 📖 使用指南
 
-### 远程组件加载 (UMD)
+### 路由系统
 
-无需重新构建主应用即可扩展功能：
+项目使用 `@wemt/vue3-auto-router` 实现基于文件系统的自动路由：
 
-- 使用 `vue3-sfc-loader` 动态编译 `.vue` 文件
-- 通过 `<script>` 标签加载 UMD 库
-- 使用 `Teleport` 技术渲染远程组件到指定 DOM 节点
+- 在 `src/views/` 目录下创建 `.vue` 文件即可自动生成路由
+- 文件名对应路由路径（如 `about.vue` 对应 `/about`）
+- 支持嵌套路由和动态路由
 
-### 布局与主题
+### 样式开发
 
-- **布局切换**：侧边栏布局 / 顶部菜单布局 / 混合布局
-- **暗色模式**：一键切换，自动持久化用户偏好
-- **标签页**：记录访问历史，支持右键菜单（关闭当前/其它/左侧/右侧/所有）
+- 优先使用 Tailwind CSS 实用类
+- 避免自定义样式，通过 Tailwind 类实现
+- 如需自定义样式，使用 CSS 自定义属性
+- 确保移动端适配
 
-### 全局配置 (GlobalConfig)
-
-通过 `window.uiGlobalConfig` 进行运行时配置：
-
-| 字段              | 说明          |
-| ----------------- | ------------- |
-| `Origin`          | 后端 API 地址 |
-| `UserCode`        | 当前用户编码  |
-| `IsAuthenticated` | 认证状态      |
-| `DisplayName`     | 系统名称      |
-
-## 🤝 贡献指南 / Contributing
-
-欢迎提交 Issue 和 Pull Request！
-
-1. Fork 本仓库
-2. 创建特性分支：`git checkout -b feature/your-feature`
-3. 提交更改：`git commit -m 'feat: add some feature'`
-4. 推送分支：`git push origin feature/your-feature`
-5. 提交 Pull Request
-
-**Commit 规范** 参考 [Conventional Commits](https://www.conventionalcommits.org/)：
-
-- `feat:` 新功能
-- `fix:` Bug 修复
-- `docs:` 文档变更
-- `style:` 代码格式
-- `refactor:` 重构
-- `perf:` 性能优化
-- `chore:` 构建/工具变更
-
-## 📝 开发规范 / Code Style
+### 组件开发
 
 - 使用 Vue 3 Composition API
-- 组件文件使用 PascalCase（`UserProfile.vue`）
-- 页面文件使用 kebab-case（`user-profile.vue`）
-- 优先使用 Tailwind CSS 实用类，避免自定义样式
-- 图标使用已集成的 FontAwesome
+- 组件文件使用 TypeScript
+- 遵循 Vue 3 最佳实践
+
+### 图标使用
+
+项目已集成 FontAwesome，可以直接使用：
 
 ```vue
 <template>
@@ -176,12 +135,38 @@ pnpm preview
 </template>
 ```
 
-## 📄 License
+## 🔧 配置说明
 
-本项目基于 [MIT License](./LICENSE) 开源。
+### Vite 配置
 
----
+- 支持 Vue 3 和 TypeScript
+- 集成 Vue DevTools
+- 配置路径别名 `@` 指向 `src` 目录
+- 自动路由插件
 
-<p align="center">
-  如果这个项目对你有帮助，欢迎 ⭐ Star 支持！
-</p>
+### Tailwind 配置
+
+- 扫描 `src` 目录下的所有 Vue、JS、TS 文件
+- 支持响应式设计
+- 可扩展主题配置
+
+### TypeScript 配置
+
+- 严格的类型检查
+- 支持 Vue 3 类型推导
+- 路径映射支持
+
+## 📝 开发规范
+
+### 代码风格
+
+- 使用中文注释提高可读性
+- 调试输出使用英文
+- 优先使用 Tailwind CSS 类
+- 响应式设计优先
+
+### 文件命名
+
+- 组件文件使用 PascalCase（如 `UserProfile.vue`）
+- 页面文件使用 kebab-case（如 `user-profile.vue`）
+- 工具函数使用 camelCase

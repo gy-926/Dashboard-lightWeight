@@ -1,15 +1,8 @@
 <script setup lang="ts">
   defineOptions({ name: 'IframePage' });
-  import {
-    ref,
-    onMounted,
-    onUnmounted,
-    onActivated,
-    computed,
-    watch,
-    getCurrentInstance,
-  } from 'vue';
+  import { ref, onMounted, onUnmounted, onActivated, computed, watch } from 'vue';
   import { useRoute } from 'vue-router';
+  import { useEventBus } from '@vueuse/core';
   import {
     useTeleportManager,
     generatePageId,
@@ -18,10 +11,6 @@
   import WebviewComponent from './webview.vue';
   import VueComponent from './vueComponent.vue';
   import UmdComponentPage from '../umd-component/index.vue';
-  import { kivii } from '@kivii.com/bridge';
-  import { getGlobalConfig } from '@/router/routes';
-  import { loadUmdOnDemand } from '@/utils/remoteComponentLoader';
-  import { adminSupabase } from '@/utils/supabase-admin';
 
   // 路由 props
   const props = defineProps<{
@@ -34,7 +23,6 @@
   }>();
 
   const route = useRoute();
-  const instance = getCurrentInstance();
   const { registerPage, unregisterPage, updatePageStatus, requestActivation, forceActivate } =
     useTeleportManager();
 
@@ -53,16 +41,12 @@
       return dynamicRenderType.value;
     }
     const type = props.type?.toLowerCase() as PageType;
-    if (type === 'vue' || type === 'umd') {
+    if (type === 'vue') {
       return type;
     }
     // 如果 URL 以 .vue 结尾，识别为 Vue 组件
     if (props.url?.endsWith('.vue') || props.functionKvid?.endsWith('.vue')) {
       return 'vue';
-    }
-    // 如果 URL 是以 < 开头且包含 > 的标签形式，识别为 UMD 组件
-    if (props.url?.startsWith('<') && props.url?.includes('>')) {
-      return 'umd';
     }
     return 'webview';
   });
@@ -95,19 +79,12 @@
       return 'vue';
     }
 
-    // 包含 < 和 > 的标签形式，作为 UMD 组件
+    // 以组件标签形式配置的按 UMD 组件处理
     if (handler.startsWith('<') && handler.includes('>')) {
       return 'umd';
     }
 
     return 'webview';
-  }
-
-  function normalizeRenderType(renderType?: string | null, handler?: string | null): PageType {
-    if (renderType === 'umd' || renderType === 'vue' || renderType === 'webview') {
-      return renderType;
-    }
-    return determineRenderTypeByHandler(handler || '');
   }
 
   // 从类似 <SmartStandardLibrary> 的标签中提取组件名
@@ -116,100 +93,36 @@
     const match = tag.match(/<([a-zA-Z0-9-]+)[^>]*>/);
     return match ? match[1] : tag;
   }
-
-  async function applyFunctionDefinition(definition: {
-    handler?: string | null;
-    remark?: string | null;
-    renderType?: string | null;
-    sourceUrl?: string | null;
-  }) {
-    const handler = definition.handler || '';
-    if (!handler) return;
-
-    const config = getGlobalConfig();
-    let origin = config.Origin || '';
-    if (!origin && config.UseWindowOrigin) {
-      origin = window.location.origin;
-    }
-
-    dynamicRenderType.value = normalizeRenderType(definition.renderType, handler);
-
-    if (handler.startsWith('http')) {
-      dynamicHandler.value = handler;
-      return;
-    }
-
-    if (dynamicRenderType.value === 'umd') {
-      const compName = extractComponentName(handler);
-      dynamicHandler.value = compName;
-      dynamicUmdTag.value = handler;
-
-      const scriptPath = definition.sourceUrl || definition.remark || '';
-      if (scriptPath && instance) {
-        const isRegistered = Object.prototype.hasOwnProperty.call(
-          instance.appContext.components,
-          compName
-        );
-        if (!isRegistered) {
-          await loadUmdOnDemand(instance.appContext.app, scriptPath);
-        }
-      }
-      return;
-    }
-
-    dynamicHandler.value = handler.startsWith('/') ? origin + handler : handler;
-  }
-
-  async function fetchFunctionDefinitionFromSupabase(): Promise<boolean> {
-    if (!props.functionKvid) return false;
-
-    const { data, error } = await adminSupabase
-      .from('functions')
-      .select('handler, remark, render_type, source_url, is_active')
-      .eq('kvid', props.functionKvid)
-      .single();
-
-    if (error || !data || data.is_active === false) {
-      return false;
-    }
-
-    await applyFunctionDefinition({
-      handler: data.handler,
-      remark: data.remark,
-      renderType: data.render_type,
-      sourceUrl: data.source_url,
-    });
-
-    return true;
-  }
-
-  async function fetchLegacyFunctionAccess(): Promise<void> {
-    if (!props.kvid) return;
-
-    const response = await kivii.request.get<any>(
-      `/Restful/Kivii.Basic.Entities.Function/Access.json?MenuKvids=${props.kvid}`
-    );
-    const data = response.data;
-
-    if (data?.Results && data.Results.length > 0) {
-      await applyFunctionDefinition({
-        handler: data.Results[0].Handler,
-        remark: data.Results[0].Remark,
-      });
-    }
-  }
-
   // 获取功能访问权限并决定渲染方式
   async function fetchFunctionAccess() {
-    if (!props.kvid && !props.functionKvid) {
+    if (!props.kvid) {
       isLoading.value = false;
       return;
     }
 
     try {
-      const loadedFromSupabase = await fetchFunctionDefinitionFromSupabase();
-      if (!loadedFromSupabase) {
-        await fetchLegacyFunctionAccess();
+      const response = await fetch(
+        `/Restful/Kivii.Basic.Entities.Function/Access.json?MenuKvids=${props.kvid}`
+      );
+      const data = await response.json();
+      const origin = 'https://datav.kivii.org';
+
+      if (data?.Results && data.Results.length > 0) {
+        const handler = data.Results[0].Handler;
+
+        if (handler) {
+          const resolvedType = determineRenderTypeByHandler(handler);
+          dynamicRenderType.value = resolvedType;
+
+          if (resolvedType === 'umd') {
+            dynamicHandler.value = extractComponentName(handler);
+            dynamicUmdTag.value = handler;
+          } else if (handler.startsWith('http')) {
+            dynamicHandler.value = handler;
+          } else {
+            dynamicHandler.value = origin + handler;
+          }
+        }
       }
     } catch (error) {
       console.error('[IframePage] 获取功能权限失败:', error);
@@ -237,15 +150,15 @@
     if (isCustomRoute.value && renderType.value === 'vue') {
       const routeQuery = props.routeQuery;
       if (routeQuery) {
-        if (!window.customRouteParamsManager) {
-          window.customRouteParamsManager = {};
+        if (!(window as any).customRouteParamsManager) {
+          (window as any).customRouteParamsManager = {};
         }
-        window.customRouteParamsManager[route.fullPath] = {
+        (window as any).customRouteParamsManager[route.fullPath] = {
           params: routeQuery,
           routeId: pageId.value,
           timestamp: Date.now(),
         };
-        window.currentCustomRouteKey = route.fullPath;
+        (window as any).currentCustomRouteKey = route.fullPath;
       }
     }
   }
@@ -269,7 +182,6 @@
       return {
         componentName: compName,
         componentTag: dynamicUmdTag.value || undefined,
-        // 这里可以继续向下透传需要的参数
       };
     }
     return {};
@@ -303,10 +215,21 @@
     }
   }
 
+  // 监听标签关闭事件
+  const tabCloseBus = useEventBus<string>('tab-close');
   onMounted(async () => {
+    // 获取功能权限并决定渲染方式
     await fetchFunctionAccess();
+
     registerCurrentPage();
     handleCustomRouteParams();
+
+    // 监听标签关闭
+    tabCloseBus.on(closedPath => {
+      if (closedPath === route.path && pageId.value) {
+        cleanupAll();
+      }
+    });
   });
 
   // 激活时更新状态
@@ -326,6 +249,7 @@
     async () => {
       isLoading.value = true;
       dynamicHandler.value = '';
+      dynamicUmdTag.value = '';
       dynamicRenderType.value = 'webview';
 
       await fetchFunctionAccess();
@@ -354,13 +278,13 @@
       v-else
       :is="CurrentComponent"
       ref="currentComponent"
+      v-bind="umdComponentProps"
       :url="renderUrl"
       :kvid="kvid"
       :function-kvid="functionKvid"
       :page-id="pageId"
       :route-query="routeQuery"
       :backend-origin="backendOrigin"
-      v-bind="umdComponentProps"
       @ready="handleComponentReady"
       @cleanup="handleComponentCleanup"
     />
