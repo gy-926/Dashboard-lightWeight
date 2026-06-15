@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
+  import { ref, computed, onMounted, onUnmounted } from 'vue';
   import { useRoute } from 'vue-router';
   import { useMenuStore } from './store';
   import type { MenuItem } from './types';
@@ -31,6 +31,7 @@
   // 更多菜单状态
   const moreMenuVisible = ref(false);
   const moreMenuOpenKeys = ref<string[]>([]);
+  let hideMoreMenuTimer: ReturnType<typeof setTimeout> | null = null;
 
   const selectedKey = computed(() => route.path);
   const openKeys = computed(() => menuStore.openKeys);
@@ -52,16 +53,7 @@
     const itemMinWidth = props.layoutMode === 'mix' ? 125 : 145; // 每个菜单项最小估算宽度
     const moreButtonWidth = 40; // 更多按钮宽度
 
-    // 混合模式逻辑：激进全显示
-    if (props.layoutMode === 'mix') {
-      const estimatedTotalWidth = totalItems * itemMinWidth;
-      if (estimatedTotalWidth <= currentWidth) {
-        return visibleMenus.value;
-      }
-    }
-
-    // 顶部模式逻辑：保守折叠（总是预留更多按钮空间，避免布局错乱）
-    // 或者当空间不足时才折叠
+    // 统一折叠逻辑：超出容器宽度时用省略号按钮替代
     const availableWidth = currentWidth - moreButtonWidth;
     const maxCount = Math.floor(availableWidth / itemMinWidth);
 
@@ -89,28 +81,35 @@
     return overflowedMenus.value.length > 0;
   });
 
-  // 更新容器宽度
+  // 更新容器宽度（兜底：读 getBoundingClientRect 触发同步 reflow）
   function updateWidth() {
     if (containerRef.value) {
-      containerWidth.value = containerRef.value.clientWidth;
+      const w = containerRef.value.getBoundingClientRect().width;
+      if (w > 0) containerWidth.value = w;
     }
   }
 
   // 监听容器尺寸变化
   let resizeObserver: ResizeObserver | null = null;
 
-  onMounted(async () => {
-    // 等待DOM渲染完成后获取宽度
-    await nextTick();
-    updateWidth();
-
-    // 使用 ResizeObserver 监听容器宽度变化
-    resizeObserver = new ResizeObserver(() => {
-      updateWidth();
+  onMounted(() => {
+    resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        // contentBoxSize / contentRect 是 ResizeObserver 在 layout 完成后直接测量的值，
+        // 比在回调里读 clientWidth 更可靠（clientWidth 可能读到 flex 布局计算前的旧值）
+        const w = entry.contentBoxSize?.[0]?.inlineSize ?? entry.contentRect.width;
+        if (w > 0) containerWidth.value = w;
+      }
     });
     if (containerRef.value) {
       resizeObserver.observe(containerRef.value);
     }
+    // 双帧兜底：第一帧 Vue DOM 已提交，第二帧浏览器 flex 布局一定已完成
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        updateWidth();
+      });
+    });
   });
 
   onUnmounted(() => {
@@ -162,13 +161,20 @@
 
   // 显示更多菜单
   function showMoreMenu() {
+    if (hideMoreMenuTimer !== null) {
+      clearTimeout(hideMoreMenuTimer);
+      hideMoreMenuTimer = null;
+    }
     moreMenuVisible.value = true;
   }
 
-  // 隐藏更多菜单
+  // 隐藏更多菜单（延迟执行，让 dropdown 的 mouseenter 有机会取消）
   function hideMoreMenu() {
-    moreMenuVisible.value = false;
-    moreMenuOpenKeys.value = []; // 重置更多菜单的展开状态
+    hideMoreMenuTimer = setTimeout(() => {
+      moreMenuVisible.value = false;
+      moreMenuOpenKeys.value = [];
+      hideMoreMenuTimer = null;
+    }, 150);
   }
 
   // 鼠标进入更多菜单中的项
@@ -200,6 +206,9 @@
 
   onUnmounted(() => {
     window.removeEventListener('resize', handleResize);
+    if (hideMoreMenuTimer !== null) {
+      clearTimeout(hideMoreMenuTimer);
+    }
   });
 </script>
 
@@ -409,8 +418,6 @@
           <div
             v-if="moreMenuVisible"
             class="absolute right-0 top-full pt-1 z-50"
-            @mouseenter="showMoreMenu"
-            @mouseleave="hideMoreMenu"
           >
             <div
               class="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 min-w-48"
