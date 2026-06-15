@@ -166,7 +166,7 @@
     </div>
 
     <!-- 中间：顶部导航菜单（自适应，占据剩余空间） -->
-    <div class="h-full flex-1 overflow-visible">
+    <div class="h-full flex-1 overflow-visible min-w-0">
       <GlobalTopMenu
         :menu="topMenuList"
         @select="handleMenuSelect"
@@ -174,7 +174,7 @@
     </div>
 
     <!-- 右侧：通知、用户 -->
-    <div class="flex items-center gap-1 pr-4">
+    <div class="flex items-center gap-1 pr-4 flex-shrink-0 relative">
       <!-- 全屏按钮 -->
       <button
         class="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
@@ -273,20 +273,20 @@
   <!-- 侧边栏/混合布局 -->
   <header
     v-else
-    class="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 relative z-[50] transition-colors duration-300"
+    class="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between relative z-[50] transition-colors duration-300"
   >
-    <!-- 左侧：侧边栏折叠按钮 或 Logo -->
-    <div class="flex items-center gap-4 flex-shrink-0">
+    <!-- 左侧：侧边栏折叠按钮 或 Logo（mix 模式） -->
+    <div class="flex items-center h-full flex-shrink-0">
       <button
         v-if="showSiderToggle !== false"
-        class="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
+        class="p-2 mx-3 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
         @click="menuStore.toggleSider()"
       >
         <i class="fas fa-bars" />
       </button>
       <div
         v-else-if="isMixLayout"
-        class="flex items-center gap-2 cursor-pointer pr-4 border-r border-gray-200 dark:border-gray-700"
+        class="flex items-center gap-2 cursor-pointer px-4 border-r border-gray-200 dark:border-gray-700 h-full"
         @click="router.push('/')"
       >
         <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
@@ -296,10 +296,10 @@
       </div>
     </div>
 
-    <!-- 混合布局下的二级菜单 -->
+    <!-- 混合布局下的顶部菜单（结构与 top 布局保持一致） -->
     <div
       v-if="isMixLayout"
-      class="flex-1 h-full overflow-visible ml-4"
+      class="h-full flex-1 overflow-visible min-w-0"
     >
       <GlobalTopMenu
         :menu="mixHeaderMenuList"
@@ -309,7 +309,7 @@
     </div>
 
     <!-- 右侧：通知、用户 -->
-    <div class="flex items-center gap-1">
+    <div class="flex items-center gap-1 pr-4 flex-shrink-0 relative">
       <!-- 全屏按钮 -->
       <button
         class="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"

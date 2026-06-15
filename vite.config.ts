@@ -57,6 +57,10 @@ export default defineConfig({
         target: 'https://datav.kivii.org',
         changeOrigin: true,
       },
+      '/Storages': {
+        target: 'https://datav.kivii.org',
+        changeOrigin: true,
+      },
       '/storages': {
         target: 'https://datav.kivii.org',
         changeOrigin: true,
