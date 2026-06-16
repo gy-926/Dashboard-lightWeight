@@ -32,6 +32,7 @@
   const moreMenuVisible = ref(false);
   const moreMenuOpenKeys = ref<string[]>([]);
   let hideMoreMenuTimer: ReturnType<typeof setTimeout> | null = null;
+  let closeKeysTimer: ReturnType<typeof setTimeout> | null = null;
 
   const selectedKey = computed(() => route.path);
   const openKeys = computed(() => menuStore.openKeys);
@@ -139,12 +140,19 @@
 
   // 鼠标进入菜单项（主菜单）
   function handleMouseEnter(key: string) {
+    if (closeKeysTimer !== null) {
+      clearTimeout(closeKeysTimer);
+      closeKeysTimer = null;
+    }
     menuStore.openKey(key);
   }
 
   // 鼠标离开菜单项（主菜单）
   function handleMouseLeave() {
-    menuStore.closeAllKeys();
+    closeKeysTimer = setTimeout(() => {
+      menuStore.closeAllKeys();
+      closeKeysTimer = null;
+    }, 150);
   }
 
   // 判断菜单项是否激活
@@ -208,6 +216,9 @@
     window.removeEventListener('resize', handleResize);
     if (hideMoreMenuTimer !== null) {
       clearTimeout(hideMoreMenuTimer);
+    }
+    if (closeKeysTimer !== null) {
+      clearTimeout(closeKeysTimer);
     }
   });
 </script>
@@ -283,8 +294,6 @@
             <div
               v-if="openKeys.includes(item.key)"
               class="absolute left-0 top-full pt-1 z-50"
-              @mouseenter="handleMouseEnter(item.key)"
-              @mouseleave="handleMouseLeave"
             >
               <div
                 class="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 min-w-48"
@@ -347,8 +356,6 @@
                         <div
                           v-if="openKeys.includes(child.key)"
                           class="absolute left-full top-0 z-50"
-                          @mouseenter="handleMouseEnter(child.key)"
-                          @mouseleave="handleMouseLeave"
                         >
                           <div
                             class="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 min-w-48 ml-1"
