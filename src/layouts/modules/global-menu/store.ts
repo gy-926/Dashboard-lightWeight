@@ -473,6 +473,14 @@ export const useMenuStore = defineStore('menu', () => {
     openKeys.value = [];
   }
 
+  // 关闭单个菜单 key（用于子菜单飞出层离开）
+  function closeKey(key: string) {
+    const index = openKeys.value.indexOf(key);
+    if (index > -1) {
+      openKeys.value.splice(index, 1);
+    }
+  }
+
   // 重置菜单状态
   function resetState() {
     openKeys.value = [];
@@ -565,6 +573,7 @@ export const useMenuStore = defineStore('menu', () => {
     toggleOpenKey,
     openKey,
     closeAllKeys,
+    closeKey,
     resetState,
   };
 });
