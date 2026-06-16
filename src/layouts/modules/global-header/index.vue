@@ -143,7 +143,15 @@
   });
 
   const currentUserName = computed(() => {
-    return (window as any).KiviiContext?.CurrentMember?.DisplayName || 'Admin';
+    return (window as any).KiviiContext?.CurrentMember?.FullName || 'Admin';
+  });
+
+  const currentUserAvatar = computed(() => {
+    const avatar = (window as any).KiviiContext?.CurrentMember?.Avatar;
+    if (!avatar) return '';
+    if (avatar.startsWith('http')) return avatar;
+    const base = ((window as any).KiviiContext?.UrlBase || '').replace(/\/$/, '');
+    return base + avatar;
   });
 </script>
 
@@ -212,9 +220,18 @@
           class="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
         >
           <div
-            class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center"
+            class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center overflow-hidden"
           >
-            <i class="fas fa-user text-blue-600 dark:text-blue-400" />
+            <img
+              v-if="currentUserAvatar"
+              :src="currentUserAvatar"
+              class="w-full h-full object-cover"
+              alt="avatar"
+            />
+            <i
+              v-else
+              class="fas fa-user text-blue-600 dark:text-blue-400"
+            />
           </div>
           <span class="text-sm text-gray-600 dark:text-gray-400">{{ currentUserName }}</span>
           <i class="fas fa-chevron-down text-xs text-gray-400 dark:text-gray-500" />
@@ -341,9 +358,18 @@
           class="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
         >
           <div
-            class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center"
+            class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center overflow-hidden"
           >
-            <i class="fas fa-user text-blue-600 dark:text-blue-400" />
+            <img
+              v-if="currentUserAvatar"
+              :src="currentUserAvatar"
+              class="w-full h-full object-cover"
+              alt="avatar"
+            />
+            <i
+              v-else
+              class="fas fa-user text-blue-600 dark:text-blue-400"
+            />
           </div>
           <span class="text-sm text-gray-600 dark:text-gray-400">{{ currentUserName }}</span>
           <i class="fas fa-chevron-down text-xs text-gray-400 dark:text-gray-500" />
