@@ -102,9 +102,39 @@ const loadConfig = async (configPath: string): Promise<Config> => {
   }
 };
 
+// 清理 UMD 脚本执行后意外插入 <body> 的 CSS 文本节点
+// 部分 UMD 打包工具会将 CSS 字符串通过 document.body.prepend(cssStr) 插入，
+// 导致样式文本以可见文本形式出现在页面顶部
+const cleanupBodyCssTextNodes = (): void => {
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+  const cssTextNodes: Text[] = [];
+  let node: Text | null;
+  while ((node = walker.nextNode() as Text | null)) {
+    const text = node.textContent?.trim() ?? '';
+    // 简单启发：包含 { 和 } 且以选择器字符开头，大概率是 CSS 文本
+    if (
+      text.length > 0 &&
+      text.includes('{') &&
+      text.includes('}') &&
+      /^[.#a-zA-Z*\[]/.test(text)
+    ) {
+      cssTextNodes.push(node);
+    }
+  }
+  for (const textNode of cssTextNodes) {
+    const style = document.createElement('style');
+    style.textContent = textNode.textContent;
+    document.head.appendChild(style);
+    textNode.parentNode?.removeChild(textNode);
+  }
+};
+
 // 将 UMD IIFE 注入的 <style> 移到 dashboard 自身 CSS 之前，
 // 避免 UMD 的主题变量/dark 选择器因级联位置靠后而覆盖项目样式
 const relocateUmdStyles = (existingStyleSet: Set<Element>): void => {
+  // 清理意外插入 body 的 CSS 文本节点
+  cleanupBodyCssTextNodes();
+
   // 找到 IIFE 新增的 <style> 元素
   const newStyles = Array.from(document.head.querySelectorAll('style')).filter(
     s => !existingStyleSet.has(s)

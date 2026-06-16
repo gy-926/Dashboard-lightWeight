@@ -3,6 +3,7 @@
   import { useRouter, useRoute } from 'vue-router';
   import { useMenuStore } from '../global-menu/store';
   import GlobalTopMenu from '../global-menu/GlobalTopMenu.vue';
+  import UserProfileModal from './UserProfileModal.vue';
   import type { MenuItem } from '../global-menu/types';
   import { kivii } from '@kivii.com/bridge';
   import { setGlobalConfig } from '@/router/routes';
@@ -80,6 +81,12 @@
   const userDropdownVisible = ref(false);
   function toggleUserDropdown() {
     userDropdownVisible.value = !userDropdownVisible.value;
+  }
+
+  const profileModalVisible = ref(false);
+  function openProfileModal() {
+    userDropdownVisible.value = false;
+    profileModalVisible.value = true;
   }
 
   // 退出登录
@@ -228,16 +235,10 @@
             <a
               href="#"
               class="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50"
+              @click.prevent="openProfileModal"
             >
               <i class="fas fa-user-circle w-4" />
               <span>个人中心</span>
-            </a>
-            <a
-              href="#"
-              class="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50"
-            >
-              <i class="fas fa-cog w-4" />
-              <span>设置</span>
             </a>
             <hr class="my-1 border-gray-200 dark:border-gray-700" />
             <a
@@ -363,16 +364,10 @@
             <a
               href="#"
               class="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50"
+              @click.prevent="openProfileModal"
             >
               <i class="fas fa-user-circle w-4" />
               <span>个人中心</span>
-            </a>
-            <a
-              href="#"
-              class="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50"
-            >
-              <i class="fas fa-cog w-4" />
-              <span>设置</span>
             </a>
             <hr class="my-1 border-gray-200 dark:border-gray-700" />
             <a
@@ -397,4 +392,7 @@
       </button>
     </div>
   </header>
+
+  <!-- 个人中心弹出框 -->
+  <UserProfileModal v-model:visible="profileModalVisible" />
 </template>
