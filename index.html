@@ -3,6 +3,31 @@
 
 <head>
   <meta charset="UTF-8">
+  <script>
+    // 拦截 UMD 脚本将 CSS 字符串误作文本节点插入 DOM 的情况，
+    // 在浏览器渲染前即时转换为合法 <style> 元素，避免样式文本可见。
+    (function () {
+      function convertCssTextNode(node) {
+        var text = node.textContent && node.textContent.trim();
+        if (!text || !text.includes('{') || !text.includes('}')) return;
+        if (!/^[.#a-zA-Z*\[@:]/.test(text)) return;
+        var style = document.createElement('style');
+        style.textContent = text;
+        document.head.appendChild(style);
+        if (node.parentNode) node.parentNode.removeChild(node);
+      }
+      var observer = new MutationObserver(function (mutations) {
+        for (var i = 0; i < mutations.length; i++) {
+          var added = mutations[i].addedNodes;
+          for (var j = 0; j < added.length; j++) {
+            var node = added[j];
+            if (node.nodeType === 3) convertCssTextNode(node);
+          }
+        }
+      });
+      observer.observe(document.documentElement, { childList: true, subtree: true });
+    })();
+  </script>
   <link rel="icon" href="/favicon.ico">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kivii Admin</title>
