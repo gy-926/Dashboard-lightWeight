@@ -19,8 +19,14 @@
   const activeTab = ref<Tab>('avatar');
 
   // 当前用户信息
-  const currentUserName = computed(() => (window as any).KiviiContext?.CurrentMember?.DisplayName || 'Admin');
-  const currentAvatar = computed(() => (window as any).KiviiContext?.CurrentMember?.Avatar || '');
+  const currentUserName = computed(() => (window as any).KiviiContext?.CurrentMember?.FullName || 'Admin');
+  const currentAvatar = computed(() => {
+    const avatar = (window as any).KiviiContext?.CurrentMember?.Avatar;
+    if (!avatar) return '';
+    if (avatar.startsWith('http')) return avatar;
+    const base = ((window as any).KiviiContext?.UrlBase || '').replace(/\/$/, '');
+    return base + avatar;
+  });
 
   // ── 头像 ──
   const avatarPreview = ref<string>('');
@@ -37,7 +43,7 @@
         avatarMessage.value = null;
         passwordForm.value = { next: '', confirm: '' };
         passwordMessage.value = null;
-        aliasForm.value = { displayName: currentUserName.value };
+        aliasForm.value = { displayName: (window as any).KiviiContext?.CurrentMember?.FullName || currentUserName.value };
         aliasMessage.value = null;
         activeTab.value = 'avatar';
       }
@@ -151,7 +157,7 @@
     }
   }
 
-  // ── 别名 ──
+  // ── 显示名称 ──
   const aliasForm = ref({ displayName: '' });
   const aliasLoading = ref(false);
   const aliasMessage = ref<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -159,7 +165,7 @@
   async function saveAlias() {
     const name = aliasForm.value.displayName.trim();
     if (!name) {
-      aliasMessage.value = { type: 'error', text: '账号别名不能为空' };
+      aliasMessage.value = { type: 'error', text: '显示名称不能为空' };
       return;
     }
     const member = (window as any).KiviiContext?.CurrentMember;
@@ -173,10 +179,11 @@
       await kivii.request.post('/Restful/Kivii.Organizations.Entities.Member/Update.json', {
         Item: { FullName: name, Metadata: {}, Kvid: member.Kvid },
       });
+      member.FullName = name;
       member.DisplayName = name;
-      aliasMessage.value = { type: 'success', text: '账号别名更新成功' };
+      aliasMessage.value = { type: 'success', text: '显示名称更新成功' };
     } catch {
-      aliasMessage.value = { type: 'error', text: '账号别名更新失败，请重试' };
+      aliasMessage.value = { type: 'error', text: '显示名称更新失败，请重试' };
     } finally {
       aliasLoading.value = false;
     }
@@ -237,7 +244,7 @@
                 v-for="tab in [
                   { key: 'avatar', icon: 'fa-camera', label: '修改头像' },
                   { key: 'password', icon: 'fa-lock', label: '修改密码' },
-                  { key: 'alias', icon: 'fa-id-badge', label: '账号别名' },
+                  { key: 'alias', icon: 'fa-id-badge', label: '修改显示名称' },
                 ]"
                 :key="tab.key"
                 class="flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-medium transition-colors border-b-2 -mb-px"
@@ -398,14 +405,14 @@
                 </button>
               </div>
 
-              <!-- 账号别名 -->
+              <!-- 修改显示名称 -->
               <div v-else-if="activeTab === 'alias'" class="space-y-4">
                 <div class="space-y-1">
-                  <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">账号别名（显示名称）</label>
+                  <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">显示名称（FullName）</label>
                   <input
                     v-model="aliasForm.displayName"
                     type="text"
-                    placeholder="请输入显示名称"
+                    placeholder="请输入显示名称（FullName）"
                     maxlength="32"
                     class="w-full px-3 py-2.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     @keydown.enter="saveAlias"
@@ -416,7 +423,7 @@
                 <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg px-4 py-3 text-xs text-gray-500 dark:text-gray-400 space-y-1">
                   <p class="flex items-center gap-1.5">
                     <i class="fas fa-info-circle text-blue-400" />
-                    别名将显示在顶部导航栏和系统中
+                    显示名称将展示在顶部导航栏和系统中
                   </p>
                   <p class="flex items-center gap-1.5">
                     <i class="fas fa-info-circle text-blue-400" />
@@ -445,7 +452,7 @@
                 >
                   <i v-if="aliasLoading" class="fas fa-spinner fa-spin" />
                   <i v-else class="fas fa-save" />
-                  {{ aliasLoading ? '保存中...' : '保存别名' }}
+                  {{ aliasLoading ? '保存中...' : '保存显示名称' }}
                 </button>
               </div>
             </div>
