@@ -259,6 +259,14 @@ export const useMenuStore = defineStore('global-menu', () => {
     removed.forEach(cleanupTabCache);
   }
 
+  // 关闭单个菜单 key（用于子菜单飞出层离开）
+  function closeKey(key: string) {
+    const index = openKeys.value.indexOf(key);
+    if (index > -1) {
+      openKeys.value.splice(index, 1);
+    }
+  }
+
   function resetState() {
     menuList.value = [];
     tabsList.value = [];
@@ -294,6 +302,7 @@ export const useMenuStore = defineStore('global-menu', () => {
     removeLeftTabs,
     removeRightTabs,
     removeAllTabs,
+    closeKey,
     resetState,
   };
 });

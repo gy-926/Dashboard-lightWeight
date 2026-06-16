@@ -138,19 +138,40 @@
     }
   }
 
-  // 鼠标进入菜单项（主菜单）
-  function handleMouseEnter(key: string) {
+  function cancelCloseTimer() {
     if (closeKeysTimer !== null) {
       clearTimeout(closeKeysTimer);
       closeKeysTimer = null;
     }
+  }
+
+  // 进入顶层菜单项：关闭所有旧下拉，打开当前
+  function handleTopLevelEnter(key: string) {
+    cancelCloseTimer();
+    menuStore.closeAllKeys();
     menuStore.openKey(key);
   }
 
-  // 鼠标离开菜单项（主菜单）
-  function handleMouseLeave() {
+  // 进入二级有子菜单项：关闭所有，重新打开 parentKey + childKey
+  function handleChildEnter(parentKey: string, childKey: string) {
+    cancelCloseTimer();
+    menuStore.closeAllKeys();
+    menuStore.openKey(parentKey);
+    menuStore.openKey(childKey);
+  }
+
+  // 离开顶层菜单 li：延迟关闭所有
+  function handleTopLevelLeave() {
     closeKeysTimer = setTimeout(() => {
       menuStore.closeAllKeys();
+      closeKeysTimer = null;
+    }, 150);
+  }
+
+  // 离开二级子菜单 li：仅关闭该飞出层 key，保留父下拉
+  function handleChildLeave(childKey: string) {
+    closeKeysTimer = setTimeout(() => {
+      menuStore.closeKey(childKey);
       closeKeysTimer = null;
     }, 150);
   }
@@ -260,8 +281,8 @@
         <li
           v-else
           class="h-full relative flex-shrink-0"
-          @mouseenter="handleMouseEnter(item.key)"
-          @mouseleave="handleMouseLeave"
+          @mouseenter="handleTopLevelEnter(item.key)"
+          @mouseleave="handleTopLevelLeave"
         >
           <button
             class="h-full flex items-center gap-1.5 px-3 text-sm font-medium transition-all duration-200 border-b-2 -mb-px"
@@ -323,8 +344,8 @@
                     <li
                       v-else
                       class="relative"
-                      @mouseenter="handleMouseEnter(child.key)"
-                      @mouseleave="handleMouseLeave"
+                      @mouseenter="handleChildEnter(item.key, child.key)"
+                      @mouseleave="handleChildLeave(child.key)"
                     >
                       <button
                         class="w-full flex items-center gap-3 px-4 py-2 text-sm transition-colors whitespace-nowrap text-left"
