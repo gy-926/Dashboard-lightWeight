@@ -39,6 +39,45 @@ const loadConfig = async (configPath: string): Promise<Config> => {
   return { components: [] };
 };
 
+// 清理 UMD 脚本执行后意外插入 <body> 的 CSS 文本节点
+const cleanupBodyCssTextNodes = (): void => {
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+  const cssTextNodes: Text[] = [];
+  let node: Text | null;
+  while ((node = walker.nextNode() as Text | null)) {
+    const text = node.textContent?.trim() ?? '';
+    if (
+      text.length > 0 &&
+      text.includes('{') &&
+      text.includes('}') &&
+      /^[.#a-zA-Z*\[]/.test(text)
+    ) {
+      cssTextNodes.push(node);
+    }
+  }
+  for (const textNode of cssTextNodes) {
+    const style = document.createElement('style');
+    style.textContent = textNode.textContent;
+    document.head.appendChild(style);
+    textNode.parentNode?.removeChild(textNode);
+  }
+};
+
+// 将 UMD IIFE 注入的 <style> 移到 dashboard 自身 CSS 之前
+const relocateUmdStyles = (existingStyleSet: Set<Element>): void => {
+  cleanupBodyCssTextNodes();
+
+  const newStyles = Array.from(document.head.querySelectorAll('style')).filter(
+    s => !existingStyleSet.has(s)
+  );
+
+  if (newStyles.length === 0) return;
+
+  const firstAppCss =
+    document.head.querySelector('link[rel="stylesheet"]') ??
+    Array.from(existingStyleSet).find(s => s.parentNode === document.head) ??
+    null;
+
 const CSS_INJECTORS = [
   'injectStyles',
   '__inject_styles',

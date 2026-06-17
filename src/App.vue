@@ -8,11 +8,17 @@
   </div>
   <!-- 主应用内容 -->
   <RouterView v-else />
+  <!-- 登录过期弹窗 -->
+  <ReLoginDialog v-if="reLoginVisible" />
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { waitForRoutesReady } from '@/router'
+import { useReLogin } from '@/composables/useReLogin'
+import ReLoginDialog from '@/components/ReLoginDialog.vue'
+
+const { visible: reLoginVisible } = useReLogin()
 
 const isReady = ref(false)
 

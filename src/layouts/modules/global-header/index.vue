@@ -3,7 +3,8 @@
   import { useRouter, useRoute } from 'vue-router';
   import { useMenuStore } from '@/layouts/modules/global-menu/store';
   import GlobalTopMenu from '../global-menu/GlobalTopMenu.vue';
-  import type { MenuItem } from '@/layouts/modules/global-menu/types';
+  import UserProfileModal from './UserProfileModal.vue';
+  import type { MenuItem } from '../global-menu/types';
   import { kivii } from '@kivii.com/bridge';
   import { supabase } from '@/utils/supabase';
   import { reloadDynamicRoutes } from '@/router';
@@ -83,6 +84,12 @@
     userDropdownVisible.value = !userDropdownVisible.value;
   }
 
+  const profileModalVisible = ref(false);
+  function openProfileModal() {
+    userDropdownVisible.value = false;
+    profileModalVisible.value = true;
+  }
+
   // 退出登录
   async function handleLogout() {
     try {
@@ -138,12 +145,15 @@
   });
 
   const currentUserName = computed(() => {
-    return (
-      window.uiGlobalConfig?.CurrentUser?.displayName ||
-      window.uiGlobalConfig?.CurrentUser?.email ||
-      (window as any).KiviiContext?.CurrentMember?.DisplayName ||
-      'Admin'
-    );
+    return (window as any).KiviiContext?.CurrentMember?.FullName || 'Admin';
+  });
+
+  const currentUserAvatar = computed(() => {
+    const avatar = (window as any).KiviiContext?.CurrentMember?.Avatar;
+    if (!avatar) return '';
+    if (avatar.startsWith('http')) return avatar;
+    const base = ((window as any).KiviiContext?.UrlBase || '').replace(/\/$/, '');
+    return base + avatar;
   });
 </script>
 
@@ -212,9 +222,18 @@
           class="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
         >
           <div
-            class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center"
+            class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center overflow-hidden"
           >
-            <i class="fas fa-user text-blue-600 dark:text-blue-400" />
+            <img
+              v-if="currentUserAvatar"
+              :src="currentUserAvatar"
+              class="w-full h-full object-cover"
+              alt="avatar"
+            />
+            <i
+              v-else
+              class="fas fa-user text-blue-600 dark:text-blue-400"
+            />
           </div>
           <span class="text-sm text-gray-600 dark:text-gray-400">{{ currentUserName }}</span>
           <i class="fas fa-chevron-down text-xs text-gray-400 dark:text-gray-500" />
@@ -235,16 +254,10 @@
             <a
               href="#"
               class="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50"
+              @click.prevent="openProfileModal"
             >
               <i class="fas fa-user-circle w-4" />
               <span>个人中心</span>
-            </a>
-            <a
-              href="#"
-              class="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50"
-            >
-              <i class="fas fa-cog w-4" />
-              <span>设置</span>
             </a>
             <hr class="my-1 border-gray-200 dark:border-gray-700" />
             <a
@@ -347,9 +360,18 @@
           class="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
         >
           <div
-            class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center"
+            class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center overflow-hidden"
           >
-            <i class="fas fa-user text-blue-600 dark:text-blue-400" />
+            <img
+              v-if="currentUserAvatar"
+              :src="currentUserAvatar"
+              class="w-full h-full object-cover"
+              alt="avatar"
+            />
+            <i
+              v-else
+              class="fas fa-user text-blue-600 dark:text-blue-400"
+            />
           </div>
           <span class="text-sm text-gray-600 dark:text-gray-400">{{ currentUserName }}</span>
           <i class="fas fa-chevron-down text-xs text-gray-400 dark:text-gray-500" />
@@ -370,16 +392,10 @@
             <a
               href="#"
               class="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50"
+              @click.prevent="openProfileModal"
             >
               <i class="fas fa-user-circle w-4" />
               <span>个人中心</span>
-            </a>
-            <a
-              href="#"
-              class="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50"
-            >
-              <i class="fas fa-cog w-4" />
-              <span>设置</span>
             </a>
             <hr class="my-1 border-gray-200 dark:border-gray-700" />
             <a
@@ -404,4 +420,7 @@
       </button>
     </div>
   </header>
+
+  <!-- 个人中心弹出框 -->
+  <UserProfileModal v-model:visible="profileModalVisible" />
 </template>
