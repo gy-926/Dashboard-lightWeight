@@ -1,5 +1,8 @@
 import '@/styles/tailwind.css';
 
+import { setupAuthInterceptor } from '@/utils/auth-interceptor';
+setupAuthInterceptor();
+
 import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 import App from './App.vue';
