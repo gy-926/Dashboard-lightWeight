@@ -109,8 +109,8 @@
       // 退出登录后立即同步全局登录标记，保持现有守卫逻辑可用
       setAuthenticatedFlag(false);
 
-      // 重置动态路由状态，确保下次登录后重新加载菜单和路由
-      await reloadDynamicRoutes();
+      // 清除动态路由状态（不重新请求菜单接口），确保下次登录后重新加载
+      clearDynamicRoutesState();
 
       // 清理 store 和缓存
       menuStore.resetState();
@@ -165,7 +165,7 @@
   >
     <!-- 左侧：Logo（固定宽度） -->
     <div
-      class="flex items-center px-6 border-r border-gray-200 dark:border-gray-700 h-full w-auto flex-shrink-0"
+      class="flex items-center px-4 h-full w-auto flex-shrink-0"
     >
       <div class="flex items-center gap-2 cursor-pointer">
         <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
@@ -174,6 +174,8 @@
         <span class="text-lg font-bold text-gray-800 dark:text-white">{{ systemName }}</span>
       </div>
     </div>
+    <!-- 小分隔线 -->
+    <div class="h-5 w-px bg-gray-200 dark:bg-gray-700 mx-2 flex-shrink-0" />
 
     <!-- 中间：顶部导航菜单（自适应，占据剩余空间） -->
     <div class="h-full flex-1 overflow-visible min-w-0">
@@ -299,7 +301,7 @@
       </button>
       <div
         v-else-if="isMixLayout"
-        class="flex items-center gap-2 cursor-pointer px-4 border-r border-gray-200 dark:border-gray-700 h-full"
+        class="flex items-center gap-2 cursor-pointer px-4 h-full"
         @click="router.push('/')"
       >
         <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
@@ -308,6 +310,11 @@
         <span class="text-lg font-bold text-gray-800 dark:text-white">{{ systemName }}</span>
       </div>
     </div>
+    <!-- 混合布局小分隔线 -->
+    <div
+      v-if="isMixLayout"
+      class="h-5 w-px bg-gray-200 dark:bg-gray-700 mx-2 flex-shrink-0"
+    />
 
     <!-- 混合布局下的顶部菜单（结构与 top 布局保持一致） -->
     <div
