@@ -3,7 +3,7 @@ import { ref, reactive } from 'vue'
 import { supabase } from '@/utils/supabase'
 import { closeReLogin } from '@/composables/useReLogin'
 
-const form = reactive({ email: '', password: '' })
+const form = reactive({ email: 'admin@example.com', password: 'admin@123456' })
 const isLoading = ref(false)
 const errorMsg = ref('')
 

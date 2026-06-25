@@ -13,8 +13,8 @@
   const menuStore = useMenuStore();
 
   const form = reactive({
-    username: '',
-    password: '',
+    username: 'admin@example.com',
+    password: 'admin@123456',
   });
 
   const isLoading = ref(false);
