@@ -17,6 +17,7 @@
     url: string;
     kvid?: string;
     functionKvid?: string;
+    handler?: string; // 关联函数的 handler，由路由层直接传入，无需再调接口
     type?: PageType;
     routeQuery?: Record<string, string>;
     backendOrigin?: string;
@@ -93,7 +94,23 @@
     const match = tag.match(/<([a-zA-Z0-9-]+)[^>]*>/);
     return match ? match[1] : tag;
   }
-  // 获取功能访问权限并决定渲染方式
+  // 将 handler 字符串解析并应用到响应式状态
+  function applyHandler(handler: string) {
+    if (!handler) return;
+    const resolvedType = determineRenderTypeByHandler(handler);
+    dynamicRenderType.value = resolvedType;
+
+    if (resolvedType === 'umd') {
+      dynamicHandler.value = extractComponentName(handler);
+      dynamicUmdTag.value = handler;
+    } else if (handler.startsWith('http')) {
+      dynamicHandler.value = handler;
+    } else {
+      dynamicHandler.value = 'https://datav.kivii.org' + handler;
+    }
+  }
+
+  // 兜底：通过接口查询 handler（仅 handler prop 不存在时使用）
   async function fetchFunctionAccess() {
     if (!props.kvid) {
       isLoading.value = false;
@@ -105,24 +122,10 @@
         `/Restful/Kivii.Basic.Entities.Function/Access.json?MenuKvids=${props.kvid}`
       );
       const data = await response.json();
-      const origin = 'https://datav.kivii.org';
 
       if (data?.Results && data.Results.length > 0) {
         const handler = data.Results[0].Handler;
-
-        if (handler) {
-          const resolvedType = determineRenderTypeByHandler(handler);
-          dynamicRenderType.value = resolvedType;
-
-          if (resolvedType === 'umd') {
-            dynamicHandler.value = extractComponentName(handler);
-            dynamicUmdTag.value = handler;
-          } else if (handler.startsWith('http')) {
-            dynamicHandler.value = handler;
-          } else {
-            dynamicHandler.value = origin + handler;
-          }
-        }
+        if (handler) applyHandler(handler);
       }
     } catch (error) {
       console.error('[IframePage] 获取功能权限失败:', error);
@@ -218,8 +221,13 @@
   // 监听标签关闭事件
   const tabCloseBus = useEventBus<string>('tab-close');
   onMounted(async () => {
-    // 获取功能权限并决定渲染方式
-    await fetchFunctionAccess();
+    // 优先使用路由层传入的 handler，避免接口调用
+    if (props.handler) {
+      applyHandler(props.handler);
+      isLoading.value = false;
+    } else {
+      await fetchFunctionAccess();
+    }
 
     registerCurrentPage();
     handleCustomRouteParams();
@@ -245,14 +253,19 @@
 
   // 路由参数变化时更新
   watch(
-    () => [props.url, props.kvid, props.type],
+    () => [props.url, props.kvid, props.type, props.handler],
     async () => {
       isLoading.value = true;
       dynamicHandler.value = '';
       dynamicUmdTag.value = '';
       dynamicRenderType.value = 'webview';
 
-      await fetchFunctionAccess();
+      if (props.handler) {
+        applyHandler(props.handler);
+        isLoading.value = false;
+      } else {
+        await fetchFunctionAccess();
+      }
 
       cleanupAll();
       registerCurrentPage();

@@ -835,7 +835,7 @@
 
               <!-- Table header：固定不滚动 -->
               <div class="overflow-x-auto shrink-0">
-                <div class="min-w-[800px]">
+                <div class="min-w-[1000px]">
                   <div
                     class="fn-grid text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-700/50"
                   >
@@ -876,6 +876,7 @@
                     <span>图标</span>
                     <span>参数配置</span>
                     <span>功能备注</span>
+                    <span>执行入口</span>
                     <span class="text-right pr-4">操作</span>
                   </div>
                 </div>
@@ -883,7 +884,7 @@
 
               <!-- Table body：内部滚动 -->
               <div class="overflow-y-auto overflow-x-auto flex-1 min-h-0">
-                <div class="min-w-[800px]">
+                <div class="min-w-[1000px]">
                   <div class="divide-y divide-slate-100 dark:divide-slate-700">
                     <div
                       v-for="(fn, idx) in functions"
@@ -895,12 +896,17 @@
                           class="fn-cell"
                           @dblclick="startFnEdit(fn, 'name')"
                         >
-                          <span
-                            v-if="fn.__editing !== 'name'"
-                            class="block truncate text-slate-700 dark:text-slate-200"
-                          >
-                            {{ fn.DisplayName || '—' }}
-                          </span>
+                          <template v-if="fn.__editing !== 'name'">
+                            <span class="block truncate text-slate-700 dark:text-slate-200">
+                              {{ fn.DisplayName || '—' }}
+                            </span>
+                            <span
+                              v-if="fn.FunctionName && fn.FunctionName !== fn.DisplayName"
+                              class="block truncate text-xs text-slate-400 dark:text-slate-500 mt-0.5"
+                            >
+                              {{ fn.FunctionName }}
+                            </span>
+                          </template>
                           <input
                             v-else
                             v-model="fn.DisplayName"
@@ -1022,6 +1028,12 @@
                             @keydown.enter.prevent="commitFnEdit(fn)"
                           />
                         </div>
+                      </div>
+                      <div>
+                        <span
+                          class="block truncate text-xs text-slate-500 dark:text-slate-400 font-mono"
+                          :title="fn.Handler || ''"
+                        >{{ fn.Handler || '—' }}</span>
                       </div>
                       <div class="flex justify-end items-center pr-4">
                         <button
@@ -1799,6 +1811,7 @@
     Icon: string;
     Parameters: Param[];
     Remark: string;
+    Handler?: string;
     FunctionKvid?: string;
     FunctionName?: string;
     __raw?: MenuRow;
@@ -2006,7 +2019,7 @@
         });
 
         const menuMap = new Map<string, TreeNodeData>();
-        const menus = [...menusInput].sort(
+        const menus = [...menusInput.filter(m => m.type !== 'Page')].sort(
           (a, b) =>
             Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0) ||
             String(a.display_name ?? a.title ?? '').localeCompare(
@@ -2115,8 +2128,9 @@
               DisplayName: displayName,
               SortId: Number(menu.sort_order ?? 0),
               Icon: String(menu.icon ?? func?.icon ?? ''),
-              Parameters: normalizeParametersToParams(menu.parameters),
-              Remark: String(menu.remark ?? ''),
+              Parameters: normalizeParametersToParams(menu.parameters ?? func?.parameters),
+              Remark: String(menu.remark ?? func?.remark ?? ''),
+              Handler: String(func?.handler ?? ''),
               FunctionKvid: menu.function_kvid ?? undefined,
               FunctionName: getFunctionDisplayName(func),
               __raw: { ...menu },
@@ -3002,10 +3016,7 @@
 
   .fn-grid {
     display: grid;
-    grid-template-columns: minmax(140px, 2fr) 70px minmax(120px, 1.5fr) minmax(150px, 2fr) minmax(
-        120px,
-        1.5fr
-      ) 60px;
+    grid-template-columns: minmax(140px, 2fr) 70px minmax(120px, 1.5fr) minmax(150px, 2fr) minmax(120px, 1.5fr) minmax(140px, 2fr) 60px;
     column-gap: 0.75rem;
     align-items: center;
   }

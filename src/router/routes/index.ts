@@ -76,7 +76,7 @@ export function syncInternalCodeToEntryPath(internalCode?: string | null): void 
 // ==================== 缓存策略 ====================
 
 const CACHE_KEY = 'DYNAMIC_ROUTES_CACHE';
-const CACHE_VERSION = 'v5'; // 缓存版本，用于强制刷新
+const CACHE_VERSION = 'v6'; // 缓存版本，用于强制刷新
 const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24小时
 
 // 缓存路由（直接存储 ElegantRoute 格式，避免反向序列化在生产构建中因代码压缩而丢失组件映射）
@@ -383,8 +383,9 @@ function generateChildRoutes(
           component: 'view.iframe-page',
           props: {
             url: item.Type === 'System' ? item.Remark || '' : '',
-            kvid: item.Kvid, // 使用父菜单的 kvid（如果需要访问父菜单的权限）
+            kvid: item.Kvid,
             functionKvid: item.FunctionKvid,
+            handler: item.Handler || '',
             type: 'webview',
           },
           meta: {
@@ -408,6 +409,7 @@ function generateChildRoutes(
         url: item.Type === 'System' ? item.Remark || '' : '',
         kvid: item.Kvid,
         functionKvid: item.FunctionKvid || '',
+        handler: item.Handler || '',
         type: (item.FunctionKvid?.endsWith('.vue') ? 'vue' : 'webview') as 'webview' | 'vue',
       },
       meta: {

@@ -1,28 +1,22 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
-import { kivii } from '@kivii.com/bridge'
+import { supabase } from '@/utils/supabase'
 import { closeReLogin } from '@/composables/useReLogin'
 
-const form = reactive({ username: '', password: '' })
+const form = reactive({ email: '', password: '' })
 const isLoading = ref(false)
 const errorMsg = ref('')
 
-function getMd5Password(password: string) {
-  const md5Api = window as Window & {
-    b64_md5?: (value: string) => string
-    hex_md5?: (value: string) => string
-    md5?: (value: string) => string
-  }
-  const encrypt = md5Api.b64_md5 || md5Api.hex_md5 || md5Api.md5
-  if (typeof encrypt !== 'function') {
-    throw new Error('MD5 加密脚本未加载，请稍后重试')
-  }
-  return encrypt(password)
+function getSupabaseErrorMessage(message: string): string {
+  if (message.includes('Invalid login credentials')) return '邮箱或密码错误'
+  if (message.includes('Email not confirmed')) return '邮箱未验证，请先前往邮箱完成验证'
+  if (message.includes('Too many requests')) return '操作过于频繁，请稍后再试'
+  return '登录失败，请稍后重试'
 }
 
 async function handleLogin() {
-  if (!form.username || !form.password) {
-    errorMsg.value = '请输入用户名和密码'
+  if (!form.email || !form.password) {
+    errorMsg.value = '请输入邮箱和密码'
     return
   }
 
@@ -30,16 +24,16 @@ async function handleLogin() {
   errorMsg.value = ''
 
   try {
-    await kivii.request.post<any>('/auth/kivii.json', {
-      State: 'SHA1',
-      UserName: form.username,
-      Password: getMd5Password(form.password),
+    const { error } = await supabase.auth.signInWithPassword({
+      email: form.email,
+      password: form.password,
     })
-    form.username = ''
+    if (error) throw error
+    form.email = ''
     form.password = ''
     closeReLogin()
   } catch (e: any) {
-    errorMsg.value = e.message || '登录失败，请稍后重试'
+    errorMsg.value = getSupabaseErrorMessage(e?.message ?? '')
   } finally {
     isLoading.value = false
   }
@@ -56,13 +50,13 @@ async function handleLogin() {
         </svg>
         <div>
           <h2 class="relogin-title">登录已过期</h2>
-          <p class="relogin-subtitle">请重新输入账号密码以继续</p>
+          <p class="relogin-subtitle">请重新输入邮箱和密码以继续</p>
         </div>
       </div>
 
       <form @submit.prevent="handleLogin" class="relogin-form">
         <div class="field-group">
-          <div class="field-label">用户名</div>
+          <div class="field-label">邮箱</div>
           <div class="field-input-wrap" :class="{ disabled: isLoading }">
             <span class="field-icon">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
@@ -71,11 +65,11 @@ async function handleLogin() {
               </svg>
             </span>
             <input
-              v-model="form.username"
-              type="text"
-              placeholder="请输入用户名"
+              v-model="form.email"
+              type="email"
+              placeholder="请输入邮箱"
               :disabled="isLoading"
-              autocomplete="username"
+              autocomplete="email"
             />
           </div>
         </div>

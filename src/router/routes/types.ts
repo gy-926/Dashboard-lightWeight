@@ -11,6 +11,7 @@ export interface MenuItem {
   Icon?: string;
   Order?: number;
   FunctionKvid?: string;
+  Handler?: string; // 关联功能的 handler（直接渲染用，免去运行时接口查询）
   Children?: MenuItem[];
   [key: string]: any;
 }

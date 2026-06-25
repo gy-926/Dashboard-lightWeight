@@ -204,7 +204,7 @@ export async function fetchMenuData(internalCode: string): Promise<MenuApiRespon
     };
   }
 
-  const results: MenuItem[] = (items ?? []).map(r => ({
+  const rawResults: MenuItem[] = (items ?? []).map(r => ({
     Kvid: r.kvid,
     ParentKvid: r.parent_kvid,
     Title: r.title,
@@ -215,6 +215,26 @@ export async function fetchMenuData(internalCode: string): Promise<MenuApiRespon
     Remark: r.remark,
     FunctionKvid: r.function_kvid,
     Parameters: r.parameters,
+  }));
+
+  // 批量查询关联函数的 handler，避免 IframePage 运行时再调接口
+  const functionKvids = Array.from(
+    new Set(rawResults.map(r => r.FunctionKvid).filter(Boolean) as string[])
+  );
+  const handlerMap = new Map<string, string>();
+  if (functionKvids.length > 0) {
+    const { data: funcs } = await adminSupabase
+      .from('functions')
+      .select('kvid, handler')
+      .in('kvid', functionKvids);
+    (funcs ?? []).forEach(f => {
+      if (f.handler) handlerMap.set(String(f.kvid), String(f.handler));
+    });
+  }
+
+  const results: MenuItem[] = rawResults.map(r => ({
+    ...r,
+    Handler: r.FunctionKvid ? (handlerMap.get(r.FunctionKvid) ?? '') : '',
   }));
 
   const permissionFilteredResults = filterMenuItemsByPermissions(
