@@ -78,6 +78,13 @@ const relocateUmdStyles = (existingStyleSet: Set<Element>): void => {
     Array.from(existingStyleSet).find(s => s.parentNode === document.head) ??
     null;
 
+  if (firstAppCss) {
+    for (const style of newStyles) {
+      document.head.insertBefore(style, firstAppCss);
+    }
+  }
+};
+
 const CSS_INJECTORS = [
   'injectStyles',
   '__inject_styles',

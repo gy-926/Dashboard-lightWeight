@@ -7,7 +7,7 @@
   import type { MenuItem } from '../global-menu/types';
   import { kivii } from '@kivii.com/bridge';
   import { supabase } from '@/utils/supabase';
-  import { reloadDynamicRoutes } from '@/router';
+  import { reloadDynamicRoutes, clearDynamicRoutesState } from '@/router';
   import { setAuthenticatedFlag } from '@/utils/auth-state';
 
   defineProps<{
