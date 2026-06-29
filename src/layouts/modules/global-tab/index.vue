@@ -24,6 +24,34 @@
     else tabElMap.delete(path);
   }
 
+  // 箭头可见性
+  const canScrollLeft = ref(false);
+  const canScrollRight = ref(false);
+
+  function updateScrollArrows() {
+    const el = containerRef.value;
+    if (!el) return;
+    canScrollLeft.value = el.scrollLeft > 0;
+    canScrollRight.value = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+  }
+
+  // 点击 / 长按箭头滚动
+  const SCROLL_STEP = 200;
+  function scrollTabs(dir: 'left' | 'right') {
+    const el = containerRef.value;
+    if (!el) return;
+    el.scrollBy({ left: dir === 'left' ? -SCROLL_STEP : SCROLL_STEP, behavior: 'smooth' });
+  }
+
+  let pressTimer: ReturnType<typeof setInterval> | null = null;
+  function startPress(dir: 'left' | 'right') {
+    scrollTabs(dir);
+    pressTimer = setInterval(() => scrollTabs(dir), 100);
+  }
+  function stopPress() {
+    if (pressTimer) { clearInterval(pressTimer); pressTimer = null; }
+  }
+
   // 关闭标签
   async function closeTab(path: string, e: Event) {
     e.stopPropagation();
@@ -75,10 +103,14 @@
     () => {
       nextTick(() => {
         scrollToActiveTab();
+        updateScrollArrows();
       });
     },
     { immediate: true }
   );
+
+  // 标签数量变化时更新箭头
+  watch(tabsList, () => nextTick(updateScrollArrows));
 
   function handleMouseDown(e: MouseEvent) {
     if (!containerRef.value) return;
@@ -114,6 +146,9 @@
     document.removeEventListener('mouseup', handleMouseUp);
     document.removeEventListener('mouseleave', handleMouseLeave);
     document.removeEventListener('click', closeMenu);
+    document.removeEventListener('mouseup', stopPress);
+    containerRef.value?.removeEventListener('scroll', updateScrollArrows);
+    stopPress();
   });
 
   // 右键菜单相关
@@ -200,11 +235,31 @@
     document.addEventListener('mouseup', handleMouseUp);
     document.addEventListener('mouseleave', handleMouseLeave);
     document.addEventListener('click', closeMenu);
+    document.addEventListener('mouseup', stopPress);
+
+    nextTick(() => {
+      containerRef.value?.addEventListener('scroll', updateScrollArrows, { passive: true });
+      updateScrollArrows();
+    });
   });
 </script>
 
 <template>
-  <div class="h-9 bg-white dark:bg-gray-800 flex items-center px-2 overflow-hidden relative transition-colors duration-300">
+  <div class="h-9 bg-white dark:bg-gray-800 flex items-center px-1 overflow-hidden relative transition-colors duration-300">
+    <!-- 左箭头 -->
+    <button
+      v-show="canScrollLeft"
+      class="scroll-arrow"
+      @mousedown.prevent="startPress('left')"
+      @mouseup="stopPress"
+      @mouseleave="stopPress"
+      @click.stop
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+        <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+
     <!-- 标签容器 - 支持横向拖拽滚动 -->
     <div
       ref="containerRef"
@@ -263,6 +318,20 @@
         </button>
       </div>
     </div>
+
+    <!-- 右箭头 -->
+    <button
+      v-show="canScrollRight"
+      class="scroll-arrow"
+      @mousedown.prevent="startPress('right')"
+      @mouseup="stopPress"
+      @mouseleave="stopPress"
+      @click.stop
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+        <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
 
     <!-- 右键菜单 -->
     <Teleport to="body">
@@ -361,5 +430,41 @@
   /* 关闭按钮只过渡 opacity */
   .tab-close-btn {
     transition: opacity 120ms ease, background-color 120ms ease;
+  }
+
+  /* 左右滚动箭头 */
+  .scroll-arrow {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+    color: #6b7280;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: background-color 120ms ease, color 120ms ease;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .scroll-arrow:hover {
+    background-color: rgba(107, 114, 128, 0.12);
+    color: #374151;
+  }
+
+  .scroll-arrow:active {
+    background-color: rgba(107, 114, 128, 0.2);
+  }
+
+  :global(.dark) .scroll-arrow {
+    color: #9ca3af;
+  }
+
+  :global(.dark) .scroll-arrow:hover {
+    background-color: rgba(156, 163, 175, 0.15);
+    color: #e5e7eb;
   }
 </style>
