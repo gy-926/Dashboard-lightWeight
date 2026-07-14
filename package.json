@@ -4,10 +4,16 @@
   "type": "module",
   "private": true,
   "scripts": {
+    "deps:ensure": "node scripts/ensure-dependencies.mjs",
+    "predev": "node scripts/ensure-dependencies.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/ensure-dependencies.mjs",
     "build": "run-p type-check \"build-only {@}\" --",
+    "prepreview": "node scripts/ensure-dependencies.mjs",
     "preview": "vite preview",
+    "prebuild-only": "node scripts/ensure-dependencies.mjs",
     "build-only": "vite build",
+    "pretype-check": "node scripts/ensure-dependencies.mjs",
     "type-check": "vue-tsc --build",
     "edge:serve": "supabase functions serve",
     "edge:deploy": "supabase functions deploy dashboard-functions dashboard-admin"
