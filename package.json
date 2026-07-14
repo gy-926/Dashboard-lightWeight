@@ -8,7 +8,9 @@
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "build-only": "vite build",
-    "type-check": "vue-tsc --build"
+    "type-check": "vue-tsc --build",
+    "edge:serve": "supabase functions serve",
+    "edge:deploy": "supabase functions deploy dashboard-functions dashboard-admin"
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.2.0",
@@ -31,6 +33,7 @@
     "autoprefixer": "^10.4.21",
     "npm-run-all2": "^8.0.4",
     "postcss": "^8.4.35",
+    "supabase": "^2.109.1",
     "tailwindcss": "^3.4.1",
     "typescript": "~5.8.0",
     "vite": "^7.0.0",

@@ -1,7 +1,10 @@
 <script setup lang="ts">
   import { ref } from 'vue';
+  import {
+    importDashboardFunctions,
+    type DashboardFunctionRecord,
+  } from '@/api/dashboard-functions';
   import { remoteLibraries } from '@/utils/remoteComponentLoader';
-  import { adminSupabase } from '@/utils/supabase-admin';
 
   // 定义分析结果的数据结构，与原页面类似
   export interface AnalyzedLibrary {
@@ -26,14 +29,6 @@
 
   function generateId(): string {
     return crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36);
-  }
-
-  function formatSupabaseError(message: string, phase: 'select' | 'insert'): string {
-    if (message.includes('row-level security policy')) {
-      const action = phase === 'select' ? '查询功能表' : '导入到功能表';
-      return `${action}被 Supabase RLS 拒绝，请先执行 scripts/setup-dashboard-rls.sql 中的策略 SQL。原始错误：${message}`;
-    }
-    return message;
   }
 
   // 已勾选的组件名称集合（默认全选）
@@ -222,7 +217,7 @@
     const sourceModule = lib.manifest?.name || lib.name;
 
     // 构造候选功能记录
-    const candidates = (lib.componentsDetailed ?? [])
+    const candidates: DashboardFunctionRecord[] = (lib.componentsDetailed ?? [])
       .filter((comp: any) => selected.has(comp.name as string))
       .map((comp: any, idx: number) => ({
         kvid: generateId(),
@@ -242,40 +237,18 @@
 
     updateAnalyzingCard(lib, { isUploading: true });
 
-    // 查询已存在功能（相同组件名 + 相同来源地址）
-    const componentValues = candidates.map(r => r.source_component);
-    const { data: existing, error: fetchErr } = await adminSupabase
-      .from('functions')
-      .select('source_component, source_url')
-      .eq('render_type', 'umd')
-      .in('source_component', componentValues);
-
-    if (fetchErr) {
+    let result: { inserted: number; skipped: number };
+    try {
+      result = await importDashboardFunctions(candidates);
+    } catch (error: any) {
       updateAnalyzingCard(lib, { isUploading: false });
-      alert('检查重复记录失败：' + formatSupabaseError(fetchErr.message, 'select'));
+      alert('导入失败：' + (error?.message ?? '未知错误'));
       return;
     }
-
-    const existingKeys = new Set(
-      (existing ?? []).map((row: any) => `${row.source_component}::${row.source_url || ''}`)
-    );
-    const newRows = candidates.filter(
-      row => !existingKeys.has(`${row.source_component}::${row.source_url || ''}`)
-    );
-    const skippedCount = candidates.length - newRows.length;
-
-    if (newRows.length === 0) {
-      updateAnalyzingCard(lib, { isUploading: false });
-      alert(`所选的 ${candidates.length} 个组件均已存在，无需重复导入。`);
-      return;
-    }
-
-    const { error } = await adminSupabase.from('functions').insert(newRows);
-
     updateAnalyzingCard(lib, { isUploading: false });
 
-    if (error) {
-      alert('导入失败：' + formatSupabaseError(error.message, 'insert'));
+    if (result.inserted === 0) {
+      alert(`所选的 ${candidates.length} 个组件均已存在，无需重复导入。`);
       return;
     }
 
@@ -283,9 +256,9 @@
       ? ''
       : ' 当前为本地分析导入，请在功能列表中补充可访问的来源地址后再用于运行时按需加载。';
     const msg =
-      skippedCount > 0
-        ? `成功注册 ${newRows.length} 个功能，跳过 ${skippedCount} 个已存在的组件。${suffix}`
-        : `已成功将 ${newRows.length} 个组件注册到功能列表！${suffix}`;
+      result.skipped > 0
+        ? `成功注册 ${result.inserted} 个功能，跳过 ${result.skipped} 个已存在的组件。${suffix}`
+        : `已成功将 ${result.inserted} 个组件注册到功能列表！${suffix}`;
     alert(msg);
   };
 </script>

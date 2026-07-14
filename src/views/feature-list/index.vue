@@ -1,7 +1,19 @@
 <script setup lang="ts">
   import { computed, onMounted, ref } from 'vue';
-  import { adminSupabase } from '@/utils/supabase-admin';
-  import { supabase } from '@/utils/supabase';
+  import {
+    deleteDashboardFunction,
+    listDashboardFunctions,
+    saveDashboardFunction,
+    updateDashboardFunction,
+    type DashboardFunctionRecord,
+  } from '@/api/dashboard-functions';
+  import {
+    deleteRoleRecord,
+    getPermissionConfig,
+    replaceRoleFunctions,
+    replaceUserRoles,
+    saveRole as saveRoleRecord,
+  } from '@/api/dashboard-admin';
 
   defineOptions({ name: 'FeatureListPage' });
 
@@ -9,21 +21,7 @@
   type SourceType = 'manual' | 'umd' | 'system';
   type TabKey = 'functions' | 'roles' | 'users';
 
-  interface FunctionItem {
-    kvid: string;
-    title: string | null;
-    handler: string;
-    remark: string | null;
-    parameters: Record<string, any> | null;
-    render_type: RenderType;
-    source_type: SourceType;
-    source_module: string | null;
-    source_url: string | null;
-    source_component: string | null;
-    icon: string | null;
-    sort_order: number;
-    is_active: boolean;
-  }
+  type FunctionItem = DashboardFunctionRecord;
 
   interface FunctionForm {
     title: string;
@@ -191,48 +189,18 @@
   async function loadFunctions() {
     loading.value = true;
     error.value = null;
-    const { data, error: err } = await adminSupabase
-      .from('functions')
-      .select('*')
-      .order('sort_order', { ascending: true })
-      .order('title', { ascending: true });
-    loading.value = false;
-    if (err) {
-      error.value = err.message;
-      return;
-    }
-    functions.value = (data ?? []) as FunctionItem[];
-  }
-
-  async function loadRoles() {
-    const { data, error: err } = await supabase
-      .from('roles')
-      .select('kvid, code, name, remark, is_active')
-      .order('is_active', { ascending: false })
-      .order('name', { ascending: true });
-
-    if (err) {
-      throw err;
-    }
-
-    roles.value = (data ?? []) as RoleItem[];
-
-    if (!roles.value.some(item => item.kvid === selectedRoleKvid.value)) {
-      selectedRoleKvid.value = roles.value[0]?.kvid ?? '';
+    try {
+      functions.value = await listDashboardFunctions();
+    } catch (err: any) {
+      error.value = err?.message ?? '加载功能列表失败';
+    } finally {
+      loading.value = false;
     }
   }
 
-  async function loadRoleFunctionMap() {
-    const { data, error: err } = await supabase
-      .from('role_functions')
-      .select('role_kvid, function_kvid');
-
-    if (err) {
-      throw err;
-    }
-
+  function buildRoleFunctionMap(data: RoleFunctionRow[]) {
     const nextMap: Record<string, string[]> = {};
-    ((data ?? []) as RoleFunctionRow[]).forEach(item => {
+    data.forEach(item => {
       if (!nextMap[item.role_kvid]) {
         nextMap[item.role_kvid] = [];
       }
@@ -242,15 +210,9 @@
     roleFunctionMap.value = nextMap;
   }
 
-  async function loadUserRoleMap() {
-    const { data, error: err } = await supabase.from('user_roles').select('user_id, role_kvid');
-
-    if (err) {
-      throw err;
-    }
-
+  function buildUserRoleMap(data: UserRoleRow[]) {
     const nextMap: Record<string, string[]> = {};
-    ((data ?? []) as UserRoleRow[]).forEach(item => {
+    data.forEach(item => {
       if (!nextMap[item.user_id]) {
         nextMap[item.user_id] = [];
       }
@@ -260,39 +222,21 @@
     userRoleMap.value = nextMap;
   }
 
-  async function loadUserDirectory() {
-    userDirectoryHint.value = null;
-
-    const { data, error: err } = await supabase.rpc('dashboard_user_directory');
-
-    if (err) {
-      userDirectory.value = [];
-      if (
-        err.message.includes('dashboard_user_directory') ||
-        err.message.includes('function public.dashboard_user_directory')
-      ) {
-        userDirectoryHint.value =
-          '请先执行 scripts/setup-dashboard-user-directory.sql，才能在页面中读取用户列表。';
-        return;
-      }
-      throw err;
-    }
-
-    userDirectory.value = ((data ?? []) as UserDirectoryRow[]).sort((a, b) =>
-      String(a.email ?? '').localeCompare(String(b.email ?? ''))
-    );
-  }
-
   async function loadPermissionData() {
     permissionLoading.value = true;
     permissionError.value = null;
+    userDirectoryHint.value = null;
     try {
-      await Promise.all([
-        loadRoles(),
-        loadRoleFunctionMap(),
-        loadUserRoleMap(),
-        loadUserDirectory(),
-      ]);
+      const data = await getPermissionConfig();
+      roles.value = data.roles as RoleItem[];
+      buildRoleFunctionMap(data.roleFunctions as RoleFunctionRow[]);
+      buildUserRoleMap(data.userRoles as UserRoleRow[]);
+      userDirectory.value = (data.users as UserDirectoryRow[]).sort((a, b) =>
+        String(a.email ?? '').localeCompare(String(b.email ?? ''))
+      );
+      if (!roles.value.some(item => item.kvid === selectedRoleKvid.value)) {
+        selectedRoleKvid.value = roles.value[0]?.kvid ?? '';
+      }
     } catch (err: any) {
       permissionError.value = err?.message ?? '加载权限配置失败';
     } finally {
@@ -348,33 +292,34 @@
       is_active: form.value.is_active,
     };
 
-    const { error: err } = await adminSupabase.from('functions').upsert(payload);
-    isSaving.value = false;
-    if (err) {
-      alert('保存失败：' + err.message);
+    try {
+      await saveDashboardFunction(payload);
+    } catch (err: any) {
+      alert('保存失败：' + (err?.message ?? '未知错误'));
+      isSaving.value = false;
       return;
     }
+    isSaving.value = false;
     closeModal();
-    await Promise.all([loadFunctions(), loadRoleFunctionMap()]);
+    await Promise.all([loadFunctions(), loadPermissionData()]);
   }
 
   async function deleteFunction(item: FunctionItem) {
     if (!confirm(`确认删除「${item.title || item.handler}」？`)) return;
-    const { error: err } = await adminSupabase.from('functions').delete().eq('kvid', item.kvid);
-    if (err) {
-      alert('删除失败：' + err.message);
+    try {
+      await deleteDashboardFunction(item.kvid);
+    } catch (err: any) {
+      alert('删除失败：' + (err?.message ?? '未知错误'));
       return;
     }
-    await Promise.all([loadFunctions(), loadRoleFunctionMap()]);
+    await Promise.all([loadFunctions(), loadPermissionData()]);
   }
 
   async function toggleEnabled(item: FunctionItem) {
-    const { error: err } = await adminSupabase
-      .from('functions')
-      .update({ is_active: !item.is_active })
-      .eq('kvid', item.kvid);
-    if (err) {
-      alert('更新状态失败：' + err.message);
+    try {
+      await updateDashboardFunction(item.kvid, { is_active: !item.is_active });
+    } catch (err: any) {
+      alert('更新状态失败：' + (err?.message ?? '未知错误'));
       return;
     }
     await loadFunctions();
@@ -411,14 +356,16 @@
       remark: roleForm.value.remark.trim() || null,
       is_active: roleForm.value.is_active,
     };
-    const { error: err } = await supabase.from('roles').upsert(payload);
-    isRoleSaving.value = false;
-    if (err) {
-      alert('保存角色失败：' + err.message);
+    try {
+      await saveRoleRecord(payload);
+    } catch (err: any) {
+      alert('保存角色失败：' + (err?.message ?? '未知错误'));
+      isRoleSaving.value = false;
       return;
     }
+    isRoleSaving.value = false;
     closeRoleModal();
-    await loadRoles();
+    await loadPermissionData();
     selectedRoleKvid.value = payload.kvid;
   }
 
@@ -428,12 +375,13 @@
       return;
     }
     if (!confirm(`确认删除角色「${role.name}」？这会同时移除其用户绑定和功能授权。`)) return;
-    const { error: err } = await supabase.from('roles').delete().eq('kvid', role.kvid);
-    if (err) {
-      alert('删除角色失败：' + err.message);
+    try {
+      await deleteRoleRecord(role.kvid);
+    } catch (err: any) {
+      alert('删除角色失败：' + (err?.message ?? '未知错误'));
       return;
     }
-    await Promise.all([loadRoles(), loadRoleFunctionMap(), loadUserRoleMap()]);
+    await loadPermissionData();
   }
 
   function isFunctionChecked(functionKvid: string): boolean {
@@ -460,32 +408,15 @@
     const roleKvid = currentRole.value.kvid;
     const selectedFunctionIds = Array.from(new Set(roleFunctionMap.value[roleKvid] ?? []));
 
-    const { error: deleteError } = await supabase
-      .from('role_functions')
-      .delete()
-      .eq('role_kvid', roleKvid);
-    if (deleteError) {
+    try {
+      await replaceRoleFunctions(roleKvid, selectedFunctionIds);
+    } catch (err: any) {
+      alert('保存角色授权失败：' + (err?.message ?? '未知错误'));
       roleFunctionsSaving.value = false;
-      alert('保存角色授权失败：' + deleteError.message);
       return;
     }
-
-    if (selectedFunctionIds.length > 0) {
-      const payload = selectedFunctionIds.map(functionKvid => ({
-        kvid: generateId(),
-        role_kvid: roleKvid,
-        function_kvid: functionKvid,
-      }));
-      const { error: insertError } = await supabase.from('role_functions').insert(payload);
-      if (insertError) {
-        roleFunctionsSaving.value = false;
-        alert('保存角色授权失败：' + insertError.message);
-        return;
-      }
-    }
-
     roleFunctionsSaving.value = false;
-    await loadRoleFunctionMap();
+    await loadPermissionData();
   }
 
   function toggleUserRole(userId: string, roleKvid: string) {
@@ -505,32 +436,15 @@
     savingUserId.value = user.user_id;
     const selectedRoleIds = Array.from(new Set(userRoleMap.value[user.user_id] ?? []));
 
-    const { error: deleteError } = await supabase
-      .from('user_roles')
-      .delete()
-      .eq('user_id', user.user_id);
-    if (deleteError) {
+    try {
+      await replaceUserRoles(user.user_id, selectedRoleIds);
+    } catch (err: any) {
+      alert('保存用户角色失败：' + (err?.message ?? '未知错误'));
       savingUserId.value = null;
-      alert('保存用户角色失败：' + deleteError.message);
       return;
     }
-
-    if (selectedRoleIds.length > 0) {
-      const payload = selectedRoleIds.map(roleKvid => ({
-        kvid: generateId(),
-        user_id: user.user_id,
-        role_kvid: roleKvid,
-      }));
-      const { error: insertError } = await supabase.from('user_roles').insert(payload);
-      if (insertError) {
-        savingUserId.value = null;
-        alert('保存用户角色失败：' + insertError.message);
-        return;
-      }
-    }
-
     savingUserId.value = null;
-    await loadUserRoleMap();
+    await loadPermissionData();
   }
 
   onMounted(async () => {

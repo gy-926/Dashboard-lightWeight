@@ -1,6 +1,7 @@
 import type { Pinia } from 'pinia';
 import type { Router } from 'vue-router';
 import type { Session, User } from '@supabase/supabase-js';
+import { getCurrentUserRoles } from '@/api/dashboard-admin';
 import { supabase } from '@/utils/supabase';
 import { setGlobalConfig, clearDynamicRoutesCache } from '@/router/routes';
 import { useMenuStore } from '@/layouts/modules/global-menu/store';
@@ -34,7 +35,10 @@ export function setAuthenticatedFlag(isAuthenticated: boolean): void {
   ensureUiGlobalConfig().IsAuthenticated = isAuthenticated;
 }
 
-async function fetchAuthUserInfo(user: User | null | undefined): Promise<AuthUserInfo | null> {
+async function fetchAuthUserInfo(
+  user: User | null | undefined,
+  accessToken?: string
+): Promise<AuthUserInfo | null> {
   if (!user) return null;
 
   const email = String(user.email ?? '').trim();
@@ -42,36 +46,15 @@ async function fetchAuthUserInfo(user: User | null | undefined): Promise<AuthUse
   const displayName = String(rawDisplayName || '用户').trim();
   const appRole = String(user.app_metadata?.role ?? '').trim();
 
-  const { data: userRoles, error: userRolesError } = await supabase
-    .from('user_roles')
-    .select('role_kvid')
-    .eq('user_id', user.id);
-
-  if (userRolesError) {
-    console.warn('[AuthState] 获取用户角色绑定失败:', userRolesError.message);
-  }
-
-  const roleKvids = Array.from(
-    new Set((userRoles ?? []).map(item => String(item.role_kvid ?? '').trim()).filter(Boolean))
-  );
-
   let roles: AuthRoleInfo[] = [];
-
-  if (roleKvids.length > 0) {
-    const { data: roleRows, error: rolesError } = await supabase
-      .from('roles')
-      .select('kvid, code, name')
-      .in('kvid', roleKvids);
-
-    if (rolesError) {
-      console.warn('[AuthState] 获取角色定义失败:', rolesError.message);
-    } else {
-      roles = (roleRows ?? []).map(item => ({
-        kvid: String(item.kvid ?? ''),
-        code: String(item.code ?? ''),
-        name: String(item.name ?? ''),
-      }));
-    }
+  try {
+    roles = (await getCurrentUserRoles(accessToken)).map(item => ({
+      kvid: String(item.kvid ?? ''),
+      code: String(item.code ?? ''),
+      name: String(item.name ?? ''),
+    }));
+  } catch (error) {
+    console.warn('[AuthState] 获取用户角色失败:', error);
   }
 
   if (appRole && !roles.some(role => role.code === appRole)) {
@@ -129,7 +112,7 @@ export async function initializeAuthState(): Promise<boolean> {
     data: { session },
   } = await supabase.auth.getSession();
 
-  syncUserInfoToGlobal(await fetchAuthUserInfo(session?.user));
+  syncUserInfoToGlobal(await fetchAuthUserInfo(session?.user, session?.access_token));
   return syncAuthenticatedFlagFromSession(session);
 }
 
@@ -138,7 +121,7 @@ export function setupSupabaseAuthSync(options: { router: Router; pinia: Pinia })
 
   supabase.auth.onAuthStateChange(async (event, session) => {
     const isAuthenticated = syncAuthenticatedFlagFromSession(session);
-    syncUserInfoToGlobal(await fetchAuthUserInfo(session?.user));
+    syncUserInfoToGlobal(await fetchAuthUserInfo(session?.user, session?.access_token));
 
     if (event === 'SIGNED_OUT' || !isAuthenticated) {
       clearDynamicRoutesCache();

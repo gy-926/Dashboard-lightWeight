@@ -105,24 +105,8 @@ FOR SELECT
 TO anon, authenticated
 USING (true);
 
-CREATE POLICY functions_insert_policy
-ON public.functions
-FOR INSERT
-TO anon, authenticated
-WITH CHECK (true);
-
-CREATE POLICY functions_update_policy
-ON public.functions
-FOR UPDATE
-TO anon, authenticated
-USING (true)
-WITH CHECK (true);
-
-CREATE POLICY functions_delete_policy
-ON public.functions
-FOR DELETE
-TO anon, authenticated
-USING (true);
+-- functions 写操作必须经过 dashboard-functions Edge Function。
+-- 不为 anon / authenticated 创建 INSERT / UPDATE / DELETE 策略。
 
 DROP POLICY IF EXISTS menu_roots_select_policy ON public.menu_roots;
 DROP POLICY IF EXISTS menu_roots_insert_policy ON public.menu_roots;
@@ -325,3 +309,35 @@ VALUES ('mock-demo', NULL, 'root-mock', '功能演示', 'Folder', 'fas fa-flask'
 
 INSERT INTO public.menus (kvid, parent_kvid, menu_root_kvid, title, display_name, type, icon, sort_order, function_kvid)
 VALUES ('mock-demo-iframe', 'mock-demo', 'root-mock', 'iframe 嵌入示例', 'iframe 嵌入示例', 'Page', 'fas fa-window-restore', 1, 'func-demo-iframe');
+-- Edge API 安全边界：业务表不再允许浏览器直接访问。
+ALTER TABLE public.functions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.menu_roots ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.menus ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.roles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.role_functions ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS functions_select_policy ON public.functions;
+DROP POLICY IF EXISTS functions_insert_policy ON public.functions;
+DROP POLICY IF EXISTS functions_update_policy ON public.functions;
+DROP POLICY IF EXISTS functions_delete_policy ON public.functions;
+DROP POLICY IF EXISTS menu_roots_select_policy ON public.menu_roots;
+DROP POLICY IF EXISTS menu_roots_insert_policy ON public.menu_roots;
+DROP POLICY IF EXISTS menu_roots_update_policy ON public.menu_roots;
+DROP POLICY IF EXISTS menu_roots_delete_policy ON public.menu_roots;
+DROP POLICY IF EXISTS menus_select_policy ON public.menus;
+DROP POLICY IF EXISTS menus_insert_policy ON public.menus;
+DROP POLICY IF EXISTS menus_update_policy ON public.menus;
+DROP POLICY IF EXISTS menus_delete_policy ON public.menus;
+DROP POLICY IF EXISTS roles_select_policy ON public.roles;
+DROP POLICY IF EXISTS roles_insert_policy ON public.roles;
+DROP POLICY IF EXISTS roles_update_policy ON public.roles;
+DROP POLICY IF EXISTS roles_delete_policy ON public.roles;
+DROP POLICY IF EXISTS user_roles_select_policy ON public.user_roles;
+DROP POLICY IF EXISTS user_roles_insert_policy ON public.user_roles;
+DROP POLICY IF EXISTS user_roles_update_policy ON public.user_roles;
+DROP POLICY IF EXISTS user_roles_delete_policy ON public.user_roles;
+DROP POLICY IF EXISTS role_functions_select_policy ON public.role_functions;
+DROP POLICY IF EXISTS role_functions_insert_policy ON public.role_functions;
+DROP POLICY IF EXISTS role_functions_update_policy ON public.role_functions;
+DROP POLICY IF EXISTS role_functions_delete_policy ON public.role_functions;

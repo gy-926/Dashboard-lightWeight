@@ -101,6 +101,44 @@ pnpm preview
 pnpm type-check
 ```
 
+## Supabase Edge Function
+
+功能中心通过 `dashboard-functions` 执行；菜单、角色和用户权限通过
+`dashboard-admin` 执行。浏览器只携带当前用户的 access token，
+`SUPABASE_SERVICE_ROLE_KEY` 仅存在于 Supabase 服务端。
+
+首次部署：
+
+```bash
+# 1. 登录 Supabase（命令会打开浏览器）
+pnpm exec supabase login
+
+# 2. 关联项目；project-ref 可在 Supabase 项目 URL 或项目设置中找到
+pnpm exec supabase link --project-ref <your-project-ref>
+
+# 3. 部署函数
+pnpm edge:deploy
+```
+
+两个函数都部署成功后，先本地验证并发布新版前端，再在 Supabase SQL Editor 执行：
+
+```text
+scripts/secure-dashboard-for-edge-api.sql
+```
+
+这会关闭浏览器对功能、菜单和权限业务表的直接访问。请严格遵循
+“先部署两个函数、再发布新版前端、最后执行 SQL”的顺序，避免旧版线上页面暂时无法读取数据。
+
+本地完整运行 Supabase 需要 Docker：
+
+```bash
+pnpm exec supabase start
+pnpm edge:serve
+```
+
+Edge Function 只允许 `app_metadata.role` 为 `admin` 的已登录用户调用。如果当前管理员
+没有该字段，需要先在 Supabase 后台为该用户设置管理员 metadata。
+
 ## 📖 使用指南
 
 ### 路由系统

@@ -1723,7 +1723,17 @@
 
 <script lang="ts">
   import { computed, defineComponent, onMounted, ref, watch } from 'vue';
-  import { adminSupabase } from '@/utils/supabase-admin';
+  import {
+    createMenus,
+    deleteMenu,
+    deleteMenuRoot,
+    getMenuConfig,
+    saveMenu,
+    saveMenuRoot,
+    type MenuRecord,
+    type MenuRootRecord,
+  } from '@/api/dashboard-admin';
+  import type { DashboardFunctionRecord } from '@/api/dashboard-functions';
   import { clearDynamicRoutesCache } from '@/router/routes';
 
   export const manifest = {
@@ -1734,50 +1744,9 @@
     author: 'Kivii Team',
   };
 
-  interface MenuRootRow {
-    kvid: string;
-    title: string;
-    display_name: string | null;
-    internal_code: string;
-    scope?: string | null;
-    sort_order?: number | null;
-    icon?: string | null;
-    remark?: string | null;
-    parameters?: Record<string, any> | null;
-  }
-
-  interface MenuRow {
-    kvid: string;
-    parent_kvid: string | null;
-    menu_root_kvid: string;
-    title: string;
-    display_name: string | null;
-    internal_code?: string | null;
-    scope?: string | null;
-    type: 'Page' | 'Folder' | 'Link' | 'System';
-    icon: string | null;
-    sort_order: number;
-    remark: string | null;
-    function_kvid: string | null;
-    parameters: Record<string, any> | null;
-    is_active: boolean;
-  }
-
-  interface FunctionRow {
-    kvid: string;
-    title: string | null;
-    handler: string;
-    remark: string | null;
-    parameters: Record<string, any> | null;
-    render_type: 'webview' | 'vue' | 'umd';
-    source_type: 'manual' | 'umd' | 'system';
-    source_module: string | null;
-    source_url: string | null;
-    source_component: string | null;
-    icon: string | null;
-    sort_order: number;
-    is_active: boolean;
-  }
+  type MenuRootRow = MenuRootRecord;
+  type MenuRow = MenuRecord;
+  type FunctionRow = DashboardFunctionRecord;
 
   interface TreeNodeData {
     id: string;
@@ -2218,36 +2187,10 @@
       async function loadTree() {
         loading.value = true;
         try {
-          const [
-            { data: rootsData, error: rootsError },
-            { data: menusData, error: menusError },
-            { data: functionsData, error: functionsError },
-          ] = await Promise.all([
-            adminSupabase
-              .from('menu_roots')
-              .select('*')
-              .order('sort_order', { ascending: true })
-              .order('title', { ascending: true }),
-            adminSupabase
-              .from('menus')
-              .select('*')
-              .order('sort_order', { ascending: true })
-              .order('title', { ascending: true }),
-            adminSupabase
-              .from('functions')
-              .select('*')
-              .order('is_active', { ascending: false })
-              .order('sort_order', { ascending: true })
-              .order('title', { ascending: true }),
-          ]);
-
-          if (rootsError) throw rootsError;
-          if (menusError) throw menusError;
-          if (functionsError) throw functionsError;
-
-          menuRoots.value = (rootsData ?? []) as MenuRootRow[];
-          menuRows.value = (menusData ?? []) as MenuRow[];
-          functionRows.value = (functionsData ?? []) as FunctionRow[];
+          const data = await getMenuConfig();
+          menuRoots.value = data.roots as MenuRootRow[];
+          menuRows.value = data.menus as MenuRow[];
+          functionRows.value = data.functions as FunctionRow[];
 
           refreshSelectedNode();
         } catch (e) {
@@ -2301,8 +2244,7 @@
         }
 
         try {
-          const { error } = await adminSupabase.from('menus').delete().eq('kvid', fn.Kvid);
-          if (error) throw error;
+          await deleteMenu(fn.Kvid);
           await loadTree();
           clearDynamicRoutesCache();
         } catch (e: any) {
@@ -2348,8 +2290,7 @@
         };
 
         try {
-          const { error } = await adminSupabase.from('menus').upsert(payload);
-          if (error) throw error;
+          await saveMenu(payload);
           fn.__raw = payload;
           fn.__snapshot = nextSnapshot ?? makeFnSnapshot(fn);
           const target = menuRows.value.find(item => item.kvid === payload.kvid);
@@ -2627,8 +2568,7 @@
         }));
 
         try {
-          const { error } = await adminSupabase.from('menus').insert(payload);
-          if (error) throw error;
+          await createMenus(payload);
           await loadTree();
           clearDynamicRoutesCache();
           closeRelatePicker();
@@ -2693,8 +2633,7 @@
               await showAlert('根目录必须填写内部编号');
               return;
             }
-            const { error } = await adminSupabase.from('menu_roots').upsert(payload);
-            if (error) throw error;
+            await saveMenuRoot(payload);
             await loadTree();
             clearDynamicRoutesCache();
             return;
@@ -2726,8 +2665,7 @@
             return;
           }
 
-          const { error } = await adminSupabase.from('menus').upsert(payload);
-          if (error) throw error;
+          await saveMenu(payload);
           await loadTree();
           clearDynamicRoutesCache();
         } catch (e: any) {
@@ -2833,11 +2771,9 @@
 
         try {
           if (node.__entityKind === 'root') {
-            const { error } = await adminSupabase.from('menu_roots').delete().eq('kvid', node.id);
-            if (error) throw error;
+            await deleteMenuRoot(node.id);
           } else {
-            const { error } = await adminSupabase.from('menus').delete().eq('kvid', node.id);
-            if (error) throw error;
+            await deleteMenu(node.id);
           }
           await loadTree();
           clearDynamicRoutesCache();
