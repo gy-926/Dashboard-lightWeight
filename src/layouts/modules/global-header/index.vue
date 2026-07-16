@@ -137,7 +137,7 @@
 
   // 全局配置相关的展示字段
   const systemName = computed(() => {
-    return (window as any).uiGlobalConfig?.DisplayName || 'Kivii';
+    return (window as any).uiGlobalConfig?.DisplayName || 'GavinYin Hub';
   });
 
   const systemIcon = computed(() => {

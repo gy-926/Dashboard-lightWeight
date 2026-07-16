@@ -302,7 +302,7 @@ INSERT INTO public.functions (kvid, handler, title, render_type, source_type)
 VALUES ('func-demo-iframe', 'https://example.com', 'iframe 示例', 'webview', 'manual');
 
 INSERT INTO public.menu_roots (kvid, title, display_name, internal_code)
-VALUES ('root-mock', 'GavinYin Dashboard', 'GavinYin Dashboard', 'umdDashboard');
+VALUES ('root-mock', 'GavinYin Hub', 'GavinYin Hub', 'umdDashboard');
 
 INSERT INTO public.menus (kvid, parent_kvid, menu_root_kvid, title, type, icon, sort_order)
 VALUES ('mock-demo', NULL, 'root-mock', '功能演示', 'Folder', 'fas fa-flask', 1);

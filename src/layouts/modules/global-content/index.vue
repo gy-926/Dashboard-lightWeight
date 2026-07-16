@@ -83,11 +83,6 @@
     );
   });
 
-  // 判断是否需要无内边距的全屏布局
-  const isNoPaddingLayout = computed(() => {
-    return ['dashboard'].includes(String(route.name));
-  });
-
   // 缓存包装组件定义，避免重复创建导致组件重置
   const wrapperMap = new Map<string, any>();
 
@@ -150,11 +145,7 @@
       <div
         :class="[
           'min-h-full relative',
-          isNoPaddingLayout
-            ? 'w-full h-full p-0 flex flex-col'
-            : isFullWidthLayout
-              ? 'w-full px-4 md:px-6 py-6'
-              : 'mx-auto',
+          isFullWidthLayout ? 'w-full px-4 md:px-6 py-6' : 'mx-auto',
         ]"
       >
         <template v-if="shouldKeepAlive">

@@ -2,7 +2,7 @@
   "comment": "Configure remote components here. autoRegister: true will register all exported components in the UMD library.",
   "components": [
     {
-      "name": "KiviiDemoLibrary",
+      "name": "GavinYinDemoLibrary",
       "type": "umd",
       "version": "1.0.0",
       "path": "/codes/kivii-component-demo-library.umd.js",
@@ -10,7 +10,7 @@
       "autoRegister": true
     },
     {
-      "name": "KiviiDemoLibraryDemo",
+      "name": "GavinYinDemoLibraryDemo",
       "type": "umd",
       "version": "1.0.0",
       "path": "/codes/kivii-component.js",

@@ -6,7 +6,9 @@
 
   const router = useRouter();
 
-  const systemName = computed(() => (window as any).uiGlobalConfig?.DisplayName || 'Kivii Dashboard');
+  const systemName = computed(
+    () => (window as any).uiGlobalConfig?.DisplayName || 'GavinYin Hub'
+  );
 
   const coreCapabilities = [
     {
@@ -66,7 +68,7 @@
             <span class="hero-title-accent">所有业务应用</span>
           </h1>
           <p class="mt-5 max-w-xl text-base leading-7 text-slate-600 dark:text-slate-300">
-            Kivii 将分散的页面、远程模块和存量系统整合进统一工作台，以动态路由、权限治理与多形态渲染能力，帮助团队更快交付、更稳扩展。
+            GavinYin Hub 将分散的页面、远程模块和存量系统整合进统一工作台，以动态路由、权限治理与多形态渲染能力，帮助团队更快交付、更稳扩展。
           </p>
 
           <div class="mt-7 flex flex-wrap items-center gap-3">
@@ -125,7 +127,7 @@
                 </div>
                 <div class="min-w-0 flex-1">
                   <div class="flex items-center justify-between gap-3">
-                    <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">Kivii Runtime</p>
+                    <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">GavinYin Runtime</p>
                     <span class="text-[10px] font-medium text-blue-600 dark:text-blue-400">CONNECTED</span>
                   </div>
                   <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-blue-100 dark:bg-blue-900">
@@ -170,7 +172,7 @@
       <div class="rounded-xl border border-slate-200 bg-white p-5 sm:p-6 dark:border-slate-700 dark:bg-slate-800">
         <div class="mb-5 flex items-center justify-between">
           <div>
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Why Kivii</p>
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Why GavinYin</p>
             <h2 class="mt-1.5 text-xl font-bold text-slate-900 dark:text-white">为持续变化的业务而设计</h2>
           </div>
           <div class="hidden h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-primary sm:flex dark:bg-blue-950/40">

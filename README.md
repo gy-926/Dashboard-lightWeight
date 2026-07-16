@@ -1,4 +1,4 @@
-# Kivii Vue3 模板
+# GavinYin Hub
 
 一个基于 Vue 3 + TypeScript + Vite + Tailwind CSS 的现代化前端开发模板，集成了自动路由、FontAwesome 图标库等开箱即用的功能。
 
@@ -32,7 +32,7 @@
 ## 📁 项目结构
 
 ```
-kivii-vue3-template/
+gavinyin-hub/
 ├── public/                 # 静态资源
 │   └── favicon.ico
 ├── src/

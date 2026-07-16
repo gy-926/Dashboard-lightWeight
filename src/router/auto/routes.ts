@@ -22,24 +22,6 @@ export const autoRoutes: RouteRecordRaw[] = [
       },
 
       {
-        path: 'dashboard',
-        name: 'dashboard',
-        component: () => import('../../views/dashboard/index.vue'),
-        meta: {
-          title: '图表展示',
-          icon: 'fa-chart-line',
-        },
-      },
-      {
-        path: 'test-supabase',
-        name: 'test-supabase',
-        component: () => import('../../views/test-supabase/index.vue'),
-        meta: {
-          title: 'Supabase测试',
-          icon: 'fa-database',
-        },
-      },
-      {
         path: 'umd-management',
         name: 'umd-management',
         component: () => import('../../views/umd-management/index.vue'),
@@ -64,15 +46,6 @@ export const autoRoutes: RouteRecordRaw[] = [
         meta: {
           title: '暂无内容',
           hidden: true,
-        },
-      },
-      {
-        path: 'test-table',
-        name: 'test-table',
-        component: () => import('../../views/test-table/index.vue'),
-        meta: {
-          title: '表格组件',
-          icon: 'fa-table',
         },
       },
       {

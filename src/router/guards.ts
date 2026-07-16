@@ -10,7 +10,7 @@ NProgress.configure({ showSpinner: false });
 // 路由守卫配置
 const guardsConfig = {
   enabled: true,
-  defaultTitle: 'Kivii Admin',
+  defaultTitle: 'GavinYin Hub',
 };
 
 export function setupRouteGuards(router: Router) {

@@ -1167,7 +1167,7 @@
                 <input
                   v-model="form.source_module"
                   type="text"
-                  placeholder="如 kivii-dashboard-umd-standards"
+                  placeholder="如 gavinyin-hub-umd-standards"
                   class="w-full form-input"
                 />
               </div>

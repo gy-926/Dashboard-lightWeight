@@ -1741,7 +1741,7 @@
     type: 'component',
     description: '菜单配置页面：支持树形菜单管理、菜单信息编辑、参数配置与功能集合维护。',
     version: '1.0.0',
-    author: 'Kivii Team',
+    author: 'GavinYin Team',
   };
 
   type MenuRootRow = MenuRootRecord;

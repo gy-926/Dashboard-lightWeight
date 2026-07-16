@@ -606,7 +606,7 @@
             </g>
           </svg>
           <div class="brand-text">
-            <span class="brand-name">GavinYin Dashboard</span>
+            <span class="brand-name">GavinYin Hub</span>
             <span class="brand-sub">春日·欢迎归来</span>
           </div>
         </div>
@@ -854,7 +854,7 @@
       </div>
     </div>
 
-    <p class="copyright">© 2025 Kivii · All Rights Reserved</p>
+    <p class="copyright">© 2025 GavinYin Hub · All Rights Reserved</p>
   </div>
 </template>
 
