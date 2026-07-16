@@ -120,10 +120,25 @@
   const form = ref<FunctionForm>(emptyForm());
   const roleForm = ref<RoleForm>(emptyRoleForm());
 
-  const tabs: Array<{ key: TabKey; label: string; icon: string }> = [
-    { key: 'functions', label: '功能中心', icon: 'fas fa-puzzle-piece' },
-    { key: 'roles', label: '角色功能授权', icon: 'fas fa-user-shield' },
-    { key: 'users', label: '用户角色绑定', icon: 'fas fa-users-cog' },
+  const tabs: Array<{ key: TabKey; label: string; description: string; icon: string }> = [
+    {
+      key: 'functions',
+      label: '功能中心',
+      description: '维护应用能力与入口',
+      icon: 'fas fa-puzzle-piece',
+    },
+    {
+      key: 'roles',
+      label: '角色授权',
+      description: '配置角色访问范围',
+      icon: 'fas fa-user-shield',
+    },
+    {
+      key: 'users',
+      label: '用户角色',
+      description: '管理用户角色关系',
+      icon: 'fas fa-users-gear',
+    },
   ];
 
   const parametersText = computed({
@@ -453,40 +468,57 @@
 </script>
 
 <template>
-  <div class="space-y-6">
-    <div class="flex items-center justify-between gap-4">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-800 dark:text-white">功能与权限中心</h1>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          统一维护功能定义、角色功能授权和用户角色绑定
-        </p>
+  <div class="feature-page space-y-5">
+    <header class="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
+      <div class="flex flex-col gap-5 px-5 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+        <div class="flex items-start gap-4">
+          <div class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-primary-bg text-primary">
+            <i class="fas fa-shield-halved text-lg" />
+          </div>
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Access control</p>
+            <h1 class="mt-1 text-xl font-bold text-slate-900 sm:text-2xl dark:text-white">功能与权限中心</h1>
+            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">集中管理功能定义、角色授权与用户访问关系。</p>
+          </div>
+        </div>
+        <div class="grid grid-cols-3 gap-2 sm:gap-3">
+          <div class="summary-card">
+            <span>功能</span><strong>{{ functions.length }}</strong>
+          </div>
+          <div class="summary-card">
+            <span>角色</span><strong>{{ roles.length }}</strong>
+          </div>
+          <div class="summary-card">
+            <span>用户</span><strong>{{ userDirectory.length }}</strong>
+          </div>
+        </div>
       </div>
-      <div class="flex items-center gap-3">
-        <span class="text-sm text-gray-500 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">
-          功能 {{ functions.length }} 项
-        </span>
-        <span class="text-sm text-gray-500 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">
-          角色 {{ roles.length }} 项
-        </span>
-      </div>
-    </div>
+    </header>
 
-    <div class="flex flex-wrap items-center gap-2">
+    <nav class="grid gap-2 rounded-xl border border-slate-200 bg-white p-1.5 sm:grid-cols-3 dark:border-slate-700 dark:bg-slate-800">
       <button
         v-for="tab in tabs"
         :key="tab.key"
-        class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+        class="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-all"
         :class="
           activeTab === tab.key
-            ? 'bg-blue-600 text-white shadow-sm'
-            : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
+            ? 'bg-primary-bg text-primary'
+            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-700/50 dark:hover:text-slate-100'
         "
         @click="activeTab = tab.key"
       >
-        <i :class="tab.icon" />
-        {{ tab.label }}
+        <span
+          class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-sm transition-colors"
+          :class="activeTab === tab.key ? 'bg-primary text-white shadow-sm' : 'bg-slate-100 text-slate-400 group-hover:text-slate-600 dark:bg-slate-700 dark:group-hover:text-slate-200'"
+        >
+          <i :class="tab.icon" />
+        </span>
+        <span class="min-w-0">
+          <span class="block text-sm font-semibold">{{ tab.label }}</span>
+          <span class="mt-0.5 block truncate text-xs opacity-70">{{ tab.description }}</span>
+        </span>
       </button>
-    </div>
+    </nav>
 
     <div
       v-if="error"
@@ -498,11 +530,15 @@
 
     <section
       v-if="activeTab === 'functions'"
-      class="space-y-4"
+      class="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"
     >
-      <div class="flex items-center justify-end">
+      <div class="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700">
+        <div>
+          <h2 class="text-base font-bold text-slate-900 dark:text-white">功能清单</h2>
+          <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">维护页面、远程组件和 WebView 的统一入口。</p>
+        </div>
         <button
-          class="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+          class="btn-primary inline-flex w-fit items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors"
           @click="openCreate"
         >
           <i class="fas fa-plus" />
@@ -512,7 +548,7 @@
 
       <div
         v-if="loading"
-        class="bg-white dark:bg-gray-800 rounded-xl p-12 shadow-sm text-center text-gray-400"
+        class="p-14 text-center text-slate-400"
       >
         <i class="fas fa-spinner fa-spin text-3xl mb-3" />
         <p class="text-sm">加载中...</p>
@@ -520,7 +556,7 @@
 
       <div
         v-else-if="functions.length === 0 && !error"
-        class="bg-white dark:bg-gray-800 rounded-xl p-12 shadow-sm text-center text-gray-500"
+        class="p-14 text-center text-slate-500"
       >
         <i class="fas fa-inbox text-4xl mb-4 text-gray-300" />
         <p>暂无功能记录</p>
@@ -529,9 +565,9 @@
 
       <div
         v-else
-        class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden"
+        class="overflow-x-auto"
       >
-        <table class="w-full text-sm">
+        <table class="w-full min-w-[980px] text-sm">
           <thead>
             <tr
               class="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50"
@@ -660,24 +696,27 @@
 
     <section
       v-else-if="activeTab === 'roles'"
-      class="space-y-4"
+      class="space-y-3"
     >
-      <div class="flex items-center justify-between">
-        <div class="text-sm text-gray-500 dark:text-gray-400">
-          通过角色统一维护功能访问范围，菜单会按角色可访问的 `function_kvid` 自动过滤。
+      <div class="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700 dark:bg-slate-800">
+        <div>
+          <h2 class="text-base font-bold text-slate-900 dark:text-white">角色与功能授权</h2>
+          <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            选择角色后配置可访问功能，菜单将根据授权结果自动过滤。
+          </p>
         </div>
         <div class="flex items-center gap-2">
           <button
-            class="px-4 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            class="secondary-button"
             @click="loadPermissionData"
           >
-            <i class="fas fa-rotate-right mr-1" />刷新
+            <i class="fas fa-rotate-right" />刷新
           </button>
           <button
-            class="px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+            class="btn-primary inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors"
             @click="openCreateRole"
           >
-            <i class="fas fa-plus mr-1" />新增角色
+            <i class="fas fa-plus" />新增角色
           </button>
         </div>
       </div>
@@ -692,7 +731,7 @@
 
       <div
         v-if="permissionLoading"
-        class="bg-white dark:bg-gray-800 rounded-xl p-12 shadow-sm text-center text-gray-400"
+        class="rounded-xl border border-slate-200 bg-white p-14 text-center text-slate-400 dark:border-slate-700 dark:bg-slate-800"
       >
         <i class="fas fa-spinner fa-spin text-3xl mb-3" />
         <p class="text-sm">加载权限配置中...</p>
@@ -700,11 +739,12 @@
 
       <div
         v-else
-        class="grid grid-cols-[320px,1fr] gap-4"
+        class="grid gap-3 lg:grid-cols-[280px,minmax(0,1fr)]"
       >
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
-          <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700">
-            <h3 class="font-semibold text-gray-800 dark:text-white">角色列表</h3>
+        <div class="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
+          <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3.5 dark:border-slate-700">
+            <h3 class="text-sm font-bold text-slate-800 dark:text-white">角色列表</h3>
+            <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500 dark:bg-slate-700 dark:text-slate-400">{{ roles.length }}</span>
           </div>
           <div
             v-if="roles.length === 0"
@@ -714,16 +754,16 @@
           </div>
           <div
             v-else
-            class="divide-y divide-gray-100 dark:divide-gray-700"
+            class="max-h-[580px] divide-y divide-slate-100 overflow-y-auto dark:divide-slate-700"
           >
             <button
               v-for="role in roles"
               :key="role.kvid"
-              class="w-full text-left px-5 py-4 transition-colors"
+              class="w-full border-l-2 px-4 py-3.5 text-left transition-colors"
               :class="
                 selectedRoleKvid === role.kvid
-                  ? 'bg-blue-50 dark:bg-blue-900/20'
-                  : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'
+                  ? 'border-primary bg-primary-bg'
+                  : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-700/30'
               "
               @click="selectedRoleKvid = role.kvid"
             >
@@ -749,7 +789,7 @@
                   {{ role.is_active ? '启用' : '禁用' }}
                 </span>
               </div>
-              <div class="mt-3 flex items-center gap-2">
+              <div class="mt-2 flex items-center gap-1">
                 <button
                   class="px-2.5 py-1 text-xs rounded-md text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
                   @click.stop="openEditRole(role)"
@@ -767,9 +807,9 @@
           </div>
         </div>
 
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
+        <div class="min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
           <div
-            class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between"
+            class="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700"
           >
             <div>
               <h3 class="font-semibold text-gray-800 dark:text-white">
@@ -785,7 +825,7 @@
             </div>
             <button
               :disabled="!currentRole || roleFunctionsSaving"
-              class="px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              class="btn-primary inline-flex w-fit items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50"
               @click="saveRoleFunctions"
             >
               <i
@@ -808,10 +848,11 @@
           >
             当前没有功能数据，无法进行授权。
           </div>
-          <table
+          <div
             v-else
-            class="w-full text-sm"
+            class="overflow-x-auto"
           >
+          <table class="w-full min-w-[680px] text-sm">
             <thead>
               <tr
                 class="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50"
@@ -884,23 +925,25 @@
               </tr>
             </tbody>
           </table>
+          </div>
         </div>
       </div>
     </section>
 
     <section
       v-else
-      class="space-y-4"
+      class="space-y-3"
     >
-      <div class="flex items-center justify-between">
-        <div class="text-sm text-gray-500 dark:text-gray-400">
-          为登录用户绑定角色，用户会继承对应角色的功能访问权限。
+      <div class="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700 dark:bg-slate-800">
+        <div>
+          <h2 class="text-base font-bold text-slate-900 dark:text-white">用户角色绑定</h2>
+          <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">为登录用户分配角色，用户将继承对应的功能访问权限。</p>
         </div>
         <button
-          class="px-4 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          class="secondary-button w-fit"
           @click="loadPermissionData"
         >
-          <i class="fas fa-rotate-right mr-1" />刷新
+          <i class="fas fa-rotate-right" />刷新数据
         </button>
       </div>
 
@@ -922,7 +965,7 @@
 
       <div
         v-if="permissionLoading"
-        class="bg-white dark:bg-gray-800 rounded-xl p-12 shadow-sm text-center text-gray-400"
+        class="rounded-xl border border-slate-200 bg-white p-14 text-center text-slate-400 dark:border-slate-700 dark:bg-slate-800"
       >
         <i class="fas fa-spinner fa-spin text-3xl mb-3" />
         <p class="text-sm">加载用户角色配置中...</p>
@@ -930,7 +973,7 @@
 
       <div
         v-else-if="userDirectory.length === 0"
-        class="bg-white dark:bg-gray-800 rounded-xl p-12 shadow-sm text-center text-gray-500"
+        class="rounded-xl border border-slate-200 bg-white p-14 text-center text-slate-500 dark:border-slate-700 dark:bg-slate-800"
       >
         <i class="fas fa-user-slash text-4xl mb-4 text-gray-300" />
         <p>暂无可分配角色的用户数据</p>
@@ -938,9 +981,9 @@
 
       <div
         v-else
-        class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden"
+        class="overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"
       >
-        <table class="w-full text-sm">
+        <table class="w-full min-w-[980px] text-sm">
           <thead>
             <tr
               class="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50"
@@ -976,7 +1019,7 @@
             <tr
               v-for="user in userDirectory"
               :key="user.user_id"
-              class="align-top"
+              class="align-top transition-colors hover:bg-slate-50/70 dark:hover:bg-slate-700/20"
             >
               <td class="px-6 py-4">
                 <div class="font-medium text-gray-800 dark:text-white">
@@ -1050,11 +1093,11 @@
     <Teleport to="body">
       <div
         v-if="isModalOpen"
-        class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+        class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/55 p-3 backdrop-blur-sm sm:p-5"
         @click.self="closeModal"
       >
         <div
-          class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-3xl mx-4 animate-fade-in-up"
+          class="animate-fade-in-up w-full max-w-3xl overflow-hidden rounded-2xl border border-white/20 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-800"
         >
           <div
             class="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700"
@@ -1072,7 +1115,7 @@
           </div>
 
           <div class="px-6 py-5 space-y-4 max-h-[75vh] overflow-y-auto">
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid gap-4 sm:grid-cols-2">
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                   功能名称 <span class="text-red-500">*</span>
@@ -1107,7 +1150,7 @@
               </div>
             </div>
 
-            <div class="grid grid-cols-3 gap-4">
+            <div class="grid gap-4 sm:grid-cols-3">
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                   渲染类型
@@ -1159,7 +1202,7 @@
               />
             </div>
 
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid gap-4 sm:grid-cols-2">
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                   来源模块
@@ -1255,7 +1298,7 @@
             </button>
             <button
               :disabled="!form.title.trim() || !form.handler.trim() || isSaving"
-              class="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              class="btn-primary flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50"
               @click="saveFunction"
             >
               <i
@@ -1272,11 +1315,11 @@
     <Teleport to="body">
       <div
         v-if="isRoleModalOpen"
-        class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+        class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/55 p-3 backdrop-blur-sm sm:p-5"
         @click.self="closeRoleModal"
       >
         <div
-          class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-xl mx-4 animate-fade-in-up"
+          class="animate-fade-in-up w-full max-w-xl overflow-hidden rounded-2xl border border-white/20 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-800"
         >
           <div
             class="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700"
@@ -1294,7 +1337,7 @@
           </div>
 
           <div class="px-6 py-5 space-y-4">
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid gap-4 sm:grid-cols-2">
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                   角色编码 <span class="text-red-500">*</span>
@@ -1366,7 +1409,7 @@
             </button>
             <button
               :disabled="!roleForm.code.trim() || !roleForm.name.trim() || isRoleSaving"
-              class="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              class="btn-primary flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50"
               @click="saveRole"
             >
               <i
@@ -1384,7 +1427,27 @@
 
 <style scoped>
   .form-input {
-    @apply bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5;
+    @apply rounded-lg border border-slate-300 bg-slate-50 p-2.5 text-sm text-slate-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-white;
+  }
+
+  .summary-card {
+    @apply flex min-w-[72px] flex-col rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-900/50;
+  }
+
+  .summary-card span {
+    @apply text-[11px] text-slate-400;
+  }
+
+  .summary-card strong {
+    @apply mt-0.5 text-lg leading-none text-slate-800 dark:text-slate-100;
+  }
+
+  .secondary-button {
+    @apply inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white;
+  }
+
+  :deep(thead th) {
+    white-space: nowrap;
   }
 
   .animate-fade-in-up {
