@@ -1,6 +1,10 @@
 <script setup lang="ts">
   import { getCurrentInstance, computed, useAttrs } from 'vue';
   import { useRoute } from 'vue-router';
+  import {
+    umdLoadingCount,
+    umdRegistryVersion,
+  } from '@/utils/remoteComponentLoader';
 
   defineOptions({
     name: 'UmdComponentPage',
@@ -132,17 +136,18 @@
     ...normalizeProps(attrs as Record<string, unknown>),
   }));
 
-  // 检查组件名是否已在全局注册表中
-  // 注意：appContext.components 非响应式，但 UMD 组件在路由注册前就已全部加载，
-  // 所以本视图挂载时注册必然已完成，computed 首次求值结果即正确。
+  // appContext.components 本身不是响应式对象，通过注册版本信号重新检查。
   const instance = getCurrentInstance();
   const isRegistered = computed(() => {
+    void umdRegistryVersion.value;
     if (!resolvedComponentName.value || !instance) return false;
     return Object.prototype.hasOwnProperty.call(
       instance.appContext.components,
       resolvedComponentName.value
     );
   });
+
+  const isLoading = computed(() => !isRegistered.value && umdLoadingCount.value > 0);
 </script>
 
 <template>
@@ -158,7 +163,16 @@
       />
     </div>
 
-    <!-- 组件未注册时的错误状态 -->
+    <!-- UMD 脚本仍在下载或执行时显示加载态，注册完成后会自动渲染组件。 -->
+    <div
+      v-else-if="isLoading"
+      class="umd-loading"
+    >
+      <i class="fas fa-spinner fa-spin" />
+      <p>组件 "{{ resolvedComponentName }}" 加载中...</p>
+    </div>
+
+    <!-- 所有 UMD 加载均结束后仍未注册，才显示错误状态。 -->
     <div
       v-else
       class="umd-not-found"
@@ -187,6 +201,7 @@
     display: block;
   }
 
+  .umd-loading,
   .umd-not-found {
     display: flex;
     flex-direction: column;
@@ -199,6 +214,7 @@
     gap: 10px;
   }
 
+  .umd-loading i,
   .umd-not-found i {
     font-size: 36px;
     opacity: 0.5;

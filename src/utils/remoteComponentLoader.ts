@@ -1,13 +1,23 @@
 import type { App } from 'vue';
 import * as Vue from 'vue';
 import type { ComponentConfig, Config } from './umd/types';
-import { remoteLibraries, umdComponentsReady, resolveUmdReady } from './umd/state';
+import {
+  remoteLibraries,
+  umdComponentsReady,
+  resolveUmdReady,
+  notifyUmdRegistryChanged,
+} from './umd/state';
 import { loadComponent, loadUMDComponent } from './umd/loader';
 import { storageClient } from '@/utils/supabase';
 
 // 公共 re-exports（维持现有外部导入路径不变）
 export type { RemoteLibraryInfo, ComponentConfig, Config } from './umd/types';
-export { remoteLibraries, umdComponentsReady } from './umd/state';
+export {
+  remoteLibraries,
+  umdComponentsReady,
+  umdLoadingCount,
+  umdRegistryVersion,
+} from './umd/state';
 export { generateUmdRoutes } from './umd/routes';
 
 // 从 Supabase 存储桶中加载 UMD 组件配置
@@ -134,6 +144,7 @@ const registerComponent = async (app: App, config: ComponentConfig): Promise<voi
   if (config.autoRegister && typeof remoteComponent === 'object' && remoteComponent !== null) {
     if (remoteComponent.install) {
       app.use(remoteComponent);
+      notifyUmdRegistryChanged();
       return;
     }
     runCssInjectors(remoteComponent);
@@ -150,6 +161,7 @@ const registerComponent = async (app: App, config: ComponentConfig): Promise<voi
       }
     }
     if (libIndex !== -1) remoteLibraries.value[libIndex].registeredCount = count;
+    if (count > 0) notifyUmdRegistryChanged();
     return;
   }
 
@@ -160,6 +172,7 @@ const registerComponent = async (app: App, config: ComponentConfig): Promise<voi
   } else {
     app.component(config.name, remoteComponent);
   }
+  notifyUmdRegistryChanged();
 };
 
 // 按需加载单个 UMD 文件并注册到 app
@@ -181,6 +194,7 @@ export const loadUmdOnDemand = async (app: App, scriptPath: string): Promise<voi
 
   if (remoteComponent.install) {
     app.use(remoteComponent);
+    notifyUmdRegistryChanged();
     return;
   }
 
@@ -195,6 +209,7 @@ export const loadUmdOnDemand = async (app: App, scriptPath: string): Promise<voi
       }
     }
   }
+  notifyUmdRegistryChanged();
 };
 
 export const registerRemoteComponents = async (
