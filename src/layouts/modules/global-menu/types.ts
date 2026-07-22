@@ -112,6 +112,18 @@ export function transformRouteToMenu(routes: RouteRecordRaw[], parentPath = ''):
     }
   }
 
+  // 仅在最外层压平“根目录 -> 唯一叶子页面”。
+  // 唯一子项仍是目录时保留原层级，避免改变多层菜单的展开行为。
+  if (!parentPath) {
+    return menu.map(item => {
+      const [onlyChild] = item.children || []
+      const hasSingleLeafChild =
+        item.children?.length === 1 && !onlyChild.children?.length
+
+      return hasSingleLeafChild ? onlyChild : item
+    })
+  }
+
   return menu
 }
 
