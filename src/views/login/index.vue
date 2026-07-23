@@ -594,7 +594,7 @@
             class="btn-spinner"
           >
             <span class="spinner-ring"></span>
-            处理中...
+            登录中...
           </span>
         </button>
 
