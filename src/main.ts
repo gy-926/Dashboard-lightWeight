@@ -16,7 +16,7 @@ import 'kivii-public-components/style';
 // 引入自定义 OpenTab 实现
 import { KiviiOpenTab } from './bridge/kivii-open-tab';
 // 引入远程组件加载器
-import { registerRemoteComponents } from '@/utils/remoteComponentLoader';
+import { loadUmdOnDemand, registerRemoteComponents } from '@/utils/remoteComponentLoader';
 import { initializeAuthState, setupSupabaseAuthSync } from '@/utils/auth-state';
 
 const initApp = async () => {
@@ -53,9 +53,16 @@ const initApp = async () => {
 
   // 动态加载远程组件（后台加载，不阻塞应用挂载）
   // Supabase 存储使用匿名 key 访问，无需登录即可加载，始终在启动时触发
-  registerRemoteComponents(app, 'supabase:UmdTempleate').catch(e => {
-    console.error('[UMD] 远程组件加载失败:', e);
-  });
+  registerRemoteComponents(app, 'supabase:UmdTempleate')
+    .catch(e => {
+      console.error('[UMD] 远程组件加载失败:', e);
+    })
+    .finally(() => {
+      const showcaseUrl = `${import.meta.env.BASE_URL}umd-showcase/kivii-runtime-showcase.umd.js?v=1.1.1`;
+      loadUmdOnDemand(app, showcaseUrl).catch(e => {
+        console.error('[UMD Showcase] 示例组件加载失败:', e);
+      });
+    });
 
   // 安装路由 (放在远程组件加载之后，避免潜在的冲突)
   app.use(router);

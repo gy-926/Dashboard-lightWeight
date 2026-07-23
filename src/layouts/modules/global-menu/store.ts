@@ -41,6 +41,35 @@ function persistTheme(theme: ThemeConfig) {
 function applyTheme(theme: ThemeConfig) {
   const root = document.documentElement;
   root.style.setProperty('--ui-primary-color', theme.primaryColor);
+  root.style.setProperty('--color-primary', theme.primaryColor);
+  root.style.setProperty(
+    '--color-primary-hover',
+    `color-mix(in srgb, ${theme.primaryColor} 84%, black)`
+  );
+  root.style.setProperty(
+    '--color-primary-light',
+    `color-mix(in srgb, ${theme.primaryColor} 18%, white)`
+  );
+  root.style.setProperty(
+    '--color-primary-dark',
+    `color-mix(in srgb, ${theme.primaryColor} 78%, black)`
+  );
+  root.style.setProperty(
+    '--color-primary-bg',
+    `color-mix(in srgb, ${theme.primaryColor} 10%, transparent)`
+  );
+  root.style.setProperty(
+    '--color-primary-dark-mode-light',
+    `color-mix(in srgb, ${theme.primaryColor} 20%, transparent)`
+  );
+  root.style.setProperty(
+    '--color-primary-dark-mode-bg',
+    `color-mix(in srgb, ${theme.primaryColor} 12%, transparent)`
+  );
+  root.style.setProperty(
+    '--color-primary-dark-mode-hover',
+    `color-mix(in srgb, ${theme.primaryColor} 26%, transparent)`
+  );
   root.style.setProperty('--nprogress-color', theme.primaryColor);
   if (theme.darkMode) {
     root.classList.add('dark');

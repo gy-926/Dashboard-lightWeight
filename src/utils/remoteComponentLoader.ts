@@ -188,28 +188,70 @@ export const loadUmdOnDemand = async (app: App, scriptPath: string): Promise<voi
     'VueDemoComponent',
   ]);
 
-  const remoteComponent = await loadUMDComponent(scriptPath);
+  const fallbackName =
+    scriptPath
+      .split('/')
+      .pop()
+      ?.replace(/(\.umd)?(\.min)?\.js$/i, '') || 'OnDemandUmdLibrary';
+  let libraryIndex = remoteLibraries.value.findIndex(item => item.url === scriptPath);
 
-  if (typeof remoteComponent !== 'object' || remoteComponent === null) return;
-
-  if (remoteComponent.install) {
-    app.use(remoteComponent);
-    notifyUmdRegistryChanged();
-    return;
+  if (libraryIndex === -1) {
+    remoteLibraries.value.push({
+      name: fallbackName,
+      url: scriptPath,
+      status: 'loading',
+    });
+    libraryIndex = remoteLibraries.value.length - 1;
+  } else {
+    remoteLibraries.value[libraryIndex].status = 'loading';
+    remoteLibraries.value[libraryIndex].error = undefined;
   }
 
-  runCssInjectors(remoteComponent);
+  try {
+    const remoteComponent = await loadUMDComponent(scriptPath);
+    if (typeof remoteComponent !== 'object' || remoteComponent === null) {
+      throw new Error(`UMD 模块没有导出可注册对象: ${scriptPath}`);
+    }
 
-  for (const key in remoteComponent) {
-    if (EXCLUDED_KEYS.has(key)) continue;
-    const component = remoteComponent[key];
-    if (component && (typeof component === 'object' || typeof component === 'function')) {
-      if (!Object.prototype.hasOwnProperty.call(app._context.components, key)) {
-        app.component(key, component);
+    let registeredCount = 0;
+    if (remoteComponent.install) {
+      app.use(remoteComponent);
+      registeredCount =
+        remoteComponent.componentsDetailed?.length ??
+        remoteComponent.manifest?.componentsDetailed?.length ??
+        remoteComponent.manifest?.components?.length ??
+        0;
+    } else {
+      runCssInjectors(remoteComponent);
+
+      for (const key in remoteComponent) {
+        if (EXCLUDED_KEYS.has(key)) continue;
+        const component = remoteComponent[key];
+        if (component && (typeof component === 'object' || typeof component === 'function')) {
+          if (!Object.prototype.hasOwnProperty.call(app._context.components, key)) {
+            app.component(key, component);
+            registeredCount++;
+          }
+        }
       }
     }
+
+    const library = remoteLibraries.value[libraryIndex];
+    library.name = remoteComponent.manifest?.zhName || remoteComponent.manifest?.libName || fallbackName;
+    library.status = 'success';
+    library.componentKeys = Object.keys(remoteComponent);
+    library.registeredCount = registeredCount;
+    library.manifest = remoteComponent.manifest;
+    library.componentsDetailed =
+      remoteComponent.componentsDetailed ?? remoteComponent.manifest?.componentsDetailed;
+    library.componentsMap = remoteComponent.componentsMap ?? remoteComponent.manifest?.componentsMap;
+    notifyUmdRegistryChanged();
+  } catch (error) {
+    const library = remoteLibraries.value[libraryIndex];
+    library.status = 'error';
+    library.error = error instanceof Error ? error.message : String(error);
+    throw error;
   }
-  notifyUmdRegistryChanged();
 };
 
 export const registerRemoteComponents = async (

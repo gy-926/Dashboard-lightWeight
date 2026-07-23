@@ -265,16 +265,24 @@
 
 <template>
   <div class="space-y-6 relative">
-    <div class="flex items-center justify-between">
-      <h1 class="text-2xl font-bold text-gray-800 dark:text-white">UMD模块管理</h1>
+    <div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+      <div>
+        <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-blue-600 dark:text-blue-400">
+          <i class="fas fa-flask"></i>
+          Runtime experiment
+        </div>
+        <h1 class="mt-1.5 text-2xl font-bold text-gray-800 dark:text-white">UMD Runtime Lab</h1>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          加载远程 URL 或本地 UMD 文件，检查导出对象、Manifest 与可注册组件。
+        </p>
+      </div>
       <div class="flex items-center gap-3">
-        <!-- Module Management Button -->
         <button
           @click="openModal"
           class="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
         >
-          <i class="fas fa-cloud-upload-alt"></i>
-          文件上传
+          <i class="fas fa-magnifying-glass-chart"></i>
+          分析 UMD 包
         </button>
 
         <span class="text-sm text-gray-500 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">
@@ -297,7 +305,7 @@
             class="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700"
           >
             <h3 class="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
-              <i class="fas fa-cloud-upload-alt text-blue-600"></i> 文件上传
+              <i class="fas fa-flask text-blue-600"></i> 分析 UMD 包
             </h3>
             <button
               @click="closeModal"

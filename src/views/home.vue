@@ -1,44 +1,183 @@
 <script setup lang="ts">
-  import { computed } from 'vue';
+  import { computed, ref } from 'vue';
   import { useRouter } from 'vue-router';
+  import { useMenuStore } from '@/layouts/modules/global-menu/store';
+  import { remoteLibraries } from '@/utils/remoteComponentLoader';
 
   defineOptions({ name: 'home' });
 
   const router = useRouter();
+  const menuStore = useMenuStore();
+  const activeFlowStep = ref(0);
+  const activeDashboardIndex = ref(0);
+  const isDark = computed(() => menuStore.theme.darkMode);
 
   const systemName = computed(
-    () => (window as any).uiGlobalConfig?.DisplayName || 'GavinYin Hub'
+    () => (window as any).uiGlobalConfig?.DisplayName || 'Kivii Runtime'
   );
 
-  const coreCapabilities = [
+  const successfulLibraries = computed(
+    () => remoteLibraries.value.filter(item => item.status === 'success')
+  );
+
+  const registeredComponentCount = computed(() =>
+    successfulLibraries.value.reduce((total, item) => {
+      const detectedCount =
+        item.registeredCount ??
+        item.componentsDetailed?.length ??
+        item.componentKeys?.filter(
+          key => !['default', 'install', 'manifest', 'componentsMap', 'componentsDetailed'].includes(key)
+        ).length ??
+        0;
+      return total + detectedCount;
+    }, 0)
+  );
+
+  const runtimeMetrics = computed(() => [
     {
-      icon: 'fas fa-cubes-stacked',
-      title: '多形态应用集成',
-      description: '统一承载 Vue 页面、UMD 远程组件与 WebView，让存量系统和新应用在同一工作台协同运行。',
-      accent: 'violet',
+      value: String(remoteLibraries.value.length),
+      label: '远程组件库',
+      detail: `${successfulLibraries.value.length} 个加载成功`,
     },
+    {
+      value: String(registeredComponentCount.value),
+      label: '已注册组件',
+      detail: '来自实时 Runtime 状态',
+    },
+    {
+      value: '3',
+      label: '运行形态',
+      detail: 'UMD · Vue SFC · WebView',
+    },
+    {
+      value: '3',
+      label: '布局模式',
+      detail: 'Side · Top · Mixed',
+    },
+  ]);
+
+  const runtimeFlow = [
+    {
+      index: '01',
+      title: 'Resolve source',
+      subtitle: '定位模块来源',
+      detail: '从功能配置解析 UMD 地址、导出名称和目标组件，无需重新构建宿主应用。',
+      code: 'source_url → globalName → component',
+      icon: 'fas fa-link',
+    },
+    {
+      index: '02',
+      title: 'Inject script',
+      subtitle: '运行时加载',
+      detail: '按需注入远程脚本，共享宿主 Vue Runtime，并跟踪 pending、loading、success、error 状态。',
+      code: 'loadUMDComponent(sourceUrl)',
+      icon: 'fas fa-bolt',
+    },
+    {
+      index: '03',
+      title: 'Read manifest',
+      subtitle: '发现模块能力',
+      detail: '读取 Manifest、组件清单和描述信息，将远程模块转化为可管理的功能记录。',
+      code: 'manifest.componentsDetailed',
+      icon: 'fas fa-file-code',
+    },
+    {
+      index: '04',
+      title: 'Mount & manage',
+      subtitle: '注册与生命周期',
+      detail: '动态注册组件，并接入标签页、路由、缓存、刷新和销毁等统一生命周期。',
+      code: 'app.component() → route → cache',
+      icon: 'fas fa-cubes-stacked',
+    },
+  ];
+
+  const adapters = [
+    {
+      name: 'Vue UMD',
+      label: '核心能力',
+      icon: 'fab fa-vuejs',
+      tone: 'emerald',
+      load: 'Script Runtime',
+      lifecycle: '动态注册 / 卸载',
+      communication: 'Props / Events / Expose',
+      description: '无需重新打包主应用，运行时发现并注册远程组件库。',
+    },
+    {
+      name: 'Vue SFC',
+      label: '动态适配',
+      icon: 'fas fa-file-code',
+      tone: 'blue',
+      load: 'Remote Source',
+      lifecycle: '编译 / 缓存',
+      communication: 'Route Query / Context',
+      description: '加载远程 Vue 单文件组件，并复用组件缓存与页面激活机制。',
+    },
+    {
+      name: 'WebView / Legacy',
+      label: '存量接入',
+      icon: 'fas fa-window-restore',
+      tone: 'amber',
+      load: 'Iframe / Bridge',
+      lifecycle: '挂载 / 显隐',
+      communication: 'Bridge / Event Bus',
+      description: '以 WebView 和 Bridge 承载传统页面及 ExtJS 等存量系统。',
+    },
+  ];
+
+  const platformProofs = [
     {
       icon: 'fas fa-route',
       title: '动态菜单与路由',
-      description: '菜单配置实时生成路由与导航结构，支持侧边、顶部、混合布局，无需反复修改前端工程。',
-      accent: 'blue',
+      text: '后端配置实时生成路由树，模块接入后即可编排进工作空间。',
     },
     {
-      icon: 'fas fa-shield-halved',
-      title: '一体化权限治理',
-      description: '以用户、角色、功能为核心建立权限链路，让功能授权、菜单可见性和访问控制保持一致。',
-      accent: 'emerald',
+      icon: 'fas fa-table-columns',
+      title: '多布局适配',
+      text: '侧边、顶部、混合菜单共享同一份动态导航数据。',
+    },
+    {
+      icon: 'fas fa-layer-group',
+      title: '标签与缓存',
+      text: '多页面标签、按需缓存、刷新和销毁形成完整运行周期。',
+    },
+    {
+      icon: 'fas fa-user-shield',
+      title: '权限链路',
+      text: '用户、角色、功能与菜单可见性保持一致。',
     },
   ];
 
-  const advantages = [
-    { icon: 'fas fa-plug-circle-bolt', title: '即插即用', text: '远程模块独立发布，接入后即可使用' },
-    { icon: 'fas fa-layer-group', title: '统一体验', text: '多应用共享导航、主题、标签页与用户上下文' },
-    { icon: 'fas fa-gauge-high', title: '轻量高效', text: '按需加载与缓存策略兼顾首屏速度和运行性能' },
-    { icon: 'fas fa-arrows-rotate', title: '渐进演进', text: '保留现有系统投入，同时持续引入现代技术栈' },
+  const currentFlow = computed(() => runtimeFlow[activeFlowStep.value]);
+  const dashboardProfiles = [
+    {
+      code: 'umdDashboard',
+      name: 'Runtime Console',
+      description: '远程模块管理与运行状态',
+      icon: 'fas fa-cubes-stacked',
+      tone: 'blue',
+      menus: ['运行总览', 'UMD 模块', '菜单配置', '系统功能'],
+      widgets: ['Runtime health', 'Module registry', 'Activity stream'],
+    },
+    {
+      code: 'operationsDashboard',
+      name: 'Operations Center',
+      description: '业务运营与任务协同',
+      icon: 'fas fa-chart-line',
+      tone: 'emerald',
+      menus: ['运营总览', '客户中心', '订单任务', '数据报表'],
+      widgets: ['Business metrics', 'Task queue', 'Live orders'],
+    },
+    {
+      code: 'analyticsDashboard',
+      name: 'Analytics Workspace',
+      description: '分析模型与数据洞察',
+      icon: 'fas fa-chart-pie',
+      tone: 'violet',
+      menus: ['指标看板', '分析模型', '数据资产', '报告中心'],
+      widgets: ['Metric board', 'Model output', 'Insight feed'],
+    },
   ];
-
-  const techStack = ['Vue 3', 'TypeScript', 'Vite', 'Tailwind CSS', 'Supabase'];
+  const currentDashboard = computed(() => dashboardProfiles[activeDashboardIndex.value]);
 
   function goTo(path: string) {
     router.push(path);
@@ -46,306 +185,1482 @@
 </script>
 
 <template>
-  <div class="home-page space-y-5 md:space-y-6">
-    <section class="hero relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white dark:border-slate-700/80 dark:bg-slate-800">
+  <div
+    class="showcase-page space-y-5 pb-3 md:space-y-7"
+    :class="{ 'home-dark': isDark }"
+  >
+    <section class="hero-shell relative overflow-hidden rounded-[24px] text-white">
       <div class="hero-grid absolute inset-0" />
-      <div class="hero-glow hero-glow-one" />
-      <div class="hero-glow hero-glow-two" />
+      <div class="hero-glow hero-glow-blue" />
+      <div class="hero-glow hero-glow-violet" />
 
-      <div class="relative grid min-h-[430px] gap-10 px-6 py-10 sm:px-10 lg:grid-cols-[1.08fr_.92fr] lg:items-center lg:px-14 lg:py-12">
+      <div class="relative grid min-h-[510px] gap-10 px-6 py-10 sm:px-10 lg:grid-cols-[1.04fr_.96fr] lg:items-center lg:px-14 lg:py-14">
         <div class="max-w-2xl">
-          <div class="mb-5 inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50/80 px-3 py-1.5 text-xs font-semibold tracking-wide text-blue-700 dark:border-blue-800 dark:bg-blue-950/50 dark:text-blue-300">
-            <span class="relative flex h-2 w-2">
-              <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span class="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-            </span>
-            企业级模块化应用工作台
+          <div class="mb-6 inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-cyan-300">
+            <span class="runtime-dot" />
+            Runtime module platform
           </div>
 
-          <p class="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-primary">{{ systemName }}</p>
-          <h1 class="max-w-xl text-3xl font-bold leading-tight tracking-tight text-slate-900 sm:text-4xl lg:text-[44px] dark:text-white">
-            一个入口，连接并管理
-            <span class="hero-title-accent">所有业务应用</span>
+          <p class="mb-3 text-sm font-semibold tracking-wide text-blue-300">{{ systemName }}</p>
+          <h1 class="max-w-2xl text-4xl font-black leading-[1.08] tracking-[-0.035em] sm:text-5xl lg:text-[58px]">
+            在运行时连接
+            <span class="hero-title-accent">不同前端世界</span>
           </h1>
-          <p class="mt-5 max-w-xl text-base leading-7 text-slate-600 dark:text-slate-300">
-            GavinYin Hub 将分散的页面、远程模块和存量系统整合进统一工作台，以动态路由、权限治理与多形态渲染能力，帮助团队更快交付、更稳扩展。
+          <p class="mt-6 max-w-xl text-base leading-7 text-slate-300 sm:text-[17px]">
+            一个以 UMD 动态加载为核心的模块化前端容器。无需重新构建宿主应用，即可发现、注册和运行远程组件，并统一承载 Vue SFC、WebView 与存量系统。
           </p>
 
-          <div class="mt-7 flex flex-wrap items-center gap-3">
-            <button class="btn-primary inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold shadow-lg transition-all hover:-translate-y-0.5" @click="goTo('/system/feature-list')">
-              探索功能中心
+          <div class="mt-8 flex flex-wrap gap-3">
+            <button
+              class="hero-primary-btn"
+              @click="goTo('/umd-showcase')"
+            >
+              <i class="fas fa-play" />
+              运行 UMD 示例
               <i class="fas fa-arrow-right text-xs" />
             </button>
-            <button class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white/70 px-5 py-2.5 text-sm font-semibold text-slate-700 transition-all hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 dark:border-slate-600 dark:bg-slate-800/70 dark:text-slate-200 dark:hover:border-blue-700 dark:hover:bg-blue-950/40 dark:hover:text-blue-300" @click="goTo('/umd-management')">
-              <i class="fas fa-cubes" />
-              管理应用模块
+            <button
+              class="hero-secondary-btn"
+              @click="goTo('/umd-management')"
+            >
+              <i class="fas fa-flask" />
+              打开 Runtime Lab
             </button>
           </div>
 
-          <div class="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-500 dark:text-slate-400">
-            <span v-for="item in techStack" :key="item" class="inline-flex items-center gap-1.5">
-              <i class="fas fa-check text-emerald-500" />{{ item }}
+          <div class="mt-9 flex flex-wrap gap-x-6 gap-y-3 text-xs text-slate-400">
+            <span class="inline-flex items-center gap-2">
+              <i class="fas fa-circle-check text-emerald-400" /> Runtime loading
+            </span>
+            <span class="inline-flex items-center gap-2">
+              <i class="fas fa-circle-check text-emerald-400" /> Manifest discovery
+            </span>
+            <span class="inline-flex items-center gap-2">
+              <i class="fas fa-circle-check text-emerald-400" /> Lifecycle control
             </span>
           </div>
         </div>
 
-        <div class="architecture-wrap mx-auto w-full max-w-[480px] lg:mx-0 lg:ml-auto">
-          <div class="architecture-card relative rounded-2xl border border-white/80 bg-white/85 p-4 shadow-2xl backdrop-blur dark:border-slate-600/80 dark:bg-slate-800/85 sm:p-5">
-            <div class="mb-4 flex items-center justify-between">
+        <div class="runtime-panel mx-auto w-full max-w-[520px] lg:ml-auto">
+          <div class="runtime-panel-header">
+            <div class="flex items-center gap-2">
+              <span class="window-dot bg-rose-400" />
+              <span class="window-dot bg-amber-400" />
+              <span class="window-dot bg-emerald-400" />
+            </div>
+            <div class="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+              live runtime
+            </div>
+          </div>
+
+          <div class="p-5 sm:p-6">
+            <div class="flex items-center justify-between gap-4 border-b border-slate-200 pb-5 dark:border-slate-800">
               <div>
-                <p class="text-xs font-medium text-slate-400">WORKSPACE</p>
-                <p class="mt-0.5 text-sm font-semibold text-slate-800 dark:text-slate-100">统一应用工作台</p>
+                <p class="font-mono text-[11px] text-primary dark:text-cyan-400">$ kivii runtime inspect</p>
+                <p class="mt-2 text-sm font-semibold text-slate-800 dark:text-slate-200">Module registry snapshot</p>
               </div>
-              <span class="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">运行中</span>
+              <span class="rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-300">
+                READY
+              </span>
             </div>
 
-            <div class="grid grid-cols-3 gap-2.5">
-              <div class="module-node module-node-blue">
-                <i class="fab fa-vuejs" />
-                <span>Vue</span>
+            <div class="runtime-log mt-5 space-y-3 font-mono text-[11px]">
+              <div class="log-row">
+                <span class="text-slate-400 dark:text-slate-600">01</span>
+                <span class="text-blue-600 dark:text-blue-300">runtime</span>
+                <span class="text-slate-600 dark:text-slate-300">Vue 3 shared context detected</span>
+                <span class="ml-auto text-emerald-600 dark:text-emerald-400">OK</span>
               </div>
-              <div class="module-node module-node-violet">
-                <i class="fas fa-cube" />
-                <span>UMD</span>
+              <div class="log-row">
+                <span class="text-slate-400 dark:text-slate-600">02</span>
+                <span class="text-violet-600 dark:text-violet-300">libraries</span>
+                <span class="text-slate-600 dark:text-slate-300">{{ remoteLibraries.length }} remote source(s)</span>
+                <span class="ml-auto text-sky-600 dark:text-sky-400">LIVE</span>
               </div>
-              <div class="module-node module-node-amber">
-                <i class="fas fa-window-maximize" />
-                <span>WebView</span>
+              <div class="log-row">
+                <span class="text-slate-400 dark:text-slate-600">03</span>
+                <span class="text-amber-600 dark:text-amber-300">registry</span>
+                <span class="text-slate-600 dark:text-slate-300">{{ registeredComponentCount }} component(s)</span>
+                <span class="ml-auto text-emerald-600 dark:text-emerald-400">OK</span>
               </div>
-            </div>
-
-            <div class="flow-line my-3 flex items-center justify-center">
-              <span class="h-4 w-px bg-slate-200 dark:bg-slate-600" />
-              <i class="fas fa-chevron-down mx-2 text-[9px] text-slate-300 dark:text-slate-500" />
-              <span class="h-4 w-px bg-slate-200 dark:bg-slate-600" />
-            </div>
-
-            <div class="rounded-xl border border-blue-100 bg-blue-50/80 p-4 dark:border-blue-900/70 dark:bg-blue-950/35">
-              <div class="flex items-center gap-3">
-                <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-white shadow-md">
-                  <i class="fas fa-bolt" />
-                </div>
-                <div class="min-w-0 flex-1">
-                  <div class="flex items-center justify-between gap-3">
-                    <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">GavinYin Runtime</p>
-                    <span class="text-[10px] font-medium text-blue-600 dark:text-blue-400">CONNECTED</span>
-                  </div>
-                  <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-blue-100 dark:bg-blue-900">
-                    <div class="runtime-progress h-full w-[82%] rounded-full bg-primary" />
-                  </div>
-                </div>
+              <div class="log-row">
+                <span class="text-slate-400 dark:text-slate-600">04</span>
+                <span class="text-cyan-600 dark:text-cyan-300">adapters</span>
+                <span class="text-slate-600 dark:text-slate-300">umd · vue · webview</span>
+                <span class="ml-auto text-emerald-600 dark:text-emerald-400">OK</span>
               </div>
             </div>
 
-            <div class="mt-3 grid grid-cols-3 gap-2 text-center">
-              <div class="metric-chip"><strong>动态</strong><span>路由</span></div>
-              <div class="metric-chip"><strong>统一</strong><span>权限</span></div>
-              <div class="metric-chip"><strong>多端</strong><span>适配</span></div>
+            <div class="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/80">
+              <div class="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                <span>Registration pipeline</span>
+                <span>{{ successfulLibraries.length }}/{{ remoteLibraries.length || 0 }}</span>
+              </div>
+              <div class="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+                <div
+                  class="runtime-progress h-full rounded-full"
+                  :style="{
+                    width: remoteLibraries.length
+                      ? `${Math.max(8, (successfulLibraries.length / remoteLibraries.length) * 100)}%`
+                      : '8%',
+                  }"
+                />
+              </div>
             </div>
+
+            <button
+              class="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-semibold text-slate-700 transition hover:border-primary/40 hover:bg-primary-bg hover:text-primary dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-200 dark:hover:border-blue-500/50 dark:hover:bg-blue-500/10 dark:hover:text-blue-200"
+              @click="goTo('/umd-management')"
+            >
+              Inspect a UMD package
+              <i class="fas fa-arrow-up-right-from-square text-[10px]" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <article
+        v-for="metric in runtimeMetrics"
+        :key="metric.label"
+        class="metric-card rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800 sm:p-5"
+      >
+        <strong class="text-2xl font-black tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+          {{ metric.value }}
+        </strong>
+        <p class="mt-1 text-sm font-bold text-slate-700 dark:text-slate-200">{{ metric.label }}</p>
+        <p class="mt-1 text-[11px] leading-4 text-slate-400">{{ metric.detail }}</p>
+      </article>
+    </section>
+
+    <section class="rounded-[22px] border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800 sm:p-7">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Runtime pipeline</p>
+          <h2>一次远程模块如何进入工作台</h2>
+        </div>
+        <p>从 URL 到可交互页面，加载链路中的每一步都由宿主统一管理。</p>
+      </div>
+
+      <div class="mt-7 grid gap-5 lg:grid-cols-[1fr_.82fr]">
+        <div class="grid gap-3 sm:grid-cols-2">
+          <button
+            v-for="(step, index) in runtimeFlow"
+            :key="step.index"
+            class="flow-step text-left"
+            :class="{ 'flow-step-active': activeFlowStep === index }"
+            @click="activeFlowStep = index"
+          >
+            <span class="flow-step-index">{{ step.index }}</span>
+            <span class="flow-step-icon"><i :class="step.icon" /></span>
+            <span>
+              <strong>{{ step.title }}</strong>
+              <small>{{ step.subtitle }}</small>
+            </span>
+            <i class="fas fa-chevron-right ml-auto text-[10px] text-slate-300" />
+          </button>
+        </div>
+
+        <div class="flow-detail">
+          <div class="flex items-center justify-between">
+            <span class="rounded-lg bg-blue-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-300">
+              Step {{ currentFlow.index }}
+            </span>
+            <i :class="[currentFlow.icon, 'text-slate-300 dark:text-slate-600']" />
+          </div>
+          <h3>{{ currentFlow.title }}</h3>
+          <p>{{ currentFlow.detail }}</p>
+          <div class="flow-code">
+            <span class="text-violet-400">runtime</span>
+            <span class="text-slate-500">.</span>
+            <span class="text-cyan-400">{{ currentFlow.code }}</span>
           </div>
         </div>
       </div>
     </section>
 
     <section>
-      <div class="mb-4 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+      <div class="section-heading mb-5">
         <div>
-          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Core capabilities</p>
-          <h2 class="mt-1.5 text-2xl font-bold text-slate-900 dark:text-white">让复杂系统，拥有清晰的运行方式</h2>
+          <p class="eyebrow">Adapter matrix</p>
+          <h2>同一个容器，适配不同技术形态</h2>
         </div>
-        <p class="max-w-md text-sm leading-6 text-slate-500 dark:text-slate-400">围绕“集成、组织、治理”构建核心能力，降低跨系统协作成本。</p>
+        <p>不是用一种技术重写所有系统，而是给不同模块提供一致的运行边界。</p>
       </div>
 
       <div class="grid gap-4 lg:grid-cols-3">
-        <article v-for="(item, index) in coreCapabilities" :key="item.title" class="capability-card group relative overflow-hidden rounded-xl border border-slate-200 bg-white p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg dark:border-slate-700 dark:bg-slate-800">
-          <span class="absolute right-4 top-3 text-5xl font-bold text-slate-100 transition-colors group-hover:text-blue-50 dark:text-slate-700/50 dark:group-hover:text-blue-950/50">0{{ index + 1 }}</span>
-          <div :class="['capability-icon', `capability-icon-${item.accent}`]">
-            <i :class="item.icon" />
+        <article
+          v-for="adapter in adapters"
+          :key="adapter.name"
+          class="adapter-card rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800"
+        >
+          <div class="flex items-start justify-between gap-4">
+            <div :class="['adapter-icon', `adapter-icon-${adapter.tone}`]">
+              <i :class="adapter.icon" />
+            </div>
+            <span class="adapter-status">
+              <i class="fas fa-circle-check" /> {{ adapter.label }}
+            </span>
           </div>
-          <h3 class="relative mt-5 text-base font-bold text-slate-900 dark:text-white">{{ item.title }}</h3>
-          <p class="relative mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">{{ item.description }}</p>
+          <h3 class="mt-5 text-lg font-black text-slate-900 dark:text-white">{{ adapter.name }}</h3>
+          <p class="mt-2 min-h-[44px] text-sm leading-6 text-slate-500 dark:text-slate-400">
+            {{ adapter.description }}
+          </p>
+          <dl class="mt-5 space-y-2.5 border-t border-slate-100 pt-4 text-xs dark:border-slate-700">
+            <div><dt>加载方式</dt><dd>{{ adapter.load }}</dd></div>
+            <div><dt>生命周期</dt><dd>{{ adapter.lifecycle }}</dd></div>
+            <div><dt>通信方式</dt><dd>{{ adapter.communication }}</dd></div>
+          </dl>
         </article>
       </div>
     </section>
 
-    <section class="grid gap-4 lg:grid-cols-[1.25fr_.75fr]">
-      <div class="rounded-xl border border-slate-200 bg-white p-5 sm:p-6 dark:border-slate-700 dark:bg-slate-800">
-        <div class="mb-5 flex items-center justify-between">
-          <div>
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Why GavinYin</p>
-            <h2 class="mt-1.5 text-xl font-bold text-slate-900 dark:text-white">为持续变化的业务而设计</h2>
+    <section class="architecture-section overflow-hidden rounded-[22px] border border-blue-200/60 bg-blue-50/60 p-5 dark:border-blue-900/50 dark:bg-blue-950/20 sm:p-7">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Architecture</p>
+          <h2>模块加载之外，还有完整的平台支撑</h2>
+        </div>
+        <button class="text-link-btn" @click="goTo('/system/menu-config')">
+          查看菜单编排 <i class="fas fa-arrow-right" />
+        </button>
+      </div>
+
+      <div class="architecture-flow mt-7">
+        <div class="architecture-layer">
+          <span class="layer-label">CONFIG</span>
+          <div><i class="fas fa-database" /> 功能配置</div>
+          <div><i class="fas fa-sitemap" /> 菜单编排</div>
+          <div><i class="fas fa-user-shield" /> 权限控制</div>
+        </div>
+        <div class="architecture-connector">
+          <span />
+          <i class="fas fa-chevron-down" />
+          <span />
+        </div>
+        <div class="architecture-layer architecture-layer-runtime">
+          <span class="layer-label">RUNTIME</span>
+          <div><i class="fas fa-download" /> Loader</div>
+          <div><i class="fas fa-code-branch" /> Router</div>
+          <div><i class="fas fa-box-archive" /> Cache</div>
+          <div><i class="fas fa-tower-broadcast" /> Bridge</div>
+        </div>
+        <div class="architecture-connector">
+          <span />
+          <i class="fas fa-chevron-down" />
+          <span />
+        </div>
+        <div class="architecture-layer">
+          <span class="layer-label">ADAPTERS</span>
+          <div><i class="fab fa-vuejs" /> Vue UMD</div>
+          <div><i class="fas fa-file-code" /> Vue SFC</div>
+          <div><i class="fas fa-window-maximize" /> WebView</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="dashboard-composer overflow-hidden rounded-[22px] border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800 sm:p-7">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Dashboard composition</p>
+          <h2>切换 InternalCode，组合不同 Dashboard</h2>
+        </div>
+        <p>框架保持不变，菜单编码决定导航树、功能模块与权限范围，让一套运行时承载多个业务工作台。</p>
+      </div>
+
+      <div class="dashboard-composer-grid mt-7">
+        <div class="dashboard-profile-list">
+          <div class="composer-label">
+            <span>MENU PROFILES</span>
+            <span>选择配置示意</span>
           </div>
-          <div class="hidden h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-primary sm:flex dark:bg-blue-950/40">
-            <i class="fas fa-sparkles" />
+          <button
+            v-for="(profile, index) in dashboardProfiles"
+            :key="profile.code"
+            class="dashboard-profile"
+            :class="{ 'dashboard-profile-active': activeDashboardIndex === index }"
+            @click="activeDashboardIndex = index"
+          >
+            <span :class="['dashboard-profile-icon', `dashboard-profile-icon-${profile.tone}`]">
+              <i :class="profile.icon" />
+            </span>
+            <span class="min-w-0 flex-1">
+              <strong>{{ profile.name }}</strong>
+              <small>{{ profile.description }}</small>
+            </span>
+            <i class="fas fa-chevron-right dashboard-profile-arrow" />
+          </button>
+
+          <div class="internal-code-config">
+            <span>uiGlobalConfig.InternalCode</span>
+            <code>{{ currentDashboard.code }}</code>
           </div>
         </div>
-        <div class="grid gap-x-6 gap-y-5 sm:grid-cols-2">
-          <div v-for="item in advantages" :key="item.title" class="flex gap-3">
-            <div class="advantage-icon"><i :class="item.icon" /></div>
-            <div>
-              <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ item.title }}</h3>
-              <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{{ item.text }}</p>
+
+        <div class="dashboard-switch-arrow">
+          <span><i class="fas fa-arrow-right-arrow-left" /></span>
+          <small>切换编码</small>
+        </div>
+
+        <div class="dashboard-preview">
+          <div class="dashboard-preview-bar">
+            <div class="flex items-center gap-1.5">
+              <span class="window-dot bg-rose-400" />
+              <span class="window-dot bg-amber-400" />
+              <span class="window-dot bg-emerald-400" />
             </div>
+            <span>LIVE MENU COMPOSITION</span>
+            <span class="dashboard-preview-status">READY</span>
+          </div>
+          <div class="dashboard-preview-body">
+            <aside>
+              <div class="dashboard-preview-brand">
+                <span :class="`dashboard-profile-icon-${currentDashboard.tone}`">
+                  <i :class="currentDashboard.icon" />
+                </span>
+                <strong>{{ currentDashboard.name }}</strong>
+              </div>
+              <div class="dashboard-preview-menu">
+                <span
+                  v-for="(menu, index) in currentDashboard.menus"
+                  :key="menu"
+                  :class="{ active: index === 0 }"
+                >
+                  <i :class="index === 0 ? 'fas fa-grid-2' : 'far fa-circle'" />
+                  {{ menu }}
+                </span>
+              </div>
+            </aside>
+            <main>
+              <div class="dashboard-preview-heading">
+                <div>
+                  <small>DASHBOARD / OVERVIEW</small>
+                  <strong>{{ currentDashboard.name }}</strong>
+                </div>
+                <code>{{ currentDashboard.code }}</code>
+              </div>
+              <div class="dashboard-widget-grid">
+                <article
+                  v-for="(widget, index) in currentDashboard.widgets"
+                  :key="widget"
+                  :class="{ 'dashboard-widget-wide': index === 2 }"
+                >
+                  <span>{{ widget }}</span>
+                  <div class="dashboard-widget-chart">
+                    <i v-for="bar in 7" :key="bar" :style="{ height: `${22 + ((bar * 13 + index * 9) % 55)}%` }" />
+                  </div>
+                </article>
+              </div>
+            </main>
           </div>
         </div>
       </div>
 
-      <div class="cta-card relative overflow-hidden rounded-xl p-6 text-white">
-        <div class="cta-orb" />
-        <div class="relative flex h-full min-h-[210px] flex-col">
-          <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-white/15 ring-1 ring-white/20">
-            <i class="fas fa-diagram-project" />
-          </div>
-          <h2 class="mt-5 text-xl font-bold">从功能到入口，灵活组织</h2>
-          <p class="mt-2 text-sm leading-6 text-blue-100">通过可视化菜单配置，将能力快速编排成贴合不同角色的工作空间。</p>
-          <button class="mt-auto inline-flex w-fit items-center gap-2 pt-5 text-sm font-semibold text-white transition-all hover:gap-3" @click="goTo('/system/menu-config')">
-            配置工作空间 <i class="fas fa-arrow-right text-xs" />
-          </button>
+      <div class="dashboard-composer-footer">
+        <div>
+          <span><i class="fas fa-check" /> 同一套框架</span>
+          <span><i class="fas fa-check" /> 独立菜单树</span>
+          <span><i class="fas fa-check" /> 权限同步过滤</span>
+          <span><i class="fas fa-check" /> 无需重新构建</span>
         </div>
+        <button class="text-link-btn" @click="goTo('/system/menu-config')">
+          配置 Dashboard <i class="fas fa-arrow-right" />
+        </button>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-heading mb-5">
+        <div>
+          <p class="eyebrow">Platform proof</p>
+          <h2>把技术能力放进真实使用场景</h2>
+        </div>
+        <p>这些配套能力证明 Runtime 不只是一段加载脚本，而是一套可使用的应用容器。</p>
+      </div>
+
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <article
+          v-for="proof in platformProofs"
+          :key="proof.title"
+          class="proof-card rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800"
+        >
+          <i :class="proof.icon" />
+          <h3>{{ proof.title }}</h3>
+          <p>{{ proof.text }}</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="final-cta relative overflow-hidden rounded-[22px] px-6 py-8 text-white sm:px-9 sm:py-10">
+      <div class="final-cta-grid absolute inset-0" />
+      <div class="relative flex flex-col justify-between gap-7 lg:flex-row lg:items-center">
+        <div>
+          <p class="text-xs font-bold uppercase tracking-[0.2em] text-blue-200">Try it yourself</p>
+          <h2 class="mt-2 text-2xl font-black sm:text-3xl">不要只看介绍，直接加载一个 UMD 包</h2>
+          <p class="mt-3 max-w-2xl text-sm leading-6 text-blue-100">
+            输入远程 URL 或选择本地 UMD 文件，查看导出对象、Manifest 与组件清单，再将组件注册到功能中心。
+          </p>
+        </div>
+        <button class="cta-light-btn" @click="goTo('/umd-management')">
+          进入 Runtime Lab
+          <i class="fas fa-arrow-right" />
+        </button>
       </div>
     </section>
   </div>
 </template>
 
 <style scoped>
-  .hero {
-    box-shadow: 0 18px 55px -38px rgba(15, 23, 42, 0.45);
+  .showcase-page {
+    color: #0f172a;
   }
 
-  .hero-grid {
-    opacity: 0.45;
+  .hero-shell {
+    border: 1px solid color-mix(in srgb, var(--color-primary) 58%, #0f172a);
+    background:
+      linear-gradient(
+        120deg,
+        color-mix(in srgb, var(--color-primary) 76%, #0f172a),
+        var(--color-primary) 55%,
+        color-mix(in srgb, var(--color-primary) 70%, #7c3aed)
+      );
+    box-shadow: 0 28px 70px -38px rgba(15, 23, 42, 0.82);
+  }
+
+  .hero-grid,
+  .final-cta-grid {
     background-image:
-      linear-gradient(rgba(148, 163, 184, 0.1) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(148, 163, 184, 0.1) 1px, transparent 1px);
+      linear-gradient(rgba(148, 163, 184, 0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(148, 163, 184, 0.07) 1px, transparent 1px);
     background-size: 34px 34px;
-    mask-image: linear-gradient(to right, transparent, black 40%, black);
+    mask-image: linear-gradient(to right, transparent 8%, black 50%, transparent);
   }
 
   .hero-glow {
     position: absolute;
+    width: 520px;
+    height: 520px;
     border-radius: 9999px;
-    filter: blur(2px);
+    filter: blur(6px);
     pointer-events: none;
   }
 
-  .hero-glow-one {
-    right: -90px;
-    top: -150px;
-    width: 440px;
-    height: 440px;
-    background: radial-gradient(circle, rgba(59, 130, 246, 0.19), transparent 68%);
+  .hero-glow-blue {
+    right: -180px;
+    top: -210px;
+    background: radial-gradient(circle, rgba(14, 165, 233, 0.22), transparent 68%);
   }
 
-  .hero-glow-two {
-    bottom: -180px;
-    left: 30%;
-    width: 360px;
-    height: 360px;
-    background: radial-gradient(circle, rgba(139, 92, 246, 0.12), transparent 68%);
+  .hero-glow-violet {
+    bottom: -300px;
+    left: 18%;
+    background: radial-gradient(circle, rgba(124, 58, 237, 0.18), transparent 68%);
+  }
+
+  .runtime-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 9999px;
+    background: #34d399;
+    box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.12), 0 0 18px rgba(52, 211, 153, 0.8);
   }
 
   .hero-title-accent {
-    color: var(--color-primary);
-    background: linear-gradient(115deg, var(--color-primary), #7c3aed);
+    display: block;
+    background: linear-gradient(105deg, #38bdf8, #818cf8 54%, #c084fc);
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
   }
 
-  .architecture-card {
-    box-shadow: 0 25px 60px -24px rgba(30, 64, 175, 0.38);
-    transform: perspective(1200px) rotateY(-2deg) rotateX(1deg);
+  .hero-primary-btn,
+  .hero-secondary-btn,
+  .cta-light-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    border-radius: 12px;
+    padding: 12px 17px;
+    font-size: 0.78rem;
+    font-weight: 800;
+    transition: 160ms ease;
   }
 
-  .module-node {
+  .hero-primary-btn {
+    color: white;
+    background: linear-gradient(110deg, #2563eb, #4f46e5);
+    box-shadow: 0 14px 32px -16px rgba(59, 130, 246, 0.9);
+  }
+
+  .hero-primary-btn:hover,
+  .cta-light-btn:hover {
+    transform: translateY(-2px);
+  }
+
+  .hero-secondary-btn {
+    color: #cbd5e1;
+    border: 1px solid #334155;
+    background: rgba(30, 41, 59, 0.68);
+  }
+
+  .hero-secondary-btn:hover {
+    color: white;
+    border-color: #475569;
+    background: rgba(51, 65, 85, 0.78);
+  }
+
+  .runtime-panel {
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 24%, #e2e8f0);
+    border-radius: 18px;
+    color: #0f172a;
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 35px 80px -35px color-mix(in srgb, var(--color-primary) 70%, transparent);
+    backdrop-filter: blur(20px);
+  }
+
+  .runtime-panel-header {
     display: flex;
-    min-height: 76px;
+    height: 42px;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #e2e8f0;
+    background: rgba(248, 250, 252, 0.94);
+    padding: 0 16px;
+  }
+
+  .window-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+  }
+
+  .log-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .runtime-progress {
+    background: linear-gradient(90deg, #2563eb, #22d3ee);
+    box-shadow: 0 0 16px rgba(34, 211, 238, 0.55);
+    transition: width 400ms ease;
+  }
+
+  .metric-card {
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 12px 34px -30px rgba(15, 23, 42, 0.65);
+  }
+
+  .metric-card::after {
+    position: absolute;
+    right: -20px;
+    top: -24px;
+    width: 72px;
+    height: 72px;
+    border-radius: 9999px;
+    background: var(--color-primary-bg);
+    content: '';
+  }
+
+  .section-heading {
+    display: flex;
     flex-direction: column;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .section-heading h2 {
+    margin-top: 6px;
+    font-size: 1.45rem;
+    font-weight: 900;
+    letter-spacing: -0.025em;
+    color: #0f172a;
+  }
+
+  .section-heading > p {
+    max-width: 510px;
+    font-size: 0.82rem;
+    line-height: 1.55rem;
+    color: #64748b;
+  }
+
+  .eyebrow {
+    font-size: 0.68rem;
+    font-weight: 900;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-primary);
+  }
+
+  .flow-step {
+    display: flex;
+    min-height: 78px;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 13px;
+    background: #f8fafc;
+    transition: 150ms ease;
+  }
+
+  .flow-step:hover,
+  .flow-step-active {
+    border-color: color-mix(in srgb, var(--color-primary) 38%, transparent);
+    background: var(--color-primary-bg);
+    transform: translateY(-1px);
+  }
+
+  .flow-step-index {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.62rem;
+    color: #94a3b8;
+  }
+
+  .flow-step-icon {
+    display: flex;
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    color: var(--color-primary);
+    background: white;
+    box-shadow: 0 5px 15px -10px rgba(15, 23, 42, 0.5);
+  }
+
+  .flow-step strong,
+  .flow-step small {
+    display: block;
+  }
+
+  .flow-step strong {
+    font-size: 0.8rem;
+    color: #1e293b;
+  }
+
+  .flow-step small {
+    margin-top: 3px;
+    font-size: 0.67rem;
+    color: #94a3b8;
+  }
+
+  .flow-detail {
+    min-height: 240px;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 24%, #e2e8f0);
+    border-radius: 18px;
+    padding: 24px;
+    color: #0f172a;
+    background:
+      radial-gradient(
+        circle at 100% 0,
+        color-mix(in srgb, var(--color-primary) 16%, transparent),
+        transparent 42%
+      ),
+      linear-gradient(
+        135deg,
+        #ffffff,
+        color-mix(in srgb, var(--color-primary) 6%, #ffffff)
+      );
+    box-shadow: 0 18px 45px -36px color-mix(in srgb, var(--color-primary) 55%, transparent);
+  }
+
+  .flow-detail h3 {
+    margin-top: 28px;
+    font-size: 1.5rem;
+    font-weight: 900;
+  }
+
+  .flow-detail > p {
+    margin-top: 10px;
+    font-size: 0.82rem;
+    line-height: 1.55rem;
+    color: #64748b;
+  }
+
+  .flow-code {
+    margin-top: 24px;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 18%, #dbe3ef);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.69rem;
+    background: rgba(255, 255, 255, 0.82);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .flow-code span:first-child {
+    color: #7c3aed;
+  }
+
+  .flow-code span:last-child {
+    color: color-mix(in srgb, var(--color-primary) 82%, #0369a1);
+  }
+
+  .adapter-card {
+    transition: 180ms ease;
+  }
+
+  .adapter-card:hover,
+  .proof-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 18px 40px -30px rgba(15, 23, 42, 0.55);
+  }
+
+  .adapter-icon {
+    display: flex;
+    width: 46px;
+    height: 46px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 13px;
+    font-size: 1.1rem;
+  }
+
+  .adapter-icon-emerald { color: #059669; background: #ecfdf5; }
+  .adapter-icon-blue { color: #2563eb; background: #eff6ff; }
+  .adapter-icon-amber { color: #d97706; background: #fffbeb; }
+
+  .adapter-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border-radius: 9999px;
+    padding: 5px 8px;
+    font-size: 0.6rem;
+    font-weight: 800;
+    color: #059669;
+    background: #ecfdf5;
+  }
+
+  .adapter-card dl > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+  }
+
+  .adapter-card dt { color: #94a3b8; }
+  .adapter-card dd {
+    text-align: right;
+    font-weight: 700;
+    color: #475569;
+  }
+
+  .text-link-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: fit-content;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: var(--color-primary);
+  }
+
+  .architecture-flow {
+    display: grid;
+    gap: 10px;
+  }
+
+  .architecture-layer {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    border-radius: 15px;
+    padding: 26px 10px 10px;
+    background: rgba(255, 255, 255, 0.74);
+  }
+
+  .architecture-layer-runtime {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    border-color: rgba(59, 130, 246, 0.28);
+    background: rgba(239, 246, 255, 0.88);
+  }
+
+  .architecture-layer > div {
+    display: flex;
+    min-height: 52px;
     align-items: center;
     justify-content: center;
     gap: 7px;
-    border-radius: 0.75rem;
-    font-size: 0.72rem;
-    font-weight: 700;
-    border: 1px solid transparent;
+    border-radius: 10px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: #475569;
+    background: white;
   }
 
-  .module-node i { font-size: 1.05rem; }
-  .module-node-blue { color: #2563eb; background: #eff6ff; border-color: #dbeafe; }
-  .module-node-violet { color: #7c3aed; background: #f5f3ff; border-color: #ede9fe; }
-  .module-node-amber { color: #d97706; background: #fffbeb; border-color: #fef3c7; }
-
-  .metric-chip {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-    border-radius: 0.6rem;
-    background: rgba(248, 250, 252, 0.85);
-    padding: 8px 4px;
+  .architecture-layer-runtime > div {
+    color: #1d4ed8;
   }
 
-  .metric-chip strong { font-size: 0.7rem; color: #334155; }
-  .metric-chip span { font-size: 0.6rem; color: #94a3b8; }
+  .layer-label {
+    position: absolute;
+    left: 12px;
+    top: 7px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.56rem;
+    font-weight: 900;
+    letter-spacing: 0.14em;
+    color: #94a3b8;
+  }
 
-  .capability-icon,
-  .advantage-icon {
+  .architecture-connector {
     display: flex;
+    height: 18px;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0;
+    color: #94a3b8;
   }
 
-  .capability-icon { width: 42px; height: 42px; border-radius: 0.7rem; }
-  .capability-icon-violet { color: #7c3aed; background: #f5f3ff; }
-  .capability-icon-blue { color: #2563eb; background: #eff6ff; }
-  .capability-icon-emerald { color: #059669; background: #ecfdf5; }
+  .architecture-connector span {
+    width: 34px;
+    height: 1px;
+    background: #cbd5e1;
+  }
 
-  .advantage-icon {
+  .architecture-connector i {
+    margin: 0 8px;
+    font-size: 0.55rem;
+  }
+
+  .dashboard-composer {
+    box-shadow: 0 18px 50px -42px rgba(15, 23, 42, 0.55);
+  }
+
+  .dashboard-composer-grid {
+    display: grid;
+    grid-template-columns: minmax(245px, 0.72fr) 54px minmax(0, 1.45fr);
+    align-items: center;
+    gap: 16px;
+  }
+
+  .dashboard-profile-list {
+    display: grid;
+    gap: 9px;
+  }
+
+  .composer-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 4px 3px;
+    font-size: 0.6rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    color: #94a3b8;
+  }
+
+  .composer-label span:last-child {
+    font-weight: 600;
+    letter-spacing: 0;
+  }
+
+  .dashboard-profile {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    width: 100%;
+    border: 1px solid #e2e8f0;
+    border-radius: 13px;
+    padding: 11px;
+    text-align: left;
+    background: #f8fafc;
+    transition: 160ms ease;
+  }
+
+  .dashboard-profile:hover,
+  .dashboard-profile-active {
+    border-color: color-mix(in srgb, var(--color-primary) 40%, #e2e8f0);
+    background: color-mix(in srgb, var(--color-primary) 7%, white);
+    transform: translateX(2px);
+  }
+
+  .dashboard-profile-icon,
+  .dashboard-preview-brand > span {
+    display: flex;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+  }
+
+  .dashboard-profile-icon-blue { color: #2563eb; background: #eff6ff; }
+  .dashboard-profile-icon-emerald { color: #059669; background: #ecfdf5; }
+  .dashboard-profile-icon-violet { color: #7c3aed; background: #f5f3ff; }
+
+  .dashboard-profile strong,
+  .dashboard-profile small {
+    display: block;
+  }
+
+  .dashboard-profile strong {
+    overflow: hidden;
+    font-size: 0.78rem;
+    color: #1e293b;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dashboard-profile small {
+    margin-top: 3px;
+    overflow: hidden;
+    font-size: 0.66rem;
+    color: #94a3b8;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dashboard-profile-arrow {
+    font-size: 0.58rem;
+    color: #cbd5e1;
+  }
+
+  .dashboard-profile-active .dashboard-profile-arrow {
+    color: var(--color-primary);
+  }
+
+  .internal-code-config {
+    margin-top: 3px;
+    border: 1px dashed color-mix(in srgb, var(--color-primary) 25%, #cbd5e1);
+    border-radius: 12px;
+    padding: 11px 13px;
+    background: color-mix(in srgb, var(--color-primary) 4%, white);
+  }
+
+  .internal-code-config span,
+  .internal-code-config code {
+    display: block;
+  }
+
+  .internal-code-config span {
+    font-size: 0.6rem;
+    font-weight: 800;
+    color: #94a3b8;
+  }
+
+  .internal-code-config code {
+    margin-top: 5px;
+    overflow: hidden;
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: var(--color-primary);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dashboard-switch-arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    color: var(--color-primary);
+  }
+
+  .dashboard-switch-arrow span {
+    display: flex;
     width: 34px;
     height: 34px;
-    border-radius: 0.55rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    background: var(--color-primary-bg);
+  }
+
+  .dashboard-switch-arrow small {
+    font-size: 0.56rem;
+    font-weight: 800;
+    color: #94a3b8;
+    white-space: nowrap;
+  }
+
+  .dashboard-preview {
+    overflow: hidden;
+    border: 1px solid #dbe3ef;
+    border-radius: 16px;
+    background: #f8fafc;
+    box-shadow: 0 24px 55px -38px rgba(15, 23, 42, 0.65);
+  }
+
+  .dashboard-preview-bar {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    height: 40px;
+    align-items: center;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 0 13px;
+    font-size: 0.55rem;
+    font-weight: 900;
+    letter-spacing: 0.14em;
+    color: #94a3b8;
+    background: white;
+  }
+
+  .dashboard-preview-status {
+    justify-self: end;
+    border-radius: 9999px;
+    padding: 4px 7px;
+    letter-spacing: 0.08em;
+    color: #059669;
+    background: #ecfdf5;
+  }
+
+  .dashboard-preview-body {
+    display: grid;
+    grid-template-columns: 170px minmax(0, 1fr);
+    min-height: 305px;
+  }
+
+  .dashboard-preview-body aside {
+    padding: 16px 12px;
+    color: #cbd5e1;
+    background:
+      radial-gradient(
+        circle at 0 0,
+        color-mix(in srgb, var(--color-primary) 24%, transparent),
+        transparent 38%
+      ),
+      #0f172a;
+  }
+
+  .dashboard-preview-brand {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 2px 3px 15px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+  }
+
+  .dashboard-preview-brand > span {
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+  }
+
+  .dashboard-preview-brand strong {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 0.68rem;
+    color: white;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dashboard-preview-menu {
+    display: grid;
+    gap: 6px;
+    margin-top: 13px;
+  }
+
+  .dashboard-preview-menu span {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 8px;
+    padding: 9px 10px;
+    font-size: 0.64rem;
+    font-weight: 700;
+    color: #94a3b8;
+  }
+
+  .dashboard-preview-menu span.active {
+    color: white;
+    background: color-mix(in srgb, var(--color-primary) 60%, transparent);
+  }
+
+  .dashboard-preview-menu i {
+    width: 12px;
+    font-size: 0.55rem;
+    text-align: center;
+  }
+
+  .dashboard-preview-body main {
+    min-width: 0;
+    padding: 17px;
+  }
+
+  .dashboard-preview-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .dashboard-preview-heading small,
+  .dashboard-preview-heading strong {
+    display: block;
+  }
+
+  .dashboard-preview-heading small {
+    font-size: 0.52rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    color: #94a3b8;
+  }
+
+  .dashboard-preview-heading strong {
+    margin-top: 4px;
+    font-size: 0.86rem;
+    color: #1e293b;
+  }
+
+  .dashboard-preview-heading code {
+    max-width: 46%;
+    overflow: hidden;
+    border-radius: 7px;
+    padding: 5px 7px;
+    font-size: 0.58rem;
     color: var(--color-primary);
     background: var(--color-primary-bg);
-    font-size: 0.75rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
-  .cta-card {
-    background: linear-gradient(135deg, #1d4ed8, #4338ca);
-    box-shadow: 0 16px 35px -25px rgba(37, 99, 235, 0.9);
+  .dashboard-widget-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+    margin-top: 17px;
   }
 
-  .cta-orb {
-    position: absolute;
-    right: -60px;
-    top: -70px;
-    width: 210px;
-    height: 210px;
-    border-radius: 9999px;
-    border: 35px solid rgba(255, 255, 255, 0.07);
+  .dashboard-widget-grid article {
+    min-width: 0;
+    height: 91px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px;
+    background: white;
   }
 
-  .runtime-progress { animation: runtime-pulse 2.8s ease-in-out infinite; }
-
-  @keyframes runtime-pulse {
-    0%, 100% { opacity: 0.68; }
-    50% { opacity: 1; }
+  .dashboard-widget-grid article.dashboard-widget-wide {
+    grid-column: 1 / -1;
+    height: 102px;
   }
 
-  :global(.dark) .module-node-blue { color: #60a5fa; background: rgba(30, 58, 138, 0.3); border-color: rgba(30, 64, 175, 0.45); }
-  :global(.dark) .module-node-violet { color: #a78bfa; background: rgba(76, 29, 149, 0.25); border-color: rgba(91, 33, 182, 0.4); }
-  :global(.dark) .module-node-amber { color: #fbbf24; background: rgba(120, 53, 15, 0.22); border-color: rgba(146, 64, 14, 0.4); }
-  :global(.dark) .metric-chip { background: rgba(15, 23, 42, 0.48); }
-  :global(.dark) .metric-chip strong { color: #e2e8f0; }
-  :global(.dark) .capability-icon-violet { color: #a78bfa; background: rgba(76, 29, 149, 0.3); }
-  :global(.dark) .capability-icon-blue { color: #60a5fa; background: rgba(30, 58, 138, 0.3); }
-  :global(.dark) .capability-icon-emerald { color: #34d399; background: rgba(6, 78, 59, 0.3); }
+  .dashboard-widget-grid article > span {
+    display: block;
+    overflow: hidden;
+    font-size: 0.58rem;
+    font-weight: 800;
+    color: #64748b;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dashboard-widget-chart {
+    display: flex;
+    height: 50px;
+    align-items: flex-end;
+    gap: 5px;
+    margin-top: 9px;
+  }
+
+  .dashboard-widget-chart i {
+    flex: 1;
+    min-width: 3px;
+    border-radius: 3px 3px 1px 1px;
+    background: color-mix(in srgb, var(--color-primary) 58%, #bfdbfe);
+  }
+
+  .dashboard-composer-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 18px;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 16px;
+  }
+
+  .dashboard-composer-footer > div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 9px 18px;
+  }
+
+  .dashboard-composer-footer span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #64748b;
+  }
+
+  .dashboard-composer-footer span i {
+    color: #10b981;
+  }
+
+  .proof-card {
+    transition: 180ms ease;
+  }
+
+  .proof-card > i {
+    color: var(--color-primary);
+  }
+
+  .proof-card h3 {
+    margin-top: 15px;
+    font-size: 0.83rem;
+    font-weight: 900;
+    color: #1e293b;
+  }
+
+  .proof-card p {
+    margin-top: 7px;
+    font-size: 0.72rem;
+    line-height: 1.25rem;
+    color: #64748b;
+  }
+
+  .final-cta {
+    background: linear-gradient(115deg, #1d4ed8, #4338ca 58%, #6d28d9);
+    box-shadow: 0 22px 50px -34px rgba(67, 56, 202, 0.9);
+  }
+
+  .cta-light-btn {
+    flex-shrink: 0;
+    color: #1d4ed8;
+    background: white;
+    box-shadow: 0 14px 30px -18px rgba(15, 23, 42, 0.5);
+  }
+
+  .home-dark .section-heading h2,
+  .home-dark .flow-step strong,
+  .home-dark .adapter-card dd,
+  .home-dark .proof-card h3 {
+    color: #f8fafc;
+  }
+
+  .home-dark .section-heading > p,
+  .home-dark .proof-card p {
+    color: #94a3b8;
+  }
+
+  .home-dark .flow-step {
+    border-color: #334155;
+    background: rgba(15, 23, 42, 0.42);
+  }
+
+  .home-dark .flow-step:hover,
+  .home-dark .flow-step-active {
+    border-color: color-mix(in srgb, var(--color-primary) 50%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 18%, #0f172a);
+  }
+
+  .home-dark .flow-step-icon {
+    background: #1e293b;
+  }
+
+  .home-dark .flow-detail {
+    border-color: color-mix(in srgb, var(--color-primary) 28%, #334155);
+    color: white;
+    background:
+      radial-gradient(
+        circle at 100% 0,
+        color-mix(in srgb, var(--color-primary) 25%, transparent),
+        transparent 38%
+      ),
+      #0f172a;
+    box-shadow: none;
+  }
+
+  .home-dark .flow-detail > p {
+    color: #94a3b8;
+  }
+
+  .home-dark .flow-code {
+    border-color: #334155;
+    background: rgba(2, 6, 23, 0.6);
+  }
+
+  .home-dark .flow-code span:first-child {
+    color: #a78bfa;
+  }
+
+  .home-dark .flow-code span:last-child {
+    color: #22d3ee;
+  }
+
+  .home-dark .adapter-icon-emerald { color: #34d399; background: rgba(6, 78, 59, 0.35); }
+  .home-dark .adapter-icon-blue { color: #60a5fa; background: rgba(30, 58, 138, 0.35); }
+  .home-dark .adapter-icon-amber { color: #fbbf24; background: rgba(120, 53, 15, 0.3); }
+  .home-dark .adapter-status { color: #34d399; background: rgba(6, 78, 59, 0.32); }
+
+  .home-dark .architecture-layer {
+    border-color: rgba(71, 85, 105, 0.7);
+    background: rgba(15, 23, 42, 0.5);
+  }
+
+  .home-dark .architecture-layer-runtime {
+    border-color: color-mix(in srgb, var(--color-primary) 42%, #334155);
+    background: color-mix(in srgb, var(--color-primary) 14%, #0f172a);
+  }
+
+  .home-dark .architecture-layer > div {
+    color: #cbd5e1;
+    background: rgba(30, 41, 59, 0.9);
+  }
+
+  .home-dark .architecture-layer-runtime > div {
+    color: color-mix(in srgb, var(--color-primary) 55%, white);
+  }
+
+  .home-dark .dashboard-profile {
+    border-color: #334155;
+    background: rgba(15, 23, 42, 0.42);
+  }
+
+  .home-dark .dashboard-profile:hover,
+  .home-dark .dashboard-profile-active {
+    border-color: color-mix(in srgb, var(--color-primary) 50%, #334155);
+    background: color-mix(in srgb, var(--color-primary) 16%, #0f172a);
+  }
+
+  .home-dark .dashboard-profile strong,
+  .home-dark .dashboard-preview-heading strong {
+    color: #f8fafc;
+  }
+
+  .home-dark .internal-code-config {
+    border-color: color-mix(in srgb, var(--color-primary) 32%, #475569);
+    background: rgba(15, 23, 42, 0.55);
+  }
+
+  .home-dark .dashboard-preview {
+    border-color: #334155;
+    background: #111827;
+  }
+
+  .home-dark .dashboard-preview-bar {
+    border-bottom-color: #334155;
+    background: #1e293b;
+  }
+
+  .home-dark .dashboard-preview-status {
+    color: #34d399;
+    background: rgba(6, 78, 59, 0.42);
+  }
+
+  .home-dark .dashboard-preview-body aside {
+    background:
+      radial-gradient(
+        circle at 0 0,
+        color-mix(in srgb, var(--color-primary) 22%, transparent),
+        transparent 38%
+      ),
+      #020617;
+  }
+
+  .home-dark .dashboard-widget-grid article {
+    border-color: #334155;
+    background: #1e293b;
+  }
+
+  .home-dark .dashboard-widget-grid article > span,
+  .home-dark .dashboard-composer-footer span {
+    color: #94a3b8;
+  }
+
+  .home-dark .dashboard-composer-footer {
+    border-top-color: #334155;
+  }
+
+  .home-dark .hero-shell {
+    border-color: color-mix(in srgb, var(--color-primary) 46%, #334155);
+    background:
+      linear-gradient(
+        120deg,
+        color-mix(in srgb, var(--color-primary) 34%, #020617),
+        color-mix(in srgb, var(--color-primary) 24%, #0f172a) 55%,
+        color-mix(in srgb, var(--color-primary) 20%, #1e1b4b)
+      );
+  }
+
+  .home-dark .runtime-panel {
+    border-color: rgba(71, 85, 105, 0.7);
+    color: white;
+    background: rgba(15, 23, 42, 0.9);
+  }
+
+  .home-dark .runtime-panel-header {
+    border-bottom-color: #1e293b;
+    background: rgba(15, 23, 42, 0.92);
+  }
+
+  @media (max-width: 1023px) {
+    .dashboard-composer-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .dashboard-switch-arrow {
+      flex-direction: row;
+      justify-content: center;
+    }
+
+    .dashboard-switch-arrow span {
+      transform: rotate(90deg);
+    }
+  }
+
+  @media (min-width: 768px) {
+    .section-heading {
+      flex-direction: row;
+      align-items: flex-end;
+    }
+  }
 
   @media (max-width: 640px) {
-    .architecture-card { transform: none; }
-    .hero-grid { mask-image: none; }
+    .hero-shell {
+      border-radius: 18px;
+    }
+
+    .runtime-panel {
+      border-radius: 14px;
+    }
+
+    .runtime-log {
+      overflow-x: auto;
+    }
+
+    .log-row {
+      min-width: 390px;
+    }
+
+    .architecture-layer,
+    .architecture-layer-runtime {
+      grid-template-columns: 1fr;
+    }
+
+    .dashboard-preview-body {
+      grid-template-columns: 125px minmax(0, 1fr);
+    }
+
+    .dashboard-composer-footer {
+      align-items: flex-start;
+      flex-direction: column;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .runtime-progress { animation: none; }
+    .hero-primary-btn,
+    .hero-secondary-btn,
+    .cta-light-btn,
+    .adapter-card,
+    .proof-card,
+    .flow-step {
+      transition: none;
+    }
   }
 </style>
