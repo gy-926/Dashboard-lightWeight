@@ -107,7 +107,13 @@ export const useMenuStore = defineStore('global-menu', () => {
 
   applyTheme(theme.value);
 
-  const mixHeaderMenuList = computed(() => menuList.value.filter(item => !item.hidden));
+  // 混合布局的顶部导航只负责切换根目录，子菜单统一由侧边栏展示。
+  // 移除 children，避免 GlobalTopMenu 将根目录渲染成下拉菜单。
+  const mixHeaderMenuList = computed(() =>
+    menuList.value
+      .filter(item => !item.hidden)
+      .map(item => ({ ...item, children: [] }))
+  );
   const mixSiderMenuList = computed(() => {
     if (!mixActiveRootKey.value) return [];
     const root = menuList.value.find(item => item.key === mixActiveRootKey.value);

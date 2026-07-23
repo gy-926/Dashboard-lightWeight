@@ -35,7 +35,23 @@
   let closeKeysTimer: ReturnType<typeof setTimeout> | null = null;
 
   const selectedKey = computed(() => route.path);
-  const openKeys = computed(() => menuStore.openKeys);
+  // 顶部菜单的展开状态仅由悬浮交互控制，不能复用侧边栏的 openKeys。
+  // 否则从侧边布局切换过来时，会直接显示侧边栏之前展开的下拉菜单。
+  const openKeys = ref<string[]>([]);
+
+  function openKey(key: string) {
+    if (!openKeys.value.includes(key)) {
+      openKeys.value.push(key);
+    }
+  }
+
+  function closeKey(key: string) {
+    openKeys.value = openKeys.value.filter(item => item !== key);
+  }
+
+  function closeAllKeys() {
+    openKeys.value = [];
+  }
 
   // 可见菜单（未隐藏的）
   const visibleMenus = computed(() => {
@@ -148,22 +164,22 @@
   // 进入顶层菜单项：关闭所有旧下拉，打开当前
   function handleTopLevelEnter(key: string) {
     cancelCloseTimer();
-    menuStore.closeAllKeys();
-    menuStore.openKey(key);
+    closeAllKeys();
+    openKey(key);
   }
 
   // 进入二级有子菜单项：关闭所有，重新打开 parentKey + childKey
   function handleChildEnter(parentKey: string, childKey: string) {
     cancelCloseTimer();
-    menuStore.closeAllKeys();
-    menuStore.openKey(parentKey);
-    menuStore.openKey(childKey);
+    closeAllKeys();
+    openKey(parentKey);
+    openKey(childKey);
   }
 
   // 离开顶层菜单 li：延迟关闭所有
   function handleTopLevelLeave() {
     closeKeysTimer = setTimeout(() => {
-      menuStore.closeAllKeys();
+      closeAllKeys();
       closeKeysTimer = null;
     }, 150);
   }
@@ -171,7 +187,7 @@
   // 离开二级子菜单 li：仅关闭该飞出层 key，保留父下拉
   function handleChildLeave(childKey: string) {
     closeKeysTimer = setTimeout(() => {
-      menuStore.closeKey(childKey);
+      closeKey(childKey);
       closeKeysTimer = null;
     }, 150);
   }
