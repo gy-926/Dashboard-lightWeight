@@ -6,6 +6,7 @@
   import UserProfileModal from './UserProfileModal.vue';
   import type { MenuItem } from '../global-menu/types';
   import { kivii } from '@kivii.com/bridge';
+  import { normalizeBrandText } from '@/utils/brand';
   import { supabase } from '@/utils/supabase';
   import { reloadDynamicRoutes, clearDynamicRoutesState } from '@/router';
   import { setAuthenticatedFlag } from '@/utils/auth-state';
@@ -139,7 +140,7 @@
 
   // 全局配置相关的展示字段
   const systemName = computed(() => {
-    return (window as any).uiGlobalConfig?.DisplayName || 'GavinYin Hub';
+    return normalizeBrandText((window as any).uiGlobalConfig?.DisplayName);
   });
 
   const systemIcon = computed(() => {

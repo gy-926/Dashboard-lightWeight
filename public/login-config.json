@@ -1,5 +1,5 @@
 {
-  "title": "GavinYin Hub",
+  "title": "GavinYinHub",
   "subtitle": "企业级后台管理系统",
   "loginApiUrl": "/auth/kivii.json",
   "redirectUrl": "/"

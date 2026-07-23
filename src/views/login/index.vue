@@ -295,7 +295,7 @@
           </svg>
         </div>
         <div class="brand-text">
-          <h1 class="brand-name">GavinYin Hub</h1>
+          <h1 class="brand-name">GavinYinHub</h1>
           <p class="brand-tagline">企业级后台管理系统</p>
         </div>
       </div>
@@ -645,7 +645,7 @@
     </div>
 
     <!-- 页脚版权 -->
-    <div class="page-footer">© 2026 GavinYin Hub · 保留所有权利</div>
+    <div class="page-footer">© 2026 GavinYinHub · 保留所有权利</div>
   </div>
 </template>
 

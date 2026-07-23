@@ -149,12 +149,12 @@ async function setupApp() {
 
   app.mount('#app');
 
-  // // 启动 GavinYin Hub 动态加载器
+  // // 启动 GavinYinHub 动态加载器
   try {
     await initApp();
-    console.log('[App] ✅ 新的 GavinYin Hub 动态加载器启动完成!');
+    console.log('[App] ✅ 新的 GavinYinHub 动态加载器启动完成!');
   } catch (error) {
-    console.error('[App] ❌ GavinYin Hub 动态加载器启动失败:', error);
+    console.error('[App] ❌ GavinYinHub 动态加载器启动失败:', error);
   }
 }
 // 组件动态引入新方法

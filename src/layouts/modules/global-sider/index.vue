@@ -3,6 +3,7 @@
   import { useMenuStore } from '@/layouts/modules/global-menu/store';
   import type { MenuItem } from '@/layouts/modules/global-menu/types';
   import { useUmdMenuConfigStore } from '@/store/modules/umd-menu-config';
+  import { normalizeBrandText } from '@/utils/brand';
 
   const menuStore = useMenuStore();
   const umdConfig = useUmdMenuConfigStore();
@@ -81,7 +82,7 @@
 
   // 获取全局配置中的 Logo 和显示名称
   const systemName = computed(() => {
-    return (window as any).uiGlobalConfig?.DisplayName || 'GavinYin Hub';
+    return normalizeBrandText((window as any).uiGlobalConfig?.DisplayName);
   });
 
   const systemIcon = computed(() => {

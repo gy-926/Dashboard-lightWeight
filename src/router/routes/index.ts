@@ -4,6 +4,7 @@ import { autoRoutes } from '../auto/routes';
 import type { MenuItem, GlobalConfig, CachedRoutes, ElegantRoute } from './types';
 import { fetchMenuData, fetchAutoStartupKvid } from './menu-service';
 import { generateUmdRoutes, umdComponentsReady } from '@/utils/remoteComponentLoader';
+import { normalizeBrandText } from '@/utils/brand';
 
 // ==================== 全局配置 ====================
 
@@ -298,7 +299,7 @@ export function analyzeTree(items: MenuItem[], depth = 1): TreeStats {
 
 // 获取菜单显示名称（优先使用 DisplayName，否则使用 Title）
 function getMenuDisplayName(item: MenuItem): string {
-  return item.DisplayName || item.Title;
+  return normalizeBrandText(item.DisplayName || item.Title);
 }
 
 // 生成根级路由

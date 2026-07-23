@@ -2,6 +2,8 @@ export interface RemoteLibraryInfo {
   name: string;
   url: string;
   status: 'pending' | 'loading' | 'success' | 'error';
+  /** 是否根据该库的 Manifest 自动生成导航菜单 */
+  showInMenu?: boolean;
   error?: string;
   manifest?: any;
   componentsMap?: Record<string, any>;
@@ -20,6 +22,8 @@ export interface ComponentConfig {
   dependencies?: string[];
   /** 是否自动遍历导出对象注册所有组件 */
   autoRegister?: boolean;
+  /** 是否将自动发现的组件生成为导航菜单 */
+  showInMenu?: boolean;
   /** 覆盖 UMD bundle 自身 manifest 中的元数据 */
   metadata?: {
     zhName?: string;

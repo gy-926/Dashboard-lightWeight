@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "app-config.schema.json",
-  "title": "GavinYin Hub App Config",
+  "title": "GavinYinHub App Config",
   "description": "Dashboard 运行时配置结构定义。当前 schema 与 public/app-config.json 中实际保留的字段保持一致。",
   "type": "object",
   "additionalProperties": false,
@@ -9,7 +9,7 @@
     "loginTitle": {
       "type": "string",
       "description": "登录页主标题。",
-      "default": "GavinYin Hub"
+      "default": "GavinYinHub"
     },
     "loginSubtitle": {
       "type": "string",

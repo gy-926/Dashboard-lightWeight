@@ -10,7 +10,7 @@ NProgress.configure({ showSpinner: false });
 // 路由守卫配置
 const guardsConfig = {
   enabled: true,
-  defaultTitle: 'GavinYin Hub',
+  defaultTitle: 'GavinYinHub',
 };
 
 export function setupRouteGuards(router: Router) {

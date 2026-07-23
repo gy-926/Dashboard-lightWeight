@@ -1,5 +1,6 @@
 import type { ElegantRoute } from '@/router/routes/types';
 import { remoteLibraries } from './state';
+import { normalizeBrandText } from '@/utils/brand';
 
 const EXCLUDED_KEYS = new Set([
   'default',
@@ -25,7 +26,7 @@ export function generateUmdRoutes(): ElegantRoute[] {
   const routes: ElegantRoute[] = [];
 
   for (const lib of remoteLibraries.value) {
-    if (lib.status !== 'success') continue;
+    if (lib.status !== 'success' || lib.showInMenu !== true) continue;
 
     const keys = (lib.componentKeys ?? []).filter(k => !EXCLUDED_KEYS.has(k));
     if (keys.length === 0) continue;
@@ -38,10 +39,14 @@ export function generateUmdRoutes(): ElegantRoute[] {
       const detail = lib.componentsDetailed?.find(
         (d: any) => d.name === compName || d.tag === compName
       );
-      const title: string = detail?.zhName ?? detail?.displayName ?? detail?.title ?? compName;
+      const title = normalizeBrandText(
+        detail?.zhName ?? detail?.displayName ?? detail?.title ?? compName
+      );
       const rawIcon: string | undefined = detail?.icon;
       const icon: string | undefined = rawIcon?.replace(/^(fas|far|fab|fal|fad)\s+/, '');
-      const description: string | undefined = detail?.description;
+      const description = detail?.description
+        ? normalizeBrandText(detail.description)
+        : undefined;
 
       return {
         name: `${libRouteName}_${toRouteSafeName(compName)}`,
@@ -65,9 +70,10 @@ export function generateUmdRoutes(): ElegantRoute[] {
       component: 'layout.base',
       redirect: children[0]?.path,
       meta: {
-        title: lib.manifest?.zhName ?? lib.name,
+        title: normalizeBrandText(lib.manifest?.zhName ?? lib.name),
         icon: 'fa-cube',
         umdLibrary: lib.name,
+        autoDiscovered: true,
       },
       children,
     });

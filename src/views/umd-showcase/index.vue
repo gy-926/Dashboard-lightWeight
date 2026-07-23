@@ -139,8 +139,8 @@
 
   const componentProps = computed(() => ({
     theme: theme.value,
-    hostName: 'Kivii Dashboard Host',
-    version: showcaseLibrary.value?.manifest?.version || '1.1.1',
+    hostName: 'GavinYinHub Dashboard Host',
+    version: showcaseLibrary.value?.manifest?.version || '1.1.2',
     registeredCount: registeredComponentCount.value,
     initialCount: 2,
     title: 'Runtime Module Workspace',
@@ -234,7 +234,7 @@
               <span>DEMO READY</span>
             </div>
             <div class="header-metric">
-              <strong>{{ showcaseLibrary?.manifest?.version || '1.1.1' }}</strong>
+              <strong>{{ showcaseLibrary?.manifest?.version || '1.1.2' }}</strong>
               <span>VERSION</span>
             </div>
             <div class="header-metric">
@@ -289,7 +289,7 @@
           >
             <i class="fas fa-circle-notch fa-spin text-3xl text-blue-500" />
             <p class="mt-4 text-sm font-bold">正在加载 Gy-umd-demo 构建产物...</p>
-            <code class="mt-2 text-xs">kivii-runtime-showcase.umd.js</code>
+            <code class="mt-2 text-xs">GavinYinHub Runtime Bundle</code>
           </div>
 
           <div

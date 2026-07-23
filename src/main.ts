@@ -58,7 +58,7 @@ const initApp = async () => {
       console.error('[UMD] 远程组件加载失败:', e);
     })
     .finally(() => {
-      const showcaseUrl = `${import.meta.env.BASE_URL}umd-showcase/kivii-runtime-showcase.umd.js?v=1.1.1`;
+      const showcaseUrl = `${import.meta.env.BASE_URL}umd-showcase/kivii-runtime-showcase.umd.js?v=1.1.2`;
       loadUmdOnDemand(app, showcaseUrl).catch(e => {
         console.error('[UMD Showcase] 示例组件加载失败:', e);
       });

@@ -13,7 +13,7 @@ const currentYear = new Date().getFullYear()
     <div class="flex flex-col md:flex-row items-center justify-between gap-2">
       <!-- 版权信息 -->
       <div class="text-sm text-gray-500 dark:text-gray-400">
-        &copy; {{ currentYear }} GavinYin Hub. All rights reserved.
+        &copy; {{ currentYear }} GavinYinHub. All rights reserved.
       </div>
 
       <!-- 备案信息 -->

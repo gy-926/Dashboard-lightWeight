@@ -1,5 +1,5 @@
 {
-  "loginTitle": "GavinYin Hub",
+  "loginTitle": "GavinYinHub",
   "loginSubtitle": "企业级后台管理系统",
   "authLoginUrl": "/auth/kivii.json",
   "authLogoutUrl": "/auth/logout.json",

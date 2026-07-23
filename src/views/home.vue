@@ -2,6 +2,7 @@
   import { computed, ref } from 'vue';
   import { useRouter } from 'vue-router';
   import { useMenuStore } from '@/layouts/modules/global-menu/store';
+  import { normalizeBrandText } from '@/utils/brand';
   import { remoteLibraries } from '@/utils/remoteComponentLoader';
 
   defineOptions({ name: 'home' });
@@ -13,7 +14,7 @@
   const isDark = computed(() => menuStore.theme.darkMode);
 
   const systemName = computed(
-    () => (window as any).uiGlobalConfig?.DisplayName || 'Kivii Runtime'
+    () => normalizeBrandText((window as any).uiGlobalConfig?.DisplayName, 'GavinYinHub Runtime')
   );
 
   const successfulLibraries = computed(
@@ -256,7 +257,7 @@
           <div class="p-5 sm:p-6">
             <div class="flex items-center justify-between gap-4 border-b border-slate-200 pb-5 dark:border-slate-800">
               <div>
-                <p class="font-mono text-[11px] text-primary dark:text-cyan-400">$ kivii runtime inspect</p>
+                <p class="font-mono text-[11px] text-primary dark:text-cyan-400">$ gavinyinhub runtime inspect</p>
                 <p class="mt-2 text-sm font-semibold text-slate-800 dark:text-slate-200">Module registry snapshot</p>
               </div>
               <span class="rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-300">

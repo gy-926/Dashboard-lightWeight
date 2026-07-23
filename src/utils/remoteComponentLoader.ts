@@ -40,6 +40,8 @@ const loadConfig = async (configPath: string): Promise<Config> => {
           path: data.publicUrl,
           globalName: 'VueComponent',
           autoRegister: true,
+          // 固定存储桶是受信任的自动发现源，加载成功后应生成运行时菜单。
+          showInMenu: true,
         };
       });
 
@@ -200,6 +202,8 @@ export const loadUmdOnDemand = async (app: App, scriptPath: string): Promise<voi
       name: fallbackName,
       url: scriptPath,
       status: 'loading',
+      // Runtime Lab / Showcase 等临时按需加载不会自动进入导航菜单。
+      showInMenu: false,
     });
     libraryIndex = remoteLibraries.value.length - 1;
   } else {
@@ -273,6 +277,7 @@ export const registerRemoteComponents = async (
       name: c.name,
       url: c.path,
       status: 'pending',
+      showInMenu: c.showInMenu === true,
     }));
 
     const CONCURRENCY = 3;

@@ -4,6 +4,7 @@
     importDashboardFunctions,
     type DashboardFunctionRecord,
   } from '@/api/dashboard-functions';
+  import { normalizeBrandText } from '@/utils/brand';
   import { remoteLibraries } from '@/utils/remoteComponentLoader';
 
   // 定义分析结果的数据结构，与原页面类似
@@ -33,6 +34,10 @@
 
   // 已勾选的组件名称集合（默认全选）
   const selectedComponents = ref<Set<string>>(new Set());
+
+  function brandText(value: unknown, fallback = '-'): string {
+    return normalizeBrandText(typeof value === 'string' ? value : '', fallback);
+  }
 
   function initSelectedComponents(lib: AnalyzedLibrary) {
     const keys =
@@ -393,7 +398,7 @@
                       <div>
                         <div class="flex items-center gap-3 mb-1">
                           <h2 class="text-lg font-bold text-gray-800 dark:text-white leading-none">
-                            {{ lib.name }}
+                            {{ brandText(lib.name) }}
                           </h2>
                           <div class="flex items-center gap-2">
                             <span
@@ -444,7 +449,7 @@
                       <div class="flex items-center whitespace-nowrap">
                         <span class="text-gray-500 dark:text-gray-400 mr-1.5">作者:</span>
                         <span class="font-bold text-gray-800 dark:text-gray-200">{{
-                          lib.manifest?.author || '-'
+                          brandText(lib.manifest?.author)
                         }}</span>
                       </div>
                       <div class="hidden sm:block w-px h-3.5 bg-gray-300 dark:bg-gray-600"></div>
@@ -452,8 +457,8 @@
                         <span class="text-gray-500 dark:text-gray-400 mr-1.5 shrink-0">描述:</span>
                         <span
                           class="font-medium text-gray-800 dark:text-gray-200 truncate min-w-0"
-                          :title="lib.manifest?.description"
-                          >{{ lib.manifest?.description || '-' }}</span
+                          :title="brandText(lib.manifest?.description)"
+                          >{{ brandText(lib.manifest?.description) }}</span
                         >
                       </div>
                     </div>
@@ -517,7 +522,7 @@
                             class="text-gray-400 text-[13px]"
                           ></i>
                           <div class="font-bold text-gray-800 dark:text-gray-100 text-xs truncate">
-                            {{ comp.zhName || comp.displayName || comp.name }}
+                            {{ brandText(comp.zhName || comp.displayName || comp.name) }}
                           </div>
                         </div>
                         <div
@@ -528,7 +533,7 @@
                         <p
                           class="text-[12px] text-gray-500 dark:text-gray-400 leading-normal line-clamp-2 mt-auto"
                         >
-                          {{ comp.description || '暂无描述' }}
+                          {{ brandText(comp.description, '暂无描述') }}
                         </p>
                       </div>
                     </div>
@@ -622,7 +627,9 @@
               <i class="fas fa-cube text-blue-600 dark:text-blue-400 text-lg"></i>
             </div>
             <div>
-              <h2 class="text-xl font-bold text-gray-800 dark:text-white">{{ lib.name }}</h2>
+              <h2 class="text-xl font-bold text-gray-800 dark:text-white">
+                {{ brandText(lib.name) }}
+              </h2>
               <p class="text-xs text-gray-400 font-mono mt-0.5 break-all">{{ lib.url }}</p>
             </div>
           </div>
@@ -673,7 +680,7 @@
         >
           <span class="text-xs text-gray-500 dark:text-gray-400 block mb-1">作者</span>
           <span class="font-medium text-gray-800 dark:text-gray-200">{{
-            lib.manifest.author || '-'
+            brandText(lib.manifest.author)
           }}</span>
         </div>
         <div
@@ -681,7 +688,7 @@
         >
           <span class="text-xs text-gray-500 dark:text-gray-400 block mb-1">描述</span>
           <span class="font-medium text-gray-800 dark:text-gray-200">{{
-            lib.manifest.description || '-'
+            brandText(lib.manifest.description)
           }}</span>
         </div>
       </div>
@@ -708,10 +715,10 @@
             <div
               class="text-xs font-medium text-blue-600 dark:text-blue-400 mb-3 bg-blue-50 dark:bg-blue-900/20 inline-block px-2 py-0.5 rounded"
             >
-              {{ comp.displayName || comp.name }}
+              {{ brandText(comp.displayName || comp.name) }}
             </div>
             <p class="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 min-h-[2.5em]">
-              {{ comp.description || '暂无描述' }}
+              {{ brandText(comp.description, '暂无描述') }}
             </p>
           </div>
         </div>
