@@ -210,7 +210,10 @@
 </script>
 
 <template>
-  <div class="space-y-5 pb-3 md:space-y-7">
+  <div
+    class="showcase-page space-y-5 pb-3 md:space-y-7"
+    :class="{ 'showcase-dark': theme === 'dark' }"
+  >
     <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
       <div class="showcase-header relative overflow-hidden px-5 py-6 sm:px-7">
         <div class="showcase-grid absolute inset-0" />
@@ -542,21 +545,31 @@
   .event-dot-emerald { background: #10b981; }
   .event-dot-amber { background: #f59e0b; }
 
-  :global(.dark) .demo-nav-item strong {
+  .showcase-dark .demo-nav-item strong {
     color: #f8fafc;
   }
 
-  :global(.dark) .contract-chip,
-  :global(.dark) .event-row {
+  .showcase-dark .demo-nav-item small {
+    color: #94a3b8;
+  }
+
+  .showcase-dark .demo-nav-item:hover,
+  .showcase-dark .demo-nav-item-active {
+    border-color: color-mix(in srgb, var(--color-primary) 48%, #334155);
+    background: color-mix(in srgb, var(--color-primary) 16%, #0f172a);
+  }
+
+  .showcase-dark .contract-chip,
+  .showcase-dark .event-row {
     color: #94a3b8;
     background: #0f172a;
   }
 
-  :global(.dark) .event-row code {
+  .showcase-dark .event-row code {
     color: #cbd5e1;
   }
 
-  :global(.dark) .showcase-header {
+  .showcase-dark .showcase-header {
     background:
       radial-gradient(
         circle at 92% -20%,
@@ -571,21 +584,29 @@
       );
   }
 
-  :global(.dark) .showcase-badge {
+  .showcase-dark .showcase-grid {
+    opacity: 0.28;
+  }
+
+  .showcase-dark .showcase-badge {
     border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
     color: #bae6fd;
     background: color-mix(in srgb, var(--color-primary) 18%, transparent);
   }
 
-  :global(.dark) .showcase-code {
+  .showcase-dark .showcase-code {
     color: #bae6fd;
     background: rgba(255, 255, 255, 0.08);
   }
 
-  :global(.dark) .header-metric {
+  .showcase-dark .header-metric {
     border-color: rgba(255, 255, 255, 0.1);
     color: white;
     background: rgba(255, 255, 255, 0.06);
+  }
+
+  .showcase-dark .header-metric span {
+    color: #94a3b8;
   }
 
   @media (max-width: 640px) {
