@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
+import { ref, computed, markRaw } from 'vue';
 
 export type PageType = 'webview' | 'vue' | 'umd';
 
@@ -97,7 +97,8 @@ export const useTeleportManager = defineStore('teleport-manager', () => {
   }
 
   function setVueComponentLoading(cacheKey: string, promise: Promise<any>): void {
-    vueComponentLoading.value.set(cacheKey, promise);
+    // Promise 不需要响应式代理；保留原始身份，才能区分旧任务与重新打开后的新任务
+    vueComponentLoading.value.set(cacheKey, markRaw(promise));
   }
 
   function deleteVueComponentLoading(cacheKey: string, promise?: Promise<any>): void {
