@@ -393,6 +393,7 @@ function generateChildRoutes(
             title: getMenuDisplayName(item),
             type: 'iframe',
             keepAlive: true,
+            kvid: item.Kvid,
           },
         });
       }
@@ -419,6 +420,7 @@ function generateChildRoutes(
         order: item.Order,
         type: 'iframe',
         keepAlive: true,
+        kvid: item.Kvid,
       },
     };
   });

@@ -111,6 +111,7 @@ export class KiviiOpenTab {
           title: pathInfo.title || '未命名页面',
           icon: pathInfo.icon || 'fa-file',
           children: [],
+          kvid: pathInfo.kvid,
         };
         // 存储额外信息到 meta
         if (pathInfo.kvid || pathInfo.url || pathInfo.type) {

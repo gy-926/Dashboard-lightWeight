@@ -105,6 +105,10 @@ export function setupRouteGuards(router: Router) {
       path: to.path,
       title: title,
       icon: to.meta?.icon as string,
+      kvid:
+        (typeof to.meta?.kvid === 'string' && to.meta.kvid) ||
+        (typeof to.query.kvid === 'string' && to.query.kvid) ||
+        undefined,
     };
     menuStore.addTab(menuItem);
 

@@ -36,6 +36,10 @@ watch(() => route.path, (path) => {
     path,
     title: (route.meta?.title as string) || route.path,
     icon: route.meta?.icon as string,
+    kvid:
+      (typeof route.meta?.kvid === 'string' && route.meta.kvid) ||
+      (typeof route.query.kvid === 'string' && route.query.kvid) ||
+      undefined,
   }
   menuStore.addTab(menuItem)
 }, { immediate: true })

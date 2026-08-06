@@ -86,6 +86,17 @@ export function transformRouteToMenu(routes: RouteRecordRaw[], parentPath = ''):
       fullPath = route.path
     }
 
+    const staticProps =
+      route.props && typeof route.props === 'object' && !Array.isArray(route.props)
+        ? route.props as Record<string, unknown>
+        : undefined
+    const kvid =
+      typeof route.meta?.kvid === 'string'
+        ? route.meta.kvid
+        : typeof staticProps?.kvid === 'string'
+          ? staticProps.kvid
+          : undefined
+
     const menuItem: MenuItem = {
       key: route.name as string || route.path,
       path: fullPath,
@@ -97,6 +108,7 @@ export function transformRouteToMenu(routes: RouteRecordRaw[], parentPath = ''):
       meta: route.meta as Record<string, unknown>,
       parentPath,
       redirect: route.redirect as string,
+      kvid,
     }
 
     // 递归处理子路由
