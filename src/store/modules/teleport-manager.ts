@@ -50,6 +50,7 @@ export const useTeleportManager = defineStore('teleport-manager', () => {
   // Vue 组件全局缓存（用于 keep-alive 保持组件状态）
   const vueComponentCache = ref<Map<string, any>>(new Map());
   const vueComponentLoading = ref<Map<string, Promise<any>>>(new Map());
+  const vueComponentGenerations = new Map<string, number>();
 
   // 防抖激活请求
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -71,8 +72,20 @@ export const useTeleportManager = defineStore('teleport-manager', () => {
     return vueComponentCache.value.get(cacheKey);
   }
 
-  function setVueComponent(cacheKey: string, component: any): void {
+  function getVueComponentGeneration(cacheKey: string): number {
+    return vueComponentGenerations.get(cacheKey) || 0;
+  }
+
+  function isVueComponentGenerationCurrent(cacheKey: string, generation: number): boolean {
+    return getVueComponentGeneration(cacheKey) === generation;
+  }
+
+  function setVueComponent(cacheKey: string, component: any, generation?: number): boolean {
+    if (generation !== undefined && !isVueComponentGenerationCurrent(cacheKey, generation)) {
+      return false;
+    }
     vueComponentCache.value.set(cacheKey, component);
+    return true;
   }
 
   function hasVueComponent(cacheKey: string): boolean {
@@ -87,73 +100,68 @@ export const useTeleportManager = defineStore('teleport-manager', () => {
     vueComponentLoading.value.set(cacheKey, promise);
   }
 
-  function deleteVueComponentLoading(cacheKey: string): void {
+  function deleteVueComponentLoading(cacheKey: string, promise?: Promise<any>): void {
+    if (promise && vueComponentLoading.value.get(cacheKey) !== promise) {
+      return;
+    }
     vueComponentLoading.value.delete(cacheKey);
   }
 
   function clearVueComponentCache(): void {
-    vueComponentCache.value.clear();
-    vueComponentLoading.value.clear();
+    const keys = new Set([
+      ...vueComponentCache.value.keys(),
+      ...vueComponentLoading.value.keys(),
+    ]);
+    keys.forEach(removeVueComponentCacheEntry);
   }
 
-  // 根据路径和 kvid 移除组件缓存
+  function parseVueComponentCacheKey(key: string): { fullUrl: string; kvid: string } | null {
+    const prefix = 'vue_component::';
+    if (!key.startsWith(prefix)) return null;
+
+    const value = key.slice(prefix.length);
+    const lastSeparator = value.lastIndexOf('::');
+    if (lastSeparator < 0) return null;
+
+    return {
+      fullUrl: value.slice(0, lastSeparator),
+      kvid: value.slice(lastSeparator + 2),
+    };
+  }
+
+  function removeVueComponentCacheEntry(key: string): void {
+    vueComponentGenerations.set(key, getVueComponentGeneration(key) + 1);
+
+    const cached = vueComponentCache.value.get(key);
+    if (cached && Array.isArray(cached.styles)) {
+      cached.styles.forEach((style: HTMLStyleElement) => style.remove());
+    }
+
+    vueComponentCache.value.delete(key);
+    vueComponentLoading.value.delete(key);
+  }
+
+  // 根据标签身份移除组件缓存；没有 kvid 时才使用路径兼容匹配
   function removeComponentCacheByPath(path: string, kvid?: string): void {
-    // 遍历缓存，找到匹配的项并删除
-    const keysToDelete: string[] = [];
     const targetKvid = kvid || '';
+    const keys = new Set([
+      ...vueComponentCache.value.keys(),
+      ...vueComponentLoading.value.keys(),
+    ]);
 
-    vueComponentCache.value.forEach((_, key) => {
-      // 缓存键格式: vue_component::${fullUrl}::${kvid || ''}
-      // 需要匹配路径部分
-      if (key.startsWith('vue_component::')) {
-        const urlPart = key.replace('vue_component::', '');
+    keys.forEach(key => {
+      const parsed = parseVueComponentCacheKey(key);
+      if (!parsed) return;
 
-        const lastSep = urlPart.lastIndexOf('::');
-        const fullUrl = lastSep > -1 ? urlPart.substring(0, lastSep) : urlPart;
-        const keyKvid = lastSep > -1 ? urlPart.substring(lastSep + 2) : '';
+      const isMatch = targetKvid
+        ? parsed.kvid === targetKvid
+        : path.includes(parsed.fullUrl) ||
+          path.includes(encodeURIComponent(parsed.fullUrl)) ||
+          parsed.fullUrl.includes(path) ||
+          (!!parsed.kvid && parsed.kvid.length > 8 && path.includes(parsed.kvid));
 
-        // 检查 kvid 是否匹配
-        let isMatch = false;
-
-        // 策略1: 如果传入了 targetKvid，且与缓存的 keyKvid 相等，并且路径或 URL 匹配
-        if (targetKvid && keyKvid === targetKvid) {
-          if (
-            path.includes(fullUrl) ||
-            path.includes(encodeURIComponent(fullUrl)) ||
-            fullUrl.includes(path)
-          ) {
-            isMatch = true;
-          }
-        }
-
-        // 策略2: 如果路径中直接包含缓存的 KVID (处理 kvid 未传入但存在于路径中的情况)
-        // 确保 keyKvid 有一定长度，避免误匹配短字符串
-        if (!isMatch && keyKvid && keyKvid.length > 8 && path.includes(keyKvid)) {
-          isMatch = true;
-        }
-
-        if (isMatch) {
-          keysToDelete.push(key);
-        }
-      }
-    });
-
-    keysToDelete.forEach(key => {
-      // Clean up styles if any (防止内存泄漏)
-      const cached = vueComponentCache.value.get(key);
-      if (cached && Array.isArray(cached.styles)) {
-        cached.styles.forEach((style: any) => {
-          if (style && style.parentNode) {
-            style.parentNode.removeChild(style);
-          }
-        });
-      }
-
-      vueComponentCache.value.delete(key);
-
-      // Also clear loading state if exists
-      if (vueComponentLoading.value.has(key)) {
-        vueComponentLoading.value.delete(key);
+      if (isMatch) {
+        removeVueComponentCacheEntry(key);
       }
     });
   }
@@ -333,6 +341,8 @@ export const useTeleportManager = defineStore('teleport-manager', () => {
     shouldShowPage,
     getActivePage,
     getVueComponent,
+    getVueComponentGeneration,
+    isVueComponentGenerationCurrent,
     setVueComponent,
     hasVueComponent,
     getVueComponentLoading,

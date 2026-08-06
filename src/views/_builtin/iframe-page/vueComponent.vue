@@ -24,6 +24,8 @@
     updatePageStatus,
     debouncedRequestActivation,
     getVueComponent,
+    getVueComponentGeneration,
+    isVueComponentGenerationCurrent,
     setVueComponent,
     hasVueComponent,
     getVueComponentLoading,
@@ -34,6 +36,7 @@
   const dynamicComponent = shallowRef<any>(null);
   const componentError = ref<string | null>(null);
   const isLoading = ref(true);
+  let isDisposed = false;
 
   // 缓存键只基于 URL 和 kvid（不要基于 pageId，因为 pageId 每次都会变）
   const cacheKey = computed(() =>
@@ -61,6 +64,7 @@
   // 加载远程组件
   async function loadRemoteComponent() {
     const key = cacheKey.value;
+    const generation = getVueComponentGeneration(key);
 
     // 检查全局缓存 - 有缓存就直接用
     if (hasVueComponent(key)) {
@@ -77,6 +81,7 @@
     const loadingPromise = getVueComponentLoading(key);
     if (loadingPromise) {
       await loadingPromise;
+      if (isDisposed || !isVueComponentGenerationCurrent(key, generation)) return;
       const cached = getVueComponent(key);
       dynamicComponent.value = cached?.component || cached;
       isLoading.value = false;
@@ -90,12 +95,13 @@
 
     // 创建加载 Promise
     const loadPromise = (async () => {
+      const styles: HTMLStyleElement[] = [];
       try {
         // 检查内部组件
         const componentName = props.url.split('/').pop()?.replace('.vue', '') || '';
         if (internalComponents[componentName]) {
           const comp = internalComponents[componentName];
-          setVueComponent(key, { component: comp });
+          setVueComponent(key, { component: comp }, generation);
           return comp;
         }
 
@@ -107,8 +113,6 @@
           }
           return fullUrl;
         };
-
-        const styles: HTMLStyleElement[] = [];
 
         const options = {
           moduleCache: { vue: Vue },
@@ -142,10 +146,16 @@
           throw new Error(`组件加载失败，返回了无效的组件定义: ${componentUrl.value}`);
         }
 
-        setVueComponent(key, { component, styles }); // 缓存组件定义和样式
+        const didCache = setVueComponent(key, { component, styles }, generation);
+        if (!didCache) {
+          styles.forEach(style => style.remove());
+        }
         return component;
       } catch (e: any) {
-        componentError.value = `加载组件失败: ${e.message}`;
+        styles.forEach(style => style.remove());
+        if (!isDisposed && isVueComponentGenerationCurrent(key, generation)) {
+          componentError.value = `加载组件失败: ${e.message}`;
+        }
         throw e;
       }
     })();
@@ -154,12 +164,16 @@
 
     try {
       const component = await loadPromise;
-      dynamicComponent.value = component;
+      if (!isDisposed && isVueComponentGenerationCurrent(key, generation)) {
+        dynamicComponent.value = component;
+      }
     } finally {
-      isLoading.value = false;
-      deleteVueComponentLoading(key);
-      updatePageStatus(props.pageId, 'ready');
-      emit('ready');
+      deleteVueComponentLoading(key, loadPromise);
+      if (!isDisposed && isVueComponentGenerationCurrent(key, generation)) {
+        isLoading.value = false;
+        updatePageStatus(props.pageId, 'ready');
+        emit('ready');
+      }
     }
   }
 
@@ -183,6 +197,7 @@
   });
 
   onUnmounted(() => {
+    isDisposed = true;
     emit('cleanup');
     dynamicComponent.value = null;
   });
