@@ -261,10 +261,14 @@ export async function reloadDynamicRoutes(): Promise<void> {
     await routesLoadPromise.catch(() => {});
   }
 
-  // 1. 清除本地缓存
+  // 1. 清理上一会话的动态页面实例、远程 Vue 缓存和在途加载
+  const { useTeleportManager } = await import('@/store/modules/teleport-manager');
+  useTeleportManager().clearUserRuntime();
+
+  // 2. 清除本地缓存
   clearDynamicRoutesCache();
 
-  // 2. 移除已动态添加的路由，还原为初始状态
+  // 3. 移除已动态添加的路由，还原为初始状态
   dynamicRouteNames.forEach(name => {
     if (router.hasRoute(name)) {
       router.removeRoute(name);
@@ -273,11 +277,11 @@ export async function reloadDynamicRoutes(): Promise<void> {
   dynamicRouteNames = [];
   originalAuthRoutes = [];
 
-  // 3. 重置标志，允许重新加载
+  // 4. 重置标志，允许重新加载
   dynamicRoutesLoaded = false;
   routesLoadPromise = null;
 
-  // 4. 重新初始化
+  // 5. 重新初始化
   await initRoutes();
 }
 

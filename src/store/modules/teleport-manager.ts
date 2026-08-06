@@ -321,6 +321,12 @@ export const useTeleportManager = defineStore('teleport-manager', () => {
     }
   }
 
+  // 清理与当前用户会话绑定的页面运行时；UMD 等应用级库资源不在此处卸载
+  function clearUserRuntime(): void {
+    cleanup();
+    clearVueComponentCache();
+  }
+
   return {
     pages,
     activePageId,
@@ -351,5 +357,6 @@ export const useTeleportManager = defineStore('teleport-manager', () => {
     clearVueComponentCache,
     removeComponentCacheByPath,
     cleanup,
+    clearUserRuntime,
   };
 });

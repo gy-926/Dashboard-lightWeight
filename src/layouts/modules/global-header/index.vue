@@ -10,6 +10,7 @@
   import { supabase } from '@/utils/supabase';
   import { reloadDynamicRoutes, clearDynamicRoutesState } from '@/router';
   import { setAuthenticatedFlag } from '@/utils/auth-state';
+  import { useTeleportManager } from '@/store/modules/teleport-manager';
 
   defineProps<{
     showSiderToggle?: boolean;
@@ -18,6 +19,7 @@
   const router = useRouter();
   const route = useRoute();
   const menuStore = useMenuStore();
+  const teleportManager = useTeleportManager();
 
   // 全屏功能
   const isFullscreen = ref(false);
@@ -97,6 +99,7 @@
       // 先切换到登录页，确保业务页面和远程组件在会话失效前完成卸载。
       // 否则仍挂载的远程组件可能继续查询菜单并产生 401。
       await router.replace('/login');
+      teleportManager.clearUserRuntime();
 
       // 1. 调用 Supabase 的退出接口，清除服务端的 session 状态
       const { error } = await supabase.auth.signOut();
