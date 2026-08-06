@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { supabase } from '@/utils/supabase'
-import { closeReLogin } from '@/composables/useReLogin'
+import { clearDynamicRoutesCache } from '@/router/routes'
 
 const form = reactive({ email: 'admin@example.com', password: 'admin@123456' })
 const isLoading = ref(false)
@@ -31,7 +31,17 @@ async function handleLogin() {
     if (error) throw error
     form.email = ''
     form.password = ''
-    closeReLogin()
+
+    // 登录响应没有可靠的用户身份字段，无法确认是否仍为同一用户。
+    // 清除用户级持久化状态并完整刷新，由宿主重新生成用户配置、权限路由和页面运行时。
+    try {
+      clearDynamicRoutesCache()
+      localStorage.removeItem('kivii-tabs')
+    } catch (storageError) {
+      console.warn('[ReLogin] 清理旧会话持久化状态失败:', storageError)
+    } finally {
+      window.location.reload()
+    }
   } catch (e: any) {
     errorMsg.value = getSupabaseErrorMessage(e?.message ?? '')
   } finally {
