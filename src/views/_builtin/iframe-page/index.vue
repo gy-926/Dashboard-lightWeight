@@ -2,7 +2,6 @@
   defineOptions({ name: 'IframePage' });
   import { ref, onMounted, onUnmounted, onActivated, computed, watch } from 'vue';
   import { useRoute } from 'vue-router';
-  import { useEventBus } from '@vueuse/core';
   import {
     useTeleportManager,
     generatePageId,
@@ -28,7 +27,6 @@
     useTeleportManager();
 
   const pageId = ref<string>('');
-  const cleanupCallbacks = ref<(() => void)[]>([]);
 
   // 动态渲染类型（由接口决定）
   const dynamicRenderType = ref<PageType>('webview');
@@ -202,24 +200,13 @@
     }
   }
 
-  // 清理所有资源
-  function cleanupAll() {
-    cleanupCallbacks.value.forEach(cb => {
-      try {
-        cb();
-      } catch (e) {
-        // 忽略清理错误
-      }
-    });
-    cleanupCallbacks.value = [];
-
+  // 注销当前页面；子渲染器的资源清理由各自的 onUnmounted 负责
+  function unregisterCurrentPage() {
     if (pageId.value) {
       unregisterPage(pageId.value);
     }
   }
 
-  // 监听标签关闭事件
-  const tabCloseBus = useEventBus<string>('tab-close');
   onMounted(async () => {
     // 优先使用路由层传入的 handler，避免接口调用
     if (props.handler) {
@@ -231,13 +218,6 @@
 
     registerCurrentPage();
     handleCustomRouteParams();
-
-    // 监听标签关闭
-    tabCloseBus.on(closedPath => {
-      if (closedPath === route.path && pageId.value) {
-        cleanupAll();
-      }
-    });
   });
 
   // 激活时更新状态
@@ -248,7 +228,7 @@
   });
 
   onUnmounted(() => {
-    cleanupAll();
+    unregisterCurrentPage();
   });
 
   // 路由参数变化时更新
@@ -267,7 +247,7 @@
         await fetchFunctionAccess();
       }
 
-      cleanupAll();
+      unregisterCurrentPage();
       registerCurrentPage();
       handleCustomRouteParams();
     },
