@@ -33,6 +33,8 @@
   const dynamicHandler = ref<string>('');
   const dynamicUmdTag = ref<string>('');
   const isLoading = ref(true);
+  let isDisposed = false;
+  let functionAccessRequestId = 0;
 
   // 最终渲染类型（优先使用动态类型，否则使用 props.type）
   const renderType = computed((): PageType => {
@@ -109,27 +111,50 @@
   }
 
   // 兜底：通过接口查询 handler（仅 handler prop 不存在时使用）
-  async function fetchFunctionAccess() {
-    if (!props.kvid) {
-      isLoading.value = false;
-      return;
+  async function fetchFunctionAccess(): Promise<boolean> {
+    const requestId = ++functionAccessRequestId;
+    const requestKvid = props.kvid;
+    const isCurrentRequest = () => !isDisposed && requestId === functionAccessRequestId;
+
+    if (!requestKvid) {
+      if (isCurrentRequest()) {
+        isLoading.value = false;
+      }
+      return isCurrentRequest();
     }
 
     try {
       const response = await fetch(
-        `/Restful/Kivii.Basic.Entities.Function/Access.json?MenuKvids=${props.kvid}`
+        `/Restful/Kivii.Basic.Entities.Function/Access.json?MenuKvids=${requestKvid}`
       );
       const data = await response.json();
+      if (!isCurrentRequest()) return false;
 
       if (data?.Results && data.Results.length > 0) {
         const handler = data.Results[0].Handler;
         if (handler) applyHandler(handler);
       }
+
+      if (!isCurrentRequest()) return false;
+      return true;
     } catch (error) {
-      console.error('[IframePage] 获取功能权限失败:', error);
+      if (isCurrentRequest()) {
+        console.error('[IframePage] 获取功能权限失败:', error);
+      }
+      return isCurrentRequest();
     } finally {
-      isLoading.value = false;
+      if (isCurrentRequest()) {
+        isLoading.value = false;
+      }
     }
+  }
+
+  function applyRouteHandler(handler: string): boolean {
+    functionAccessRequestId++;
+    if (isDisposed) return false;
+    applyHandler(handler);
+    isLoading.value = false;
+    return true;
   }
 
   // 生成页面实例 ID
@@ -141,6 +166,7 @@
 
   // 注册页面
   function registerCurrentPage() {
+    if (isDisposed) return;
     initPageId();
     registerPage(pageId.value, renderType.value, renderUrl.value, props.kvid);
     updatePageStatus(pageId.value, 'pending');
@@ -209,12 +235,10 @@
 
   onMounted(async () => {
     // 优先使用路由层传入的 handler，避免接口调用
-    if (props.handler) {
-      applyHandler(props.handler);
-      isLoading.value = false;
-    } else {
-      await fetchFunctionAccess();
-    }
+    const shouldInitialize = props.handler
+      ? applyRouteHandler(props.handler)
+      : await fetchFunctionAccess();
+    if (!shouldInitialize) return;
 
     registerCurrentPage();
     handleCustomRouteParams();
@@ -228,6 +252,8 @@
   });
 
   onUnmounted(() => {
+    isDisposed = true;
+    functionAccessRequestId++;
     unregisterCurrentPage();
   });
 
@@ -240,12 +266,10 @@
       dynamicUmdTag.value = '';
       dynamicRenderType.value = 'webview';
 
-      if (props.handler) {
-        applyHandler(props.handler);
-        isLoading.value = false;
-      } else {
-        await fetchFunctionAccess();
-      }
+      const shouldInitialize = props.handler
+        ? applyRouteHandler(props.handler)
+        : await fetchFunctionAccess();
+      if (!shouldInitialize) return;
 
       unregisterCurrentPage();
       registerCurrentPage();
