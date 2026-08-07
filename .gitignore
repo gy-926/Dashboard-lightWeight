@@ -25,6 +25,9 @@ pids
 # Coverage directory used by tools like istanbul
 coverage/
 
+# Local browser automation artifacts
+.playwright-mcp/
+
 # nyc test coverage
 .nyc_output
 
@@ -57,4 +60,4 @@ jspm_packages/
 
 # OS
 .DS_Store
-Thumbs.db 
+Thumbs.db

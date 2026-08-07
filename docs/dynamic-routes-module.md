@@ -1,132 +1,188 @@
-# 动态路由获取与路由树重组说明
+# 动态菜单与路由说明
 
-本说明总结 `/src/router/routes/index.ts` 中的“动态路由获取 + 菜单树重组 + 路由融合与转换”完整流程，并给出与 IframePage 的搭配用法及跨项目移植步骤。
+本文档对应 `githubDashboard` 分支当前实现，说明静态路由、后端菜单路由和 UMD 自动发现路由如何合并并注册到 Vue Router。
 
-## 模块目标
-- 从后端按用户/系统配置获取菜单数据
-- 将菜单数据重组为树形结构
-- 依据树形结构生成符合前端路由的路由树
-- 与静态/自定义路由融合为最终的“常量 + 认证”路由集合
-- 输出为 Vue Router 可用的路由记录，并与 IframePage 组件协同渲染
+## 组成结构
 
-## 数据来源与初始化
-- 等待全局配置：`waitForGlobalConfig()` 等待 `window.uiGlobalConfig.InternalCode` 就绪
-- API 构造：`/Restful/Kivii.Basic.Entities.Menu/Show.json?RootInternalCode=${InternalCode}`
-- 拉取根菜单：`getRootMenu(apiUrl)`，结果包含 `MenusMain.Results` 与 `MenuRoot`
-- 代码参考：[routes/index.ts](file:///Users/_suesusan/kivii/Kivii2024Project/Vue-Dashboard/src/router/routes/index.ts#L200-L358)
+```mermaid
+flowchart TD
+  A[应用启动] --> B[等待 UMD 初始加载]
+  B --> C[静态 autoRoutes]
+  B --> D{后端菜单缓存有效?}
+  D -- 是 --> E[恢复并转换缓存]
+  D -- 否 --> F[请求菜单]
+  F --> G[构建菜单树]
+  G --> H[生成并缓存 ElegantRoute]
+  B --> I[根据已加载库生成 UMD 路由]
+  C --> J[合并 authRoutes]
+  E --> J
+  H --> J
+  I --> J
+  J --> K[递归注册 Vue Router]
+  K --> L[从原始路由树生成导航菜单]
+```
 
-## 缓存策略
-- 缓存路由：`cacheDynamicRoutes(routes, globalConfig)` 将生成的路由、时间戳、用户信息写入 localStorage
-- 尝试恢复：`restoreDynamicRoutesFromCache()` 校验 24 小时有效期、用户一致性、InternalCode 一致性
-- 清除缓存：`clearDynamicRoutesCache()`
-- 启动时恢复：模块加载时即尝试恢复；若失败则稍后主动生成
-- 代码参考：
-  - 写入缓存：[routes/index.ts](file:///Users/_suesusan/kivii/Kivii2024Project/Vue-Dashboard/src/router/routes/index.ts#L225-L262)
-  - 恢复缓存：[routes/index.ts](file:///Users/_suesusan/kivii/Kivii2024Project/Vue-Dashboard/src/router/routes/index.ts#L264-L318)
-  - 启动恢复：[routes/index.ts](file:///Users/_suesusan/kivii/Kivii2024Project/Vue-Dashboard/src/router/routes/index.ts#L779-L795)
+路由来源包括：
 
-## 菜单到树：getMenuThree
-- 输入：`MenusMain.Results` 扁平菜单数组
-- 根节点识别：`ParentKvid` 为 null/undefined 或未在数据集中出现的项
-- 递归构建：`buildChildren(parentKvid)`，为每个父项填充 `children`
-- 统计分析：最大深度、总节点、叶子/容器/功能节点计数，便于调试与监控
-- 代码参考：[routes/index.ts](file:///Users/_suesusan/kivii/Kivii2024Project/Vue-Dashboard/src/router/routes/index.ts#L419-L540)
+- [auto/routes.ts](../src/router/auto/routes.ts)：首页、UMD 管理、示例、菜单配置和系统功能等固定页面。
+- [routes/index.ts](../src/router/routes/index.ts)：后端菜单获取、树构建、缓存、转换与合并。
+- [umd/routes.ts](../src/utils/umd/routes.ts)：根据成功加载且允许展示的 UMD 库生成路由。
+- [router/index.ts](../src/router/index.ts)：初始化路由、递归注册、菜单同步和登录后重载。
 
-## 路由生成：generateRoutes
-- 输入：树形菜单数据（根数组）
-- 根级路由：
-  - `name`: 如果 `Type === 'System'`，用类型；否则用 `Kvid`
-  - `path`: `Type === 'System'` → `/${Type}`；否则 `/${Kvid}`
-  - `component`: `layout.base`（布局）
-  - `meta`: `{ title, icon, order, keepAlive: true }`
-- 子路由：`generateChildRoutes(children, parentPath, parentName)`
-  - 生成 `routeName` / `routePath`
-    - `Type === 'System'`：按 `Remark`（首斜杠剔除）拼接父路径与父名
-    - 其他：使用 `Kvid`
-  - 容器 vs 页面：
-    - 容器（有 `children`）：`component: 'layout.base'`，继续递归生成子路由
-    - 页面（有 `FunctionKvid` 或叶子节点）：`component: 'view.iframe-page'`
-  - 容器兼页面（既有 children 又有 FunctionKvid）：
-    - 在 children 数组头部添加一个“默认子页面”：
-      - `path: ''` 默认子路由
-      - `component: 'view.iframe-page'`
-      - `props: { url, kvid, functionKvid, type }`
-      - `meta.type = 'iframe'`
-  - 页面 props（用于 IframePage 渲染）：
-    - `url`: `Type === 'System'` 用 `Remark`；否则为空由后续查询填充
-    - `kvid`, `functionKvid`, `type`
-    - `meta.type = 'iframe'`
-- 代码参考：
-  - 根级生成：[routes/index.ts](file:///Users/_suesusan/kivii/Kivii2024Project/Vue-Dashboard/src/router/routes/index.ts#L656-L692)
-  - 子级生成与默认子页面：[routes/index.ts](file:///Users/_suesusan/kivii/Kivii2024Project/Vue-Dashboard/src/router/routes/index.ts#L551-L654)
+## 全局配置
 
-## 自定义路由融合：getDynamicCustomRoutes
-- 来源：`window.uiGlobalConfig.customRouteManager.getRoutes()`
-- 生成规则：
-  - `name: custom_${routeId}`
-  - `path: config.path`
-  - `component: 'layout.base'`
-  - 子路由命名：`custom_${routeId}_detail`
-  - 子路由 `component: 'view.iframe-page'`
-  - `props: { url: config.handler, kvid: routeId, type: config.type, ...config.props }`
-  - 统一 `meta.keepAlive` 与 `meta.type = config.type`
-- 代码参考：[routes/index.ts](file:///Users/_suesusan/kivii/Kivii2024Project/Vue-Dashboard/src/router/routes/index.ts#L694-L739)
+动态菜单使用 `window.uiGlobalConfig` 初始化运行参数。主要字段包括：
 
-## 路由集合与转换
-- 组合路由：`createStaticRoutes()`
-  - `dynamicCustomRoutes + dynamicMenuRoutes + generatedRoutes` → 分拣为常量路由与认证路由
-  - 返回 `{ constantRoutes, authRoutes }`
-- 转换为 Vue 路由记录：`getAuthVueRoutes(routes)`
-  - 使用 `transformElegantRoutesToVueRoutes(routes, layouts, views)` 完成组件映射与结构转换
-  - `layouts/views` 定义位置：[router/elegant/imports.ts](file:///Users/_suesusan/kivii/Kivii2024Project/Vue-Dashboard/src/router/elegant/imports.ts)
-- 代码参考：
-  - 路由集合：[routes/index.ts](file:///Users/_suesusan/kivii/Kivii2024Project/Vue-Dashboard/src/router/routes/index.ts#L741-L759)
-  - 路由转换：[routes/index.ts](file:///Users/_suesusan/kivii/Kivii2024Project/Vue-Dashboard/src/router/routes/index.ts#L766-L768)
+- `InternalCode`：菜单工作空间标识。优先从 `/entry/{InternalCode}` 路径读取，其次使用全局配置，默认 `umdDashboard`。
+- `UserCode`：参与缓存隔离，默认 `admin`。
+- `Origin` / `UseWindowOrigin`：后端来源配置。
+- `DisplayName`、`Icon`、`Scope`、`Parameters`：工作空间展示与扩展参数。
+- `IsAuthenticated`、`PublicLoginUrl`：认证状态与外部登录地址。
 
-## 生成时机与刷新策略
-- 启动时：
-  - 先尝试从缓存恢复；失败则稍后生成（延迟 500ms，等待 `uiGlobalConfig` 更充分初始化）
-- 首次生成后的刷新：
-  - 通过 `sessionStorage.hasReloadedAfterRouteGen` 避免无限刷新
-  - 首次生成后延迟触发 `window.location.reload()`，确保路由挂载与权限上下文一致
-- 代码参考：[routes/index.ts](file:///Users/_suesusan/kivii/Kivii2024Project/Vue-Dashboard/src/router/routes/index.ts#L396-L408)
+`setGlobalConfig()` 可在运行时合并配置，`syncInternalCodeToEntryPath()` 可把当前 InternalCode 同步到浏览器入口路径。
 
-## 与 IframePage 的搭配
-- IframePage 入口视图按 `type` 渲染：
-  - `webview`：拼接 `routeQuery` 到 URL，iframe 渲染
-  - `extjs`：使用 `url` 作为 `Ext.create()` 的名称渲染 ExtJS 组件
-  - `vue`：通过 `vue3-sfc-loader` 加载远程 `.vue`，或映射为本地内置组件
-- 路由 props 对应关系：
-  - `url/kvid/functionKvid/type` 直接由动态路由生成逻辑注入
-  - 自定义路由还会传递 `config.props` 给子视图，可在 IframePage 中转交
-- TeleportManager 协作：
-  - IframePage 为每个页面实例生成唯一 ID，注册与激活，控制显示与清理
-- 参考文件：
-  - IframePage 入口：[iframe-page/[url].vue](file:///Users/_suesusan/kivii/Kivii2024Project/Vue-Dashboard/src/views/_builtin/iframe-page/%5Burl%5D.vue)
-  - TeleportManager：[teleport-manager.ts](file:///Users/_suesusan/kivii/Kivii2024Project/Vue-Dashboard/src/store/modules/teleport-manager.ts)
+## 后端菜单获取
 
-## 跨项目移植步骤
-1. 复制核心逻辑：
-   - `routes/index.ts` 中的 `waitForGlobalConfig`、`generateDynamicRoutes`、`getMenuThree`、`generateRoutes`、`getDynamicCustomRoutes`、`createStaticRoutes`、`getAuthVueRoutes`
-2. 调整服务端 API：
-   - 校准 `getRootMenu` 与后端返回结构（至少包含 `MenusMain.Results`）
-3. 合并静态路由：
-   - 你的项目的静态路由（常量）合并到 `generatedRoutes`；或替换为你自己的生成方式
-4. 映射布局与视图：
-   - 在你的项目中提供 `layouts` 与 `views` 的组件映射（对应 `layout.base` 与 `view.iframe-page` 等）
-5. 接入 IframePage：
-   - 使用本文档的 IframePage 模块说明，按 `props` 注入与 `type` 分支渲染
-6. 设置缓存策略（可选）：
-   - 根据业务调整 `localStorage` 的封存/恢复策略与时效
-7. 启动生成与刷新（可选）：
-   - 若首屏需要依赖动态路由，保留“首次生成后刷新”策略，或改为路由层重载
+[menu-service.ts](../src/router/routes/menu-service.ts) 通过 [dashboard-admin.ts](../src/api/dashboard-admin.ts) 获取运行时菜单。响应至少包含：
 
-## 常见问题
-- 菜单 Remark 的前导斜杠：已在生成逻辑中剔除（`/^\\//`），确保路径拼接正确
-- 容器节点兼页面：通过默认子路由 `path: ''` 承载页面，避免丢失功能入口
-- 自定义路由管理器：当 `customRouteManager` 不可用时自动降级到静态 `customRoutes`
+```ts
+{
+  MenuRoot: { Kvid, Title }
+  MenusMain: { Results: MenuItem[] }
+}
+```
 
-## 参考代码位置
-- 动态路由总览：[routes/index.ts](file:///Users/_suesusan/kivii/Kivii2024Project/Vue-Dashboard/src/router/routes/index.ts)
-- 布局与视图映射：[elegant/imports.ts](file:///Users/_suesusan/kivii/Kivii2024Project/Vue-Dashboard/src/router/elegant/imports.ts)
-- IframePage 搭配文档：[iframe-page-module.md](file:///Users/_suesusan/kivii/Kivii2024Project/Vue-Dashboard/docs/iframe-page-module.md)
+`getRootMenu()` 保存 `MenuRoot.Kvid`，并过滤 `Type === 'System'` 的菜单记录。请求失败时服务层记录警告并返回空菜单结构，使应用可以继续运行固定路由和 UMD 路由。
+
+菜单项常用字段：
+
+| 字段 | 用途 |
+| --- | --- |
+| `Kvid` | 路由身份和默认路径片段 |
+| `ParentKvid` | 构建父子关系 |
+| `Title` / `DisplayName` | 菜单标题，优先使用 DisplayName |
+| `Icon` / `Order` | 导航图标和顺序 |
+| `FunctionKvid` | 功能身份及渲染类型辅助判断 |
+| `Handler` | 页面 URL、远程 Vue 地址或 UMD 标签 |
+
+## 菜单树构建
+
+`getMenuTree()` 将扁平数组转换为树：
+
+1. `ParentKvid` 为空的节点作为根节点。
+2. 父节点不在本次数据集中的孤儿节点也降级为根节点。
+3. 根据 `ParentKvid === parent.Kvid` 递归填充 `Children`。
+
+该函数会直接写入菜单项的 `Children` 字段。`analyzeTree()` 可统计深度、节点、叶子、容器和功能节点数量，但不参与正式路由生成。
+
+## 后端菜单路由生成
+
+路由先生成项目内部的 `ElegantRoute`，再映射为 `RouteRecordRaw`。
+
+### 根节点
+
+- `name`：默认使用 `Kvid`。
+- `path`：默认使用 `/{Kvid}`。
+- `component`：`layout.base`。
+- `meta`：包含标题、图标、顺序和 `keepAlive`。
+
+### 容器节点
+
+有子节点的菜单使用 `layout.passthrough`，随后递归生成 children。若容器自身还有 `FunctionKvid`，会在 children 首位加入 `path: ''` 的默认页面，并交给 `view.iframe-page` 渲染。
+
+### 页面节点
+
+叶子节点统一使用 `view.iframe-page`，路由 props 包含：
+
+```ts
+{
+  url,
+  kvid,
+  functionKvid,
+  handler,
+  type
+}
+```
+
+`FunctionKvid` 以 `.vue` 结尾时初始类型为 `vue`，否则为 `webview`。IframePage 随后会以 Handler 为准再次判断 WebView、Vue SFC 或 UMD；详细规则参见 [动态页面容器说明](./iframe-page-module.md)。
+
+## 组件映射与转换
+
+当前组件映射直接定义在 [routes/index.ts](../src/router/routes/index.ts)，不再依赖旧版 `router/elegant/imports.ts`：
+
+| 内部标识 | 实际组件 |
+| --- | --- |
+| `layout.base` | `layouts/base-layout/index.vue` |
+| `layout.passthrough` | `layouts/passthrough-layout/index.vue` |
+| `view.iframe-page` | `views/_builtin/iframe-page/index.vue` |
+| `view.umd-component` | `views/_builtin/umd-component/index.vue` |
+
+转换过程保留 `name`、`path`、`meta`、`props`、`redirect` 和 children。未知布局降级到基础布局，未知视图降级到 IframePage。
+
+## UMD 自动发现路由
+
+应用启动时会从受信任的 Supabase 存储桶发现并注册 UMD 脚本。动态路由生成会先等待 `umdComponentsReady`，然后只处理同时满足以下条件的库：
+
+- 加载状态为 `success`。
+- `showInMenu === true`。
+- 至少导出一个可展示组件。
+
+每个库生成 `/umd/{library}` 容器，每个组件生成 `/umd/{library}/{component}` 页面，并从 Manifest/组件详情读取中文名称、图标和描述。Runtime Lab 临时按需加载的库默认 `showInMenu: false`，不会自动进入导航。
+
+## 路由缓存
+
+后端菜单路由以 `DYNAMIC_ROUTES_CACHE` 写入 localStorage。当前缓存版本为 `v6`，有效期 24 小时，并校验：
+
+- 缓存版本。
+- `UserCode`。
+- `InternalCode`。
+- 路由数据至少具有有效 `path`。
+
+缓存只包含后端生成的 `ElegantRoute` 和 `menuRootKvid`。固定路由与 UMD 路由每次启动重新合并，不写入该缓存。
+
+localStorage 缓存是性能优化，不是权限边界。服务端仍必须验证菜单接口和实际业务接口权限。
+
+## 合并与注册顺序
+
+`generateDynamicRoutes()` 返回：
+
+```ts
+{
+  constantRoutes,
+  authRoutes: [...autoRoutes, ...menuRoutes, ...umdRoutes],
+  initialRedirect: null
+}
+```
+
+`router/index.ts` 使用 `addRouteWithChildren()` 递归注册 authRoutes，并保存原始树用于生成导航菜单。404、修改密码等 constantRoutes 随后注册。
+
+当前实现还会查询菜单根节点的 AutoStartup Kvid 并写入 `autoStartupKvid`，但 `initialRedirect` 固定返回 `null`，当前首页也没有消费该响应式值，因此它暂不改变首页跳转行为。
+
+## 登录、退出与重载
+
+登录成功后的 `reloadDynamicRoutes()` 按以下顺序执行：
+
+1. 等待正在进行的路由加载结束。
+2. 调用 TeleportManager 的 `clearUserRuntime()`，清除页面实例及远程 Vue 缓存。
+3. 清除动态路由 localStorage 缓存。
+4. 移除之前动态注册的路由名。
+5. 重置加载状态并重新初始化。
+
+退出登录使用 `clearDynamicRoutesState()` 清理路由缓存和动态注册状态，但不会卸载应用级 UMD 脚本。
+
+## 排查顺序
+
+1. 检查 `InternalCode` 是否来自预期的 `/entry/{code}` 或全局配置。
+2. 检查菜单接口响应是否包含 `MenuRoot` 和 `MenusMain.Results`。
+3. 检查异常节点的 `Kvid`、`ParentKvid`、`FunctionKvid` 和 `Handler`。
+4. 清除 `DYNAMIC_ROUTES_CACHE` 后重试，排除旧缓存。
+5. 检查 UMD 库的加载状态、`showInMenu` 和导出组件清单。
+6. 检查路由是否已注册，以及 `meta.hidden` 是否导致菜单被过滤。
+
+## 当前限制与边界
+
+- 菜单请求失败会降级为空菜单，而不是阻断应用启动。
+- 菜单树通过递归筛选数组构建；超大菜单数据量需要单独评估索引化优化。
+- 动态 import 的布局和视图只接受本地映射中的可信标识。
+- Handler 和 UMD 脚本属于高权限运行时配置，必须由可信后台和受控发布链路提供。
+- AutoStartup 当前只完成查询和状态保存，尚未接入首页展示或自动跳转。
