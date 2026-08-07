@@ -1,5 +1,7 @@
 # GavinYin Hub
 
+[![CI](https://github.com/gy-926/Dashboard-lightWeight/actions/workflows/ci.yml/badge.svg)](https://github.com/gy-926/Dashboard-lightWeight/actions/workflows/ci.yml)
+
 一个经过持续试运行验证的 Vue 3 企业工作台，用统一的路由、标签、鉴权和运行时生命周期承载本地页面、远程 Vue SFC、UMD 业务组件与 iframe 系统。
 
 本项目不是通用 Vue Admin 皮肤，也不是带 JavaScript 沙箱的通用微前端框架。它面向来源可信、技术栈可控的企业业务模块，强调低成本接入、单文件交付和渐进式集成。
@@ -175,6 +177,7 @@ src/
 supabase/functions/              Edge Functions
 scripts/                         数据库、权限和 RLS 脚本
 public/umd-showcase/             可公开运行的 UMD 示例
+public/umd/                      随应用发布的 UMD 兼容性制品
 tests/                           Vitest 回归测试
 docs/                            模块说明与实现记录
 ```
@@ -198,7 +201,7 @@ docs/                            模块说明与实现记录
 - 扩充浏览器端到端测试；
 - 为 Manifest 和远程协议建立共享类型；
 - 拆分超大页面和加载器的职责；
-- 增加 CI、Lint、运行时诊断和兼容矩阵；
+- 扩充 Lint、运行时诊断和兼容矩阵；
 - 逐步明确库缓存、页面实例和业务数据缓存的边界。
 
 ## 文档

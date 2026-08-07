@@ -28,6 +28,9 @@ coverage/
 # Local browser automation artifacts
 .playwright-mcp/
 
+# Local UMD build output (runtime fixtures belong in public/umd/)
+/umd/
+
 # nyc test coverage
 .nyc_output
 
