@@ -2,7 +2,10 @@ import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
 import { createPageInstanceKey } from './identity';
 import type { PageDescriptor, PageDestroyReason, PageIdentityQuery } from './types';
-import { resolveFunctionAccessPayload } from './function-access';
+import {
+  resolveFunctionAccessPayload,
+  type FunctionAccessPayload,
+} from './function-access';
 import {
   destroyHostedPageLifecycle,
   setHostedPageLifecycleActive,
@@ -14,6 +17,10 @@ export interface PageHostPilotRoute {
   name?: string | symbol | null;
   kvid?: string;
   query?: PageIdentityQuery;
+  /** 路由层已经从菜单数据解析出的 Handler；空字符串也是一个有效结果。 */
+  handler?: string;
+  /** 为 true 时禁止再回退请求旧的 Function Access 接口。 */
+  handlerResolved?: boolean;
 }
 
 export interface HostedPilotPageRecord {
@@ -155,10 +162,9 @@ export const usePageHostPilotStore = defineStore('page-host-pilot', () => {
     const requestedInstanceKey = createPageInstanceKey(descriptorBase);
     const startedAt = Date.now();
     try {
-      const [{ getGlobalConfig }, { shouldPilotPageHostKvid }, { kivii }] = await Promise.all([
+      const [{ getGlobalConfig }, { shouldPilotPageHostKvid }] = await Promise.all([
         import('@/router/routes'),
         import('./pilot-config'),
-        import('@kivii.com/bridge'),
       ]);
       if (generation !== resolveGeneration) return false;
       const config = getGlobalConfig();
@@ -187,9 +193,16 @@ export const usePageHostPilotStore = defineStore('page-host-pilot', () => {
         return true;
       }
 
-      const response = await kivii.request.get<any>(
-        `/Restful/Kivii.Basic.Entities.Function/Access.json?MenuKvids=${route.kvid}`
-      );
+      let accessPayload: FunctionAccessPayload;
+      if (route.handlerResolved) {
+        accessPayload = { Results: [{ Handler: route.handler || '' }] };
+      } else {
+        const { kivii } = await import('@kivii.com/bridge');
+        const response = await kivii.request.get<any>(
+          `/Restful/Kivii.Basic.Entities.Function/Access.json?MenuKvids=${route.kvid}`
+        );
+        accessPayload = response.data;
+      }
       if (generation !== resolveGeneration) {
         pageHostDiagnostics.record({
           ...diagnosticBase(route),
@@ -200,7 +213,7 @@ export const usePageHostPilotStore = defineStore('page-host-pilot', () => {
       }
 
       const resolved = resolveFunctionAccessPayload(
-        response.data,
+        accessPayload,
         config,
         window.location.origin
       );

@@ -55,6 +55,11 @@ watch(
         (typeof route.query.kvid === 'string' && route.query.kvid) ||
         undefined,
       query: normalizeRouteQuery(),
+      handler:
+        typeof route.meta?.pageHandler === 'string'
+          ? route.meta.pageHandler
+          : undefined,
+      handlerResolved: route.meta?.pageHandlerResolved === true,
     }
     const decision = getPageHostPilotDecision(getGlobalConfig(), pageRoute.kvid)
     if (!decision.eligible) {

@@ -17,6 +17,7 @@
     kvid?: string;
     functionKvid?: string;
     handler?: string; // 关联函数的 handler，由路由层直接传入，无需再调接口
+    handlerResolved?: boolean; // 即使 handler 为空，也表示菜单数据已完成解析
     type?: PageType;
     routeQuery?: Record<string, string>;
     backendOrigin?: string;
@@ -234,9 +235,9 @@
   }
 
   onMounted(async () => {
-    // 优先使用路由层传入的 handler，避免接口调用
-    const shouldInitialize = props.handler
-      ? applyRouteHandler(props.handler)
+    // 路由层明确完成解析后，不再回退调用旧 Function Access 接口。
+    const shouldInitialize = props.handlerResolved || !!props.handler
+      ? applyRouteHandler(props.handler || '')
       : await fetchFunctionAccess();
     if (!shouldInitialize) return;
 
@@ -259,15 +260,15 @@
 
   // 路由参数变化时更新
   watch(
-    () => [props.url, props.kvid, props.type, props.handler],
+    () => [props.url, props.kvid, props.type, props.handler, props.handlerResolved],
     async () => {
       isLoading.value = true;
       dynamicHandler.value = '';
       dynamicUmdTag.value = '';
       dynamicRenderType.value = 'webview';
 
-      const shouldInitialize = props.handler
-        ? applyRouteHandler(props.handler)
+      const shouldInitialize = props.handlerResolved || !!props.handler
+        ? applyRouteHandler(props.handler || '')
         : await fetchFunctionAccess();
       if (!shouldInitialize) return;
 

@@ -77,7 +77,7 @@ export function syncInternalCodeToEntryPath(internalCode?: string | null): void 
 // ==================== 缓存策略 ====================
 
 const CACHE_KEY = 'DYNAMIC_ROUTES_CACHE';
-const CACHE_VERSION = 'v6'; // 缓存版本，用于强制刷新
+const CACHE_VERSION = 'v7'; // Handler 解析状态进入路由元数据，强制淘汰旧缓存
 const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24小时
 
 // 缓存路由（直接存储 ElegantRoute 格式，避免反向序列化在生产构建中因代码压缩而丢失组件映射）
@@ -337,6 +337,9 @@ function generateChildRoutes(
     const isSystem = item.Type === 'System';
     const hasChildren = item.Children && item.Children.length > 0;
     const hasFunction = !!item.FunctionKvid;
+    // Supabase 菜单会显式返回 Handler（包括空字符串）。只有字段确实存在时，
+    // 才视为路由层已经完成解析，以兼容仍依赖旧 Access 接口的数据源。
+    const handlerResolved = Object.prototype.hasOwnProperty.call(item, 'Handler');
 
     // 生成路由名称
     let routeName: string;
@@ -387,6 +390,7 @@ function generateChildRoutes(
             kvid: item.Kvid,
             functionKvid: item.FunctionKvid,
             handler: item.Handler || '',
+            handlerResolved,
             type: 'webview',
           },
           meta: {
@@ -394,6 +398,8 @@ function generateChildRoutes(
             type: 'iframe',
             keepAlive: true,
             kvid: item.Kvid,
+            pageHandler: item.Handler || '',
+            pageHandlerResolved: handlerResolved,
           },
         });
       }
@@ -412,6 +418,7 @@ function generateChildRoutes(
         kvid: item.Kvid,
         functionKvid: item.FunctionKvid || '',
         handler: item.Handler || '',
+        handlerResolved,
         type: (item.FunctionKvid?.endsWith('.vue') ? 'vue' : 'webview') as 'webview' | 'vue',
       },
       meta: {
@@ -421,6 +428,8 @@ function generateChildRoutes(
         type: 'iframe',
         keepAlive: true,
         kvid: item.Kvid,
+        pageHandler: item.Handler || '',
+        pageHandlerResolved: handlerResolved,
       },
     };
   });
