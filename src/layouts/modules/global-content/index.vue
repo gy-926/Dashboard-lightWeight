@@ -1,8 +1,10 @@
 <script setup lang="ts">
-  import { computed, h, watch } from 'vue';
+  import { computed, h, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
   import { useRoute } from 'vue-router';
   import { useMenuStore } from '@/layouts/modules/global-menu/store';
   import { useTeleportManager } from '@/store/modules/teleport-manager';
+  import { isDynamicPageRoute, shouldBypassRouteKeepAlive } from '@/router/page-route';
+  import { usePageHostPilotStore } from '@/runtime/page-host/pilot-store';
 
   const props = withDefaults(
     defineProps<{
@@ -18,6 +20,40 @@
   const menuStore = useMenuStore();
   const teleportManager = useTeleportManager();
   const route = useRoute();
+  const pageHostPilot = usePageHostPilotStore();
+  const pageHostAnchor = ref<HTMLElement | null>(null);
+  let pageHostResizeObserver: ResizeObserver | null = null;
+
+  function updatePageHostBounds() {
+    const anchor = pageHostAnchor.value;
+    if (!anchor) return;
+    const rect = anchor.getBoundingClientRect();
+    pageHostPilot.setBounds({
+      top: rect.top,
+      left: rect.left,
+      width: rect.width,
+      height: rect.height,
+    });
+  }
+
+  onMounted(async () => {
+    await nextTick();
+    updatePageHostBounds();
+    if (pageHostAnchor.value && typeof ResizeObserver !== 'undefined') {
+      pageHostResizeObserver = new ResizeObserver(updatePageHostBounds);
+      pageHostResizeObserver.observe(pageHostAnchor.value);
+    }
+    window.addEventListener('resize', updatePageHostBounds, { passive: true });
+    window.addEventListener('scroll', updatePageHostBounds, true);
+  });
+
+  onBeforeUnmount(() => {
+    pageHostResizeObserver?.disconnect();
+    pageHostResizeObserver = null;
+    window.removeEventListener('resize', updatePageHostBounds);
+    window.removeEventListener('scroll', updatePageHostBounds, true);
+    pageHostPilot.clearBounds();
+  });
 
   const currentViewRecord = computed(() => {
     const passthroughRecord = route.matched.find(record => record.meta?.passthrough === true);
@@ -35,33 +71,25 @@
     return route.fullPath;
   });
 
-  // 监听路由变化，非动态组件路由时隐藏所有动态组件
+  // 监听路由变化，非动态页面路由时隐藏旧链路的动态组件
   watch(
-    () => route.name,
-    newName => {
-      const name = String(newName || '');
-      // 如果不是 iframe-page 相关路由，隐藏所有动态组件
-      if (!name.startsWith('iframe-page')) {
+    () => [route.path, route.name, route.meta?.type],
+    () => {
+      if (!isDynamicPageRoute(route)) {
         teleportManager.hideAllPages();
       }
     },
     { immediate: true }
   );
 
-  // 检查是否为动态路由（需要禁用 keep-alive）
-  const isDynamicRoute = computed(() => {
-    const path = route.path;
-    const name = String(route.name || '');
-    // iframe / 自定义动态页通常承载重型 DOM、iframe 或远程组件，继续保活会显著抬高内存占用
-    return (
-      path.startsWith('/custom_') || path.startsWith('/bridge_') || name.startsWith('iframe-page')
-    );
-  });
+  const bypassRouteKeepAlive = computed(() => shouldBypassRouteKeepAlive(route));
 
   // 是否应该使用 keep-alive（动态路由不使用）
   const shouldKeepAlive = computed(() => {
-    return props.keepAlive && !isDynamicRoute.value;
+    return props.keepAlive && !bypassRouteKeepAlive.value;
   });
+  const isPilotReserved = computed(() => pageHostPilot.isReservedPath(route.path));
+  const isPilotResolving = computed(() => pageHostPilot.resolvingPath === route.path);
 
   // 缓存的组件列表（使用路由名称作为缓存 key）
   const cachedViews = computed(() => {
@@ -143,12 +171,19 @@
     <!-- 内容区域 -->
     <div class="flex-1 overflow-y-auto p-0 relative">
       <div
+        ref="pageHostAnchor"
         :class="[
           'min-h-full relative',
           isFullWidthLayout ? 'w-full px-4 md:px-6 py-6' : 'mx-auto',
         ]"
       >
-        <template v-if="shouldKeepAlive">
+        <div
+          v-if="isPilotResolving"
+          class="absolute inset-0 flex items-center justify-center text-sm text-gray-500"
+        >
+          页面加载中...
+        </div>
+        <template v-else-if="!isPilotReserved && shouldKeepAlive">
           <router-view v-slot="{ Component }">
             <transition
               enter-active-class="tab-enter-active"
@@ -168,7 +203,7 @@
           </router-view>
         </template>
 
-        <template v-else>
+        <template v-else-if="!isPilotReserved">
           <router-view v-slot="{ Component }">
             <transition
               enter-active-class="tab-enter-active"

@@ -56,6 +56,12 @@ flowchart LR
 
 UMD 模板将 Vue、ECharts 和 `@kivii.com/bridge` 设为外部依赖，避免业务组件携带第二份运行时。宿主加载组件前提供兼容版本，并通过 `app.use()` 或具名导出完成注册。
 
+## PageHost 页面保活
+
+后端菜单生成的 KVID 动态页默认由应用根级 PageHost 承载，支持 iframe、远程 Vue SFC 和 Hosted UMD。标签切换只隐藏页面并保留真实实例；关闭、刷新和会话重建进入明确的销毁链路，填写中的表单不会因普通标签切换被清空。
+
+PageHost 不需要在构建时预知 KVID。可通过 `PageHostEnabled: false` 全局回退，或使用 `PageHostExcludedKvids` 精确排除个别页面。详细行为、诊断命令和新旧方案对比见 [PageHost 页面保活](docs/page-host.md)。阶段 6 的驻留上限和 LRU 当前暂缓。
+
 ## 技术栈
 
 - Vue 3、TypeScript、Vite
@@ -100,6 +106,7 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 | --- | --- |
 | `pnpm dev` | 启动开发服务器 |
 | `pnpm test` | 运行 Vitest 回归测试 |
+| `pnpm test:e2e` | 运行 PageHost Playwright 浏览器测试 |
 | `pnpm test:watch` | 监听模式运行测试 |
 | `pnpm type-check` | 执行 Vue/TypeScript 类型检查 |
 | `pnpm build` | 类型检查并生成生产构建 |

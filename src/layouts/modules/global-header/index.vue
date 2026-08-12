@@ -11,18 +11,30 @@
   import { reloadDynamicRoutes, clearDynamicRoutesState } from '@/router';
   import { setAuthenticatedFlag } from '@/utils/auth-state';
   import { useTeleportManager } from '@/store/modules/teleport-manager';
+  import {
+    createPageRefreshGate,
+    runPageRefreshTransaction,
+  } from '@/runtime/page-host/refresh-transaction';
+  import { usePageHostPilotStore } from '@/runtime/page-host/pilot-store';
 
   defineProps<{
     showSiderToggle?: boolean;
+  }>();
+
+  defineEmits<{
+    (event: 'open-theme-drawer'): void;
   }>();
 
   const router = useRouter();
   const route = useRoute();
   const menuStore = useMenuStore();
   const teleportManager = useTeleportManager();
+  const pageHostPilot = usePageHostPilotStore();
 
   // 全屏功能
   const isFullscreen = ref(false);
+  const isRefreshing = ref(false);
+  const refreshGate = createPageRefreshGate();
 
   function toggleFullscreen() {
     if (!document.fullscreenElement) {
@@ -38,26 +50,31 @@
 
   // 刷新当前标签页
   async function refreshCurrentTab() {
-    const currentPath = route.path;
-    if (currentPath === '/blank') return;
+    await refreshGate.run(async () => {
+      isRefreshing.value = true;
 
-    const originalIndex = menuStore.tabsList.findIndex(t => t.path === currentPath);
-    if (originalIndex === -1) return;
+      try {
+        const status = await runPageRefreshTransaction({
+          path: route.path,
+          fullPath: route.fullPath,
+          tabs: menuStore.tabsList,
+          removeTab: (path, reason) => menuStore.removeTab(path, reason),
+          navigate: target => router.push(target),
+          afterBlank: nextTick,
+        });
 
-    const savedTab = { ...menuStore.tabsList[originalIndex] };
-
-    // 移除标签（清除 keep-alive 缓存 + teleport 组件缓存）
-    await menuStore.removeTab(currentPath);
-
-    // 跳转到空白页，触发当前组件卸载
-    await router.push('/blank');
-    await nextTick();
-
-    // 在原有位置插回标签，而非追加到末尾
-    const insertIndex = Math.min(originalIndex, menuStore.tabsList.length);
-    menuStore.tabsList.splice(insertIndex, 0, savedTab);
-
-    router.push(currentPath);
+        if (status.endsWith('navigation-failed')) {
+          console.warn(`[PageHost] 刷新未完成: ${status}`);
+        }
+        if (status === 'refreshed') {
+          await pageHostPilot.waitForRouteResolution(route.path);
+        }
+      } catch (error) {
+        console.error('[PageHost] 刷新事务失败，标签已恢复:', error);
+      } finally {
+        isRefreshing.value = false;
+      }
+    });
   }
 
   onMounted(() => {
@@ -167,7 +184,7 @@
   <!-- 顶部菜单布局 -->
   <header
     v-if="isTopLayout"
-    class="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between relative z-[20] transition-colors duration-300"
+    class="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between relative z-[150] transition-colors duration-300"
   >
     <!-- 左侧：Logo（固定宽度） -->
     <div
@@ -206,9 +223,11 @@
       <button
         class="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
         title="刷新当前页"
+        :disabled="isRefreshing"
+        :aria-busy="isRefreshing"
         @click="refreshCurrentTab"
       >
-        <i class="fas fa-redo-alt" />
+        <i :class="['fas', 'fa-redo-alt', { 'fa-spin': isRefreshing }]" />
       </button>
 
       <!-- 主题切换按钮 -->
@@ -294,7 +313,7 @@
   <!-- 侧边栏/混合布局 -->
   <header
     v-else
-    class="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between relative z-[50] transition-colors duration-300"
+    class="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between relative z-[150] transition-colors duration-300"
   >
     <!-- 左侧：侧边栏折叠按钮 或 Logo（mix 模式） -->
     <div class="flex items-center h-full flex-shrink-0">
@@ -349,9 +368,11 @@
       <button
         class="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
         title="刷新当前页"
+        :disabled="isRefreshing"
+        :aria-busy="isRefreshing"
         @click="refreshCurrentTab"
       >
-        <i class="fas fa-redo-alt" />
+        <i :class="['fas', 'fa-redo-alt', { 'fa-spin': isRefreshing }]" />
       </button>
 
       <!-- 主题切换按钮 -->

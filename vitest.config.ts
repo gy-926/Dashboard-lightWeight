@@ -10,6 +10,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['tests/**/*.spec.ts'],
+    exclude: ['tests/e2e/**'],
     restoreMocks: true,
   },
 });

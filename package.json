@@ -18,7 +18,8 @@
     "edge:serve": "supabase functions serve",
     "edge:deploy": "supabase functions deploy dashboard-functions dashboard-admin",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.2.0",
@@ -33,6 +34,7 @@
     "vue3-sfc-loader": "^0.9.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@tsconfig/node22": "^22.0.2",
     "@types/node": "^22.15.32",
     "@types/nprogress": "^0.2.3",

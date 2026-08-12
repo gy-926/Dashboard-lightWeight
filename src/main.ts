@@ -18,9 +18,16 @@ import { KiviiOpenTab } from './bridge/kivii-open-tab';
 // 引入远程组件加载器
 import { loadUmdOnDemand, registerRemoteComponents } from '@/utils/remoteComponentLoader';
 import { initializeAuthState, setupSupabaseAuthSync } from '@/utils/auth-state';
+import { usePageHostPilotStore } from '@/runtime/page-host/pilot-store';
+import { installPageHostDiagnosticsBrowserApi } from '@/runtime/page-host/diagnostics';
+import { getGlobalConfig } from '@/router/routes';
+import { getPageHostPilotConfig } from '@/runtime/page-host/pilot-config';
 
 const initApp = async () => {
   const app = createApp(App);
+  installPageHostDiagnosticsBrowserApi(window, () =>
+    getPageHostPilotConfig(getGlobalConfig())
+  );
 
   // 注册布局全局组件
   for (const [key, component] of Object.entries(LayoutComponents)) {
@@ -39,6 +46,17 @@ const initApp = async () => {
   // 安装 Pinia
   const pinia = createPinia();
   app.use(pinia);
+
+  // PageHost 只卸载 UMD 页面实例；脚本、全局注册与共享样式保持应用级常驻。
+  usePageHostPilotStore(pinia).setUmdRegistrationBridge(async (componentName, scriptPath) => {
+    const isRegistered = () =>
+      Object.prototype.hasOwnProperty.call(app._context.components, componentName);
+
+    if (!isRegistered() && scriptPath) {
+      await loadUmdOnDemand(app, scriptPath);
+    }
+    return isRegistered();
+  });
 
   // 在路由守卫执行前先根据 Supabase session 初始化登录状态
   await initializeAuthState();

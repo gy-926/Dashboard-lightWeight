@@ -12,6 +12,11 @@
     functionKvid?: string;
     routeQuery?: Record<string, string>;
     backendOrigin?: string;
+    /** PageHost 模式下由永久宿主直接控制显隐，不依赖 TeleportManager。 */
+    hosted?: boolean;
+    active?: boolean;
+    /** 旧链路默认 Teleport；PageHost 使用 false 在当前位置渲染。 */
+    teleport?: boolean;
   }>();
 
   const emit = defineEmits<{
@@ -44,13 +49,15 @@
   );
 
   // 是否显示
-  const shouldRender = computed(() => shouldShowPage(props.pageId));
+  const shouldRender = computed(() =>
+    props.hosted ? props.active !== false : shouldShowPage(props.pageId)
+  );
 
   // 远程组件的 URL
   const componentUrl = computed(() => {
     const origin = props.backendOrigin || '';
     const url = props.url || '';
-    if (url.startsWith('http')) {
+    if (/^https?:\/\//i.test(url)) {
       return url;
     }
     return `${origin}${url}`;
@@ -72,7 +79,7 @@
       // 缓存结构: { component: 组件定义 }
       dynamicComponent.value = cached?.component || cached;
       isLoading.value = false;
-      updatePageStatus(props.pageId, 'ready');
+      if (!props.hosted) updatePageStatus(props.pageId, 'ready');
       emit('ready');
       return;
     }
@@ -85,7 +92,7 @@
       const cached = getVueComponent(key);
       dynamicComponent.value = cached?.component || cached;
       isLoading.value = false;
-      updatePageStatus(props.pageId, 'ready');
+      if (!props.hosted) updatePageStatus(props.pageId, 'ready');
       emit('ready');
       return;
     }
@@ -107,7 +114,7 @@
 
         // 使用 vue3-sfc-loader 加载远程组件
         const getProxyUrl = (fullUrl: string) => {
-          if (fullUrl.startsWith('http')) {
+          if (/^https?:\/\//i.test(fullUrl)) {
             const url = new URL(fullUrl);
             return url.pathname;
           }
@@ -171,7 +178,7 @@
       deleteVueComponentLoading(key, loadPromise);
       if (!isDisposed && isVueComponentGenerationCurrent(key, generation)) {
         isLoading.value = false;
-        updatePageStatus(props.pageId, 'ready');
+        if (!props.hosted) updatePageStatus(props.pageId, 'ready');
         emit('ready');
       }
     }
@@ -179,8 +186,9 @@
 
   // 监听显示状态
   watch(
-    () => shouldShowPage(props.pageId),
+    () => shouldRender.value,
     show => {
+      if (props.hosted) return;
       if (show) {
         debouncedRequestActivation(props.pageId);
         updatePageStatus(props.pageId, 'active');
@@ -192,7 +200,7 @@
   );
 
   onMounted(() => {
-    updatePageStatus(props.pageId, 'loading');
+    if (!props.hosted) updatePageStatus(props.pageId, 'loading');
     loadRemoteComponent();
   });
 
@@ -211,7 +219,10 @@
 </script>
 
 <template>
-  <Teleport to="#extjs-root">
+  <Teleport
+    to="#extjs-root"
+    :disabled="teleport === false"
+  >
     <div
       v-show="shouldRender"
       class="vue-component-container"

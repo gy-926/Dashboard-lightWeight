@@ -42,6 +42,7 @@ interface KiviiBridge {
 
 // ── Window 扩展 ────────────────────────────────────────────────
 interface Window {
+  __KIVII_PAGE_HOST_DIAGNOSTICS__?: import('@/runtime/page-host/diagnostics').PageHostDiagnosticsBrowserApi;
   /** 宿主系统注入的全局配置（来自 HTML） */
   uiGlobalConfig?: {
     CurrentUser?: {

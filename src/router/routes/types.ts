@@ -55,7 +55,7 @@ export interface GlobalConfig {
   /** 作用域 */
   Scope?: string;
   /** 参数 */
-  Parameters?: Record<string, any>;
+  Parameters?: string | Record<string, any>;
   /** 是否已认证 */
   IsAuthenticated?: boolean;
   PublicLoginUrl?: string; // 公共登录页URL

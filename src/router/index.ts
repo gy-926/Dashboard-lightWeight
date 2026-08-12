@@ -7,6 +7,8 @@ import {
   clearDynamicRoutesCache,
 } from './routes';
 import { UnauthorizedError } from './routes/menu-service';
+import { usePageHostObserver } from '@/runtime/page-host/observer';
+import { usePageHostPilotStore } from '@/runtime/page-host/pilot-store';
 
 // 初始静态路由（用于首次渲染）
 const initialRoutes: RouteRecordRaw[] = [
@@ -264,6 +266,8 @@ export async function reloadDynamicRoutes(): Promise<void> {
   // 1. 清理上一会话的动态页面实例、远程 Vue 缓存和在途加载
   const { useTeleportManager } = await import('@/store/modules/teleport-manager');
   useTeleportManager().clearUserRuntime();
+  usePageHostObserver().clear();
+  usePageHostPilotStore().clear('logout');
 
   // 2. 清除本地缓存
   clearDynamicRoutesCache();

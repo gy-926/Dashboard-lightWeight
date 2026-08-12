@@ -14,6 +14,8 @@
   const props = defineProps<{
     componentName: string;
     componentTag?: string;
+    hosted?: boolean;
+    routeQuery?: Record<string, unknown>;
   }>();
 
   const attrs = useAttrs();
@@ -132,7 +134,9 @@
 
   const componentProps = computed(() => ({
     ...(parsedComponentTag.value?.props ?? {}),
-    ...normalizeProps(route.query as Record<string, unknown>),
+    ...normalizeProps(
+      props.hosted ? (props.routeQuery ?? {}) : (route.query as Record<string, unknown>)
+    ),
     ...normalizeProps(attrs as Record<string, unknown>),
   }));
 

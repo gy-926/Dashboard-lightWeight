@@ -4,6 +4,9 @@ import type { RouteRecordRaw } from 'vue-router';
 import type { MenuItem, ThemeConfig } from './types';
 import { findMenuParents, transformRouteToMenu } from './types';
 import { useTeleportManager } from '@/store/modules/teleport-manager';
+import { usePageHostObserver } from '@/runtime/page-host/observer';
+import { usePageHostPilotStore } from '@/runtime/page-host/pilot-store';
+import type { PageDestroyReason } from '@/runtime/page-host/types';
 
 const THEME_STORAGE_KEY = 'kivii-theme';
 
@@ -234,7 +237,9 @@ export const useMenuStore = defineStore('global-menu', () => {
     tabsList.value.push(cloneTab(item));
   }
 
-  function cleanupTabCache(tab: MenuItem) {
+  function cleanupTabCache(tab: MenuItem, reason: PageDestroyReason = 'close') {
+    usePageHostObserver().removeByPath(tab.path);
+    usePageHostPilotStore().removeByPath(tab.path, reason);
     teleportManager.removeComponentCacheByPath(tab.path, getTabKvid(tab));
   }
 
@@ -242,13 +247,13 @@ export const useMenuStore = defineStore('global-menu', () => {
     return theme.value.preserveHomeTab && tab.path === '/home';
   }
 
-  async function removeTab(path: string) {
+  async function removeTab(path: string, reason: PageDestroyReason = 'close') {
     const target = tabsList.value.find(tab => tab.path === path);
     if (!target) return;
     if (isProtectedHomeTab(target)) return;
 
     tabsList.value = tabsList.value.filter(tab => tab.path !== path);
-    cleanupTabCache(target);
+    cleanupTabCache(target, reason);
   }
 
   async function removeOtherTabs(targetPath: string) {
@@ -261,7 +266,7 @@ export const useMenuStore = defineStore('global-menu', () => {
       if (tab.path === targetPath) return true;
       return isProtectedHomeTab(tab);
     });
-    removed.forEach(cleanupTabCache);
+    removed.forEach(tab => cleanupTabCache(tab));
   }
 
   async function removeLeftTabs(targetPath: string) {
@@ -273,7 +278,7 @@ export const useMenuStore = defineStore('global-menu', () => {
       ...tabsList.value.slice(0, targetIndex).filter(isProtectedHomeTab),
       ...tabsList.value.slice(targetIndex),
     ];
-    removed.forEach(cleanupTabCache);
+    removed.forEach(tab => cleanupTabCache(tab));
   }
 
   async function removeRightTabs(targetPath: string) {
@@ -285,13 +290,13 @@ export const useMenuStore = defineStore('global-menu', () => {
       ...tabsList.value.slice(0, targetIndex + 1),
       ...tabsList.value.slice(targetIndex + 1).filter(isProtectedHomeTab),
     ];
-    removed.forEach(cleanupTabCache);
+    removed.forEach(tab => cleanupTabCache(tab));
   }
 
   async function removeAllTabs() {
     const removed = tabsList.value.filter(tab => !isProtectedHomeTab(tab));
     tabsList.value = tabsList.value.filter(isProtectedHomeTab);
-    removed.forEach(cleanupTabCache);
+    removed.forEach(tab => cleanupTabCache(tab));
   }
 
   // 关闭单个菜单 key（用于子菜单飞出层离开）
@@ -309,6 +314,8 @@ export const useMenuStore = defineStore('global-menu', () => {
     selectedKey.value = '';
     siderCollapsed.value = false;
     mixActiveRootKey.value = '';
+    usePageHostObserver().clear();
+    usePageHostPilotStore().clear('logout');
   }
 
   return {

@@ -24,6 +24,8 @@ pids
 
 # Coverage directory used by tools like istanbul
 coverage/
+playwright-report/
+test-results/
 
 # Local browser automation artifacts
 .playwright-mcp/

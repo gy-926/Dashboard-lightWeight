@@ -37,7 +37,7 @@ export function generateComponentCacheKey(
   backendOrigin?: string
 ): string {
   const origin = backendOrigin || '';
-  const fullUrl = url.startsWith('http') ? url : `${origin}${url}`;
+  const fullUrl = /^https?:\/\//i.test(url) ? url : `${origin}${url}`;
   return `vue_component::${fullUrl}::${kvid || ''}`;
 }
 
