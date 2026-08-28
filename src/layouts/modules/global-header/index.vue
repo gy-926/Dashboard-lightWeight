@@ -4,6 +4,7 @@
   import { useMenuStore } from '@/layouts/modules/global-menu/store';
   import GlobalTopMenu from '../global-menu/GlobalTopMenu.vue';
   import UserProfileModal from './UserProfileModal.vue';
+  import GlobalFunctionSearch from './GlobalFunctionSearch.vue';
   import type { MenuItem } from '../global-menu/types';
   import { kivii } from '@kivii.com/bridge';
   import { normalizeBrandText } from '@/utils/brand';
@@ -210,6 +211,7 @@
 
     <!-- 右侧：通知、用户 -->
     <div class="flex items-center gap-1 pr-4 flex-shrink-0 relative">
+      <GlobalFunctionSearch />
       <!-- 全屏按钮 -->
       <button
         class="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
@@ -355,6 +357,7 @@
 
     <!-- 右侧：通知、用户 -->
     <div class="flex items-center gap-1 pr-4 flex-shrink-0 relative">
+      <GlobalFunctionSearch />
       <!-- 全屏按钮 -->
       <button
         class="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
