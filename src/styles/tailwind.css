@@ -24,6 +24,14 @@
   --color-primary-light: #dbeafe;
   --color-primary-dark: #1d4ed8;
   --color-primary-bg: rgba(59, 130, 246, 0.1);
+
+  /* 首页通过语义变量取色，亮/暗主题切换时无需组件内判断。 */
+  --home-page-background: #f9fafb;
+  --home-page-title: #1f2937;
+  --home-page-description: #71717a;
+  --home-orb-one: #bfdbfe;
+  --home-orb-two: #dbeafe;
+  --home-orb-three: #e0f2fe;
 }
 
 /* 暗色模式基础样式 */
@@ -41,6 +49,14 @@
   --color-primary-light: var(--color-primary-dark-mode-light, rgba(59, 130, 246, 0.15));
   --color-primary-bg: var(--color-primary-dark-mode-bg, rgba(59, 130, 246, 0.1));
   --color-primary-hover: var(--color-primary-dark-mode-hover, rgba(59, 130, 246, 0.25));
+
+  /* 与宿主默认 dark gray 色板一致，避免首页和布局出现两套暗色。 */
+  --home-page-background: #111827;
+  --home-page-title: #f3f4f6;
+  --home-page-description: #9ca3af;
+  --home-orb-one: #1e3a5f;
+  --home-orb-two: #172554;
+  --home-orb-three: #164e63;
 }
 
 /* 主题色应用类 */
