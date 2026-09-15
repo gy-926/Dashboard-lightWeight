@@ -330,7 +330,7 @@
           >
             <div
               v-if="openKeys.includes(item.key)"
-              class="absolute left-0 top-full pt-1 z-50"
+              class="absolute left-0 top-full pt-1 z-[200]"
             >
               <div
                 class="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 min-w-48"
@@ -392,7 +392,7 @@
                       >
                         <div
                           v-if="openKeys.includes(child.key)"
-                          class="absolute left-full top-0 z-50"
+                          class="absolute left-full top-0 z-[200]"
                         >
                           <div
                             class="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 min-w-48 ml-1"
@@ -461,7 +461,7 @@
         >
           <div
             v-if="moreMenuVisible"
-            class="absolute right-0 top-full pt-1 z-50"
+            class="absolute right-0 top-full pt-1 z-[200]"
           >
             <div
               class="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 min-w-48"
@@ -522,7 +522,7 @@
                     >
                       <div
                         v-if="isMoreMenuOpen(item.key)"
-                        class="absolute left-full top-0 z-50 ml-1"
+                        class="absolute left-full top-0 z-[200] ml-1"
                         @mouseenter="handleMoreMenuEnter(item.key)"
                         @mouseleave="handleMoreMenuLeave"
                       >
