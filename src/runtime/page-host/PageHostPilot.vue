@@ -53,7 +53,8 @@ const hostStyle = computed(() => ({
 <style scoped>
 .page-host-root {
   position: fixed;
-  z-index: 101;
+  /* Keep hosted pages above the layout, but below UMD dialogs teleported to body (z-50). */
+  z-index: 10;
   pointer-events: none;
   overflow: hidden;
 }
