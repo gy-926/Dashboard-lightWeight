@@ -230,6 +230,25 @@ test('keeps a Hosted UMD component alive across tab switches and destroys it on 
   await expect.poll(async () => (await diagnosticSummary(page))?.destroy).toBe(destroyBefore + 1);
 });
 
+test('body teleported UMD dialogs appear above hosted page content', async ({ page }) => {
+  await page.goto(`/#${umdPath}`);
+  await expect(page.locator('#page-host-root #umd-draft')).toBeVisible();
+
+  const topElementId = await page.evaluate(() => {
+    const overlay = document.createElement('div');
+    overlay.id = 'e2e-umd-dialog';
+    overlay.style.cssText = 'position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,.4)';
+    document.body.appendChild(overlay);
+    const input = document.querySelector('#page-host-root #umd-draft')!;
+    const bounds = input.getBoundingClientRect();
+    const topElement = document.elementFromPoint(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2);
+    overlay.remove();
+    return topElement?.id;
+  });
+
+  expect(topElementId).toBe('e2e-umd-dialog');
+});
+
 test('close all destroys every hosted page through the public tab menu', async ({ page }) => {
   await page.goto(`/#${secondPath}`);
   await page.goto(`/#${umdPath}`);
