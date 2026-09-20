@@ -87,6 +87,6 @@ curl -H 'Authorization: Bearer <accessToken>' -H 'Content-Type: application/json
 
 TypeORM 迁移创建用户、会话、登录限制、文件、Dashboard 功能、菜单、角色、权限绑定和 UMD 版本表，并写入示例角色、菜单根及 iframe 示例。
 
-完整仓库的 Docker Compose 演示会在迁移完成后调用注册接口创建演示账号，再将该账号设置为超级管理员。独立运行 API 时不会自动创建超级管理员；请先注册用户，再按 `认证与无感续期.md` 中的方式由数据库管理员授予角色。
+根目录的本地联合启动脚本会在迁移完成后创建演示账号并授予超级管理员角色。独立运行 API 时不会自动创建超级管理员；请先注册用户，再按 `认证与无感续期.md` 中的方式由数据库管理员授予角色。
 
 随前端发布的 UMD 示例位于 `public/umd-showcase`。用户在 UMD Runtime Lab 导入的脚本由本 API 保存到 `FILE_STORAGE_ROOT`，并通过版本化的 `/dashboard-assets/:versionId/:fileName` 地址提供。

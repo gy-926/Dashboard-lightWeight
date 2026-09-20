@@ -6,7 +6,7 @@
   "scripts": {
     "deps:ensure": "node scripts/ensure-dependencies.mjs",
     "predev": "node scripts/ensure-dependencies.mjs",
-    "dev": "vite",
+    "dev": "node scripts/start-fullstack.mjs",
     "prebuild": "node scripts/ensure-dependencies.mjs",
     "build": "run-p type-check \"build-only {@}\" --",
     "prepreview": "node scripts/ensure-dependencies.mjs",
@@ -18,8 +18,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "demo": "docker compose -f docker-compose.demo.yml up --build",
-    "demo:down": "docker compose -f docker-compose.demo.yml down"
+    "dev:web": "vite",
+    "predev:web": "node scripts/ensure-dependencies.mjs",
+    "dev:api": "node scripts/start-api.mjs"
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.2.0",

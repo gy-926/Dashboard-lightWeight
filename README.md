@@ -75,30 +75,39 @@ PageHost 不需要在构建时预知 KVID。可通过 `PageHostEnabled: false` �
 
 ## 快速开始
 
-### 一键演示
+### 本地启动
 
-仓库已经包含 `server/` Nest API。安装 Docker Desktop 后运行：
+仓库已经包含 `server/` Nest API。首次使用时准备后端配置：
 
 ```bash
-docker compose -f docker-compose.demo.yml up --build
+cp server/.env.example server/.env
 ```
 
-已安装 pnpm 时也可以使用快捷命令 `pnpm demo`。
+在 `server/.env` 中填写本机 MySQL 用户和密码，并确保 MySQL 已启动。之后可以一键启动：
 
-首次启动会构建前端与 API、启动 MySQL、执行全部迁移并创建演示超级管理员。服务就绪后打开 [http://localhost:8080](http://localhost:8080)：
+```bash
+pnpm dev
+```
 
-- 邮箱：`admin@example.com`
-- 密码：`admin@123456`
+该命令会自动安装缺失的后端依赖、执行数据库迁移、创建本地演示管理员、先启动 API，确认 API 可访问后再启动前端。
 
-数据保存在 Docker volumes 中。停止服务使用 `Ctrl+C`；删除容器但保留数据使用 `pnpm demo:down`，需要完全重置时运行 `docker compose -f docker-compose.demo.yml down -v`。
+也可以在两个终端分别启动：
 
-可通过 `DEMO_PORT`、`DEMO_ADMIN_EMAIL`、`DEMO_ADMIN_PASSWORD`、`DEMO_DB_PASSWORD` 环境变量覆盖演示默认值。默认凭据只适合本机演示，公开部署前必须替换。
+```bash
+# 终端 1：迁移数据库并启动 API
+pnpm dev:api
+
+# 终端 2：只启动前端
+pnpm dev:web
+```
+
+默认本地管理员为 `admin@example.com` / `admin@123456`。如果同邮箱用户已经存在，只会授予超级管理员角色，不会重置原密码。可在 `server/.env` 中修改 `DEMO_ADMIN_EMAIL` 和 `DEMO_ADMIN_PASSWORD`。
 
 ### 环境要求
 
 - Node.js 24（同时开发前端和内置 API）；只开发前端时最低为 20.19
 - pnpm 10（前端）和 npm（内置 API）
-- 源码开发需要 MySQL；一键演示只需要 Docker Desktop
+- MySQL 8 或兼容版本
 
 ### 安装与启动
 
@@ -123,9 +132,9 @@ VITE_API_BASE_URL=/api
 
 | 命令 | 说明 |
 | --- | --- |
-| `pnpm demo` | 构建并启动前端、API、MySQL 和演示账号 |
-| `pnpm demo:down` | 停止并删除演示容器，保留数据卷 |
-| `pnpm dev` | 启动前端开发服务器 |
+| `pnpm dev` | 迁移数据库，依次启动 API 和前端 |
+| `pnpm dev:api` | 迁移数据库并启动内置 Nest API |
+| `pnpm dev:web` | 只启动前端开发服务器 |
 | `pnpm test` | 运行 Vitest 回归测试 |
 | `pnpm test:e2e` | 运行 PageHost Playwright 浏览器测试 |
 | `pnpm test:watch` | 监听模式运行测试 |

@@ -2,7 +2,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class CreateDashboardUmdVersions1789880000000 implements MigrationInterface {
   async up(q: QueryRunner): Promise<void> {
-    await q.query(`CREATE TABLE \`dashboard_umd_packages\` (
+    await q.query(`CREATE TABLE IF NOT EXISTS \`dashboard_umd_packages\` (
       \`id\` char(36) NOT NULL,
       \`module_key\` varchar(120) NOT NULL,
       \`name\` varchar(255) NOT NULL,
@@ -10,7 +10,7 @@ export class CreateDashboardUmdVersions1789880000000 implements MigrationInterfa
       PRIMARY KEY (\`id\`),
       UNIQUE KEY \`uq_dashboard_umd_packages_module_key\` (\`module_key\`)
     ) ENGINE=InnoDB`);
-    await q.query(`CREATE TABLE \`dashboard_umd_versions\` (
+    await q.query(`CREATE TABLE IF NOT EXISTS \`dashboard_umd_versions\` (
       \`id\` char(36) NOT NULL,
       \`package_id\` char(36) NOT NULL,
       \`version\` varchar(64) NOT NULL,
@@ -29,7 +29,7 @@ export class CreateDashboardUmdVersions1789880000000 implements MigrationInterfa
   }
 
   async down(q: QueryRunner): Promise<void> {
-    await q.query('DROP TABLE `dashboard_umd_versions`');
-    await q.query('DROP TABLE `dashboard_umd_packages`');
+    await q.query('DROP TABLE IF EXISTS `dashboard_umd_versions`');
+    await q.query('DROP TABLE IF EXISTS `dashboard_umd_packages`');
   }
 }
