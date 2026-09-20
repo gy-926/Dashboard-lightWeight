@@ -21,6 +21,8 @@ export interface PageHostPilotRoute {
   handler?: string;
   /** 为 true 时禁止再回退请求旧的 Function Access 接口。 */
   handlerResolved?: boolean;
+  /** UMD Handler 对应的本地脚本地址，来自功能记录 source_url。 */
+  scriptPath?: string;
 }
 
 export interface HostedPilotPageRecord {
@@ -195,7 +197,9 @@ export const usePageHostPilotStore = defineStore('page-host-pilot', () => {
 
       let accessPayload: FunctionAccessPayload;
       if (route.handlerResolved) {
-        accessPayload = { Results: [{ Handler: route.handler || '' }] };
+        accessPayload = {
+          Results: [{ Handler: route.handler || '', Remark: route.scriptPath || '' }],
+        };
       } else {
         const { kivii } = await import('@kivii.com/bridge');
         const response = await kivii.request.get<any>(

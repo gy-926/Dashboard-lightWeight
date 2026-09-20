@@ -1,6 +1,9 @@
 <script setup lang="ts">
   import { ref, computed, watch } from 'vue';
   import { kivii } from '@kivii.com/bridge';
+  import { apiRequest, getCurrentUser } from '@/api/nest-client';
+  import { validateNewPassword } from '@/utils/password-policy';
+  import { uploadFile } from '@/api/files';
 
   const props = defineProps<{
     visible: boolean;
@@ -19,7 +22,7 @@
   const activeTab = ref<Tab>('avatar');
 
   // 当前用户信息
-  const currentUserName = computed(() => (window as any).KiviiContext?.CurrentMember?.FullName || 'Admin');
+  const currentUserName = computed(() => getCurrentUser()?.name || (window as any).KiviiContext?.CurrentMember?.FullName || '用户');
   const currentAvatar = computed(() => {
     const avatar = (window as any).KiviiContext?.CurrentMember?.Avatar;
     if (!avatar) return '';
@@ -41,7 +44,7 @@
         avatarPreview.value = currentAvatar.value;
         avatarFile.value = null;
         avatarMessage.value = null;
-        passwordForm.value = { next: '', confirm: '' };
+        passwordForm.value = { old: '', next: '', confirm: '' };
         passwordMessage.value = null;
         aliasForm.value = { displayName: (window as any).KiviiContext?.CurrentMember?.FullName || currentUserName.value };
         aliasMessage.value = null;
@@ -78,53 +81,37 @@
       avatarMessage.value = { type: 'error', text: '请先选择头像图片' };
       return;
     }
-    const member = (window as any).KiviiContext?.CurrentMember;
-    if (!member?.Kvid) {
-      avatarMessage.value = { type: 'error', text: '无法获取当前用户信息，请刷新后重试' };
-      return;
-    }
     avatarLoading.value = true;
     avatarMessage.value = null;
     try {
-      const formData = new FormData();
-      formData.append('OwnerKvid', member.Kvid);
-      formData.append('Description', member.DisplayName || '');
-      formData.append('FileName', member.DisplayName || '');
-      formData.append('FolderPath', '/Organizations/Member/Avatars');
-      formData.append('FolderType', 'Kivii.Organizations.Entities.Member');
-      formData.append('uploadFile', avatarFile.value);
-      // 使用原生 fetch 上传，避免 bridge 将 FormData 序列化为 JSON 导致文件丢失
-      const res = await fetch('/storages.json', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await uploadFile(avatarFile.value);
+      const member = (window as any).KiviiContext?.CurrentMember;
       if (member) {
         member.Avatar = avatarPreview.value;
       }
-      avatarMessage.value = { type: 'success', text: '头像更新成功' };
-    } catch {
-      avatarMessage.value = { type: 'error', text: '头像更新失败，请重试' };
+      avatarMessage.value = { type: 'success', text: '头像已保存到本地文件存储' };
+    } catch (error: any) {
+      avatarMessage.value = { type: 'error', text: error?.message || '头像上传失败，请重试' };
     } finally {
       avatarLoading.value = false;
     }
   }
 
   // ── 密码 ──
-  const passwordForm = ref({ next: '', confirm: '' });
+  const passwordForm = ref({ old: '', next: '', confirm: '' });
   const passwordLoading = ref(false);
   const passwordMessage = ref<{ type: 'success' | 'error'; text: string } | null>(null);
   const showNext = ref(false);
   const showConfirm = ref(false);
 
   async function savePassword() {
-    if (!passwordForm.value.next || !passwordForm.value.confirm) {
-      passwordMessage.value = { type: 'error', text: '请填写新密码和确认密码' };
+    if (!passwordForm.value.old || !passwordForm.value.next || !passwordForm.value.confirm) {
+      passwordMessage.value = { type: 'error', text: '请填写原密码、新密码和确认密码' };
       return;
     }
-    if (passwordForm.value.next.length < 6) {
-      passwordMessage.value = { type: 'error', text: '新密码不能少于 6 位' };
+    const passwordError = validateNewPassword(passwordForm.value.next);
+    if (passwordError) {
+      passwordMessage.value = { type: 'error', text: passwordError };
       return;
     }
     if (passwordForm.value.next !== passwordForm.value.confirm) {
@@ -134,22 +121,9 @@
     passwordLoading.value = true;
     passwordMessage.value = null;
     try {
-      // 第一步：查询当前登录账号，获取 Account Kvid
-      const queryRes = await kivii.request.post<any>(
-        '/Restful/Kivii.Organizations.Entities.Account/Query.json',
-        {}
-      );
-      const accountKvid = queryRes?.data?.Results?.[0]?.Kvid;
-      if (!accountKvid) {
-        passwordMessage.value = { type: 'error', text: '无法获取账号信息，请刷新后重试' };
-        return;
-      }
-      // 第二步：用 Account Kvid 修改密码
-      await kivii.request.post('/Restful/Kivii.Organizations.Entities.Account/Update.json', {
-        Item: { Password: passwordForm.value.next, Kvid: accountKvid },
-      });
+      await apiRequest('/auth/change-password', { method: 'POST', body: JSON.stringify({ oldPassword: passwordForm.value.old, newPassword: passwordForm.value.next }) });
       passwordMessage.value = { type: 'success', text: '密码修改成功' };
-      passwordForm.value = { next: '', confirm: '' };
+      passwordForm.value = { old: '', next: '', confirm: '' };
     } catch {
       passwordMessage.value = { type: 'error', text: '密码修改失败，请重试' };
     } finally {
@@ -339,6 +313,10 @@
 
               <!-- 修改密码 -->
               <div v-else-if="activeTab === 'password'" class="space-y-4">
+                <div class="space-y-1">
+                  <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">原密码</label>
+                  <input v-model="passwordForm.old" type="password" autocomplete="current-password" placeholder="请输入原密码" class="w-full px-3 py-2.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white" />
+                </div>
                 <!-- 新密码 -->
                 <div class="space-y-1">
                   <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">新密码</label>
@@ -346,7 +324,7 @@
                     <input
                       v-model="passwordForm.next"
                       :type="showNext ? 'text' : 'password'"
-                      placeholder="请输入新密码（至少 6 位）"
+                      placeholder="至少 8 位，含字母、数字和符号"
                       class="w-full px-3 py-2.5 pr-10 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     />
                     <button

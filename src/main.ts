@@ -13,17 +13,21 @@ import '@kivii.com/bridge';
 // 引入公共组件及样式
 import * as KiviiPublicComponents from 'kivii-public-components';
 import 'kivii-public-components/style';
+import * as echarts from 'echarts';
 // 引入自定义 OpenTab 实现
 import { KiviiOpenTab } from './bridge/kivii-open-tab';
 // 引入远程组件加载器
 import { loadUmdOnDemand, registerRemoteComponents } from '@/utils/remoteComponentLoader';
-import { initializeAuthState, setupSupabaseAuthSync } from '@/utils/auth-state';
+import { initializeAuthState, setupAuthSync } from '@/utils/auth-state';
 import { usePageHostPilotStore } from '@/runtime/page-host/pilot-store';
 import { installPageHostDiagnosticsBrowserApi } from '@/runtime/page-host/diagnostics';
 import { getGlobalConfig } from '@/router/routes';
 import { getPageHostPilotConfig } from '@/runtime/page-host/pilot-config';
 
 const initApp = async () => {
+  // UMD 组件将 ECharts 作为外部依赖；由宿主的本地 npm 包统一提供。
+  (window as typeof window & { echarts?: typeof echarts }).echarts = echarts;
+
   const app = createApp(App);
   installPageHostDiagnosticsBrowserApi(window, () =>
     getPageHostPilotConfig(getGlobalConfig())
@@ -58,9 +62,9 @@ const initApp = async () => {
     return isRegistered();
   });
 
-  // 在路由守卫执行前先根据 Supabase session 初始化登录状态
+  // 在路由守卫执行前先通过本地 Nest API 初始化登录状态
   await initializeAuthState();
-  setupSupabaseAuthSync({ router, pinia });
+  setupAuthSync({ router, pinia });
 
   // 注册 kiviiBridge 自定义实现（在挂载前）
   if (window.kivii) {
@@ -69,9 +73,8 @@ const initApp = async () => {
     console.warn('[KiviiBridge] kivii 未初始化，无法注册自定义实现');
   }
 
-  // 动态加载远程组件（后台加载，不阻塞应用挂载）
-  // Supabase 存储使用匿名 key 访问，无需登录即可加载，始终在启动时触发
-  registerRemoteComponents(app, 'supabase:UmdTempleate')
+  // 不再请求 /codes 配置；仅初始化 UMD 就绪状态并加载内置 showcase。
+  registerRemoteComponents(app, 'empty_skip_load')
     .catch(e => {
       console.error('[UMD] 远程组件加载失败:', e);
     })

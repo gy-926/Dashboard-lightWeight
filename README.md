@@ -33,7 +33,7 @@
 - **多标签工作台**：统一处理打开、切换、刷新、关闭和批量关闭。
 - **缓存与竞争保护**：远程 Vue 加载去重，并阻止已失效异步任务重新写入缓存。
 - **会话隔离**：退出和重新认证后清理旧用户的标签、动态路由与页面运行时。
-- **Supabase 鉴权**：使用 Supabase Auth、Edge Functions 和 RLS 管理菜单、角色与用户权限。
+- **自建鉴权与接口**：通过 Nest API 和 MySQL 管理登录、菜单、角色与用户权限。
 - **主题与响应式布局**：支持侧边、顶部和混合导航，以及亮色、暗色和窄屏布局。
 
 ## 主项目与 UMD 模板
@@ -54,7 +54,7 @@ flowchart LR
   Routes --> Workspace[标签式工作台]
 ```
 
-UMD 模板将 Vue、ECharts 和 `@kivii.com/bridge` 设为外部依赖，避免业务组件携带第二份运行时。宿主加载组件前提供兼容版本，并通过 `app.use()` 或具名导出完成注册。
+UMD 模板将 Vue、ECharts 和 `@kivii.com/bridge` 设为外部依赖，避免业务组件携带第二份运行时。宿主从本地 npm 依赖提供 ECharts，并通过 `app.use()` 或具名导出完成注册；页面不再加载远程 ECharts 和 MD5 脚本。
 
 ## PageHost 页面保活
 
@@ -67,7 +67,7 @@ PageHost 不需要在构建时预知 KVID。可通过 `PageHostEnabled: false` �
 - Vue 3、TypeScript、Vite
 - Vue Router、Pinia、VueUse
 - Tailwind CSS、Font Awesome
-- Supabase Auth、Database、RLS、Edge Functions
+- Nest API、MySQL
 - Vitest
 - `vue3-sfc-loader`
 - `@kivii.com/bridge`
@@ -78,7 +78,7 @@ PageHost 不需要在构建时预知 KVID。可通过 `PageHostEnabled: false` �
 
 - Node.js 20.19 或更高版本
 - pnpm 10（仓库锁定版本为 10.28.1）
-- 如需运行本地 Supabase：Docker
+- 已启动的 `nest-learning-api` 和 MySQL
 
 ### 安装与启动
 
@@ -91,14 +91,13 @@ cp .env.example .env
 pnpm dev
 ```
 
-在 `.env` 中填写自己的 Supabase 项目配置：
+在 `.env` 中填写 Nest API 地址：
 
 ```dotenv
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key
+VITE_API_BASE_URL=/api
 ```
 
-浏览器端只能使用 Supabase Anon Key。不要把 `SUPABASE_SERVICE_ROLE_KEY` 或其他服务端密钥写入 `.env`、前端代码或 Git。
+开发服务器默认监听 `127.0.0.1:5173`，并将 `/api` 代理到本地 Nest 的 `127.0.0.1:3000`。启动前需先在 `nest-learning-api` 中执行数据库迁移。生产环境也需要把同源 `/api` 转发到 Nest，并将响应 cookie 的 `/auth` 路径改写为 `/api/auth`。
 
 ### 常用命令
 
@@ -111,33 +110,18 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 | `pnpm type-check` | 执行 Vue/TypeScript 类型检查 |
 | `pnpm build` | 类型检查并生成生产构建 |
 | `pnpm preview` | 预览生产构建 |
-| `pnpm edge:serve` | 本地运行 Supabase Edge Functions |
-| `pnpm edge:deploy` | 部署 Dashboard Edge Functions |
+| `pnpm edge:serve` | 仅用于旧 Supabase Edge Function 代码 |
+| `pnpm edge:deploy` | 仅用于旧 Supabase 部署 |
 
-## Supabase 初始化
+## 自建 API 初始化
 
-仓库提供菜单、权限、用户目录和 RLS 所需的 SQL 脚本，以及两个 Edge Function：
+在 `nest-learning-api` 中配置 MySQL 并运行 `./node_modules/.bin/typeorm-ts-node-esm migration:run -d data-source.ts`。迁移创建 Dashboard 功能、菜单、角色及绑定表，并写入原始脚本中的示例菜单；仓库不包含旧 Supabase 数据导出。管理接口要求 `users.role=super_admin`，角色及菜单接口见该项目的 `doc/Dashboard 自建接口.md`。
 
-- `dashboard-functions`：读取当前用户可访问的功能与菜单；
-- `dashboard-admin`：执行受管理员权限保护的菜单、角色和用户管理操作。
-
-首次部署建议按以下顺序执行：
-
-1. 创建或关联 Supabase 项目；
-2. 根据 `scripts/` 中的初始化与升级脚本创建表、权限和 RLS；
-3. 部署 `dashboard-functions` 与 `dashboard-admin`；
-4. 验证新版前端能够通过 Edge Function 访问数据；
-5. 最后执行 `scripts/secure-dashboard-for-edge-api.sql`，关闭浏览器对业务表的直接访问。
-
-```bash
-pnpm exec supabase login
-pnpm exec supabase link --project-ref <your-project-ref>
-pnpm edge:deploy
-```
-
-管理员接口要求当前用户的 `app_metadata.role` 为 `admin`。Service Role Key 只能配置在 Supabase 服务端。
+应用启动时不再请求 `/codes` 配置。UMD 文件仍可在功能页面中按明确的脚本地址加载，内置示例从 `/umd-showcase` 读取。
 
 ## UMD 接入契约
+
+“UMD Runtime Lab” 支持选择 UMD `.js` 文件并读取其 manifest。确认模块标识和版本后，前端通过 `POST /dashboard-functions/import-umd` 将原始 JS 保存到 Nest 本地文件存储，并把组件清单同步到功能列表。页面会保留历史版本；启用历史版本时会更新功能来源地址、清理动态路由缓存并重新加载对应脚本。
 
 推荐使用配套模板构建业务 UMD。每个 UMD 至少应提供：
 
@@ -172,7 +156,7 @@ window.__KIVII_UMD_REGISTRY__.byFileName[fileName]
 
 ```text
 src/
-├── api/                         Supabase Edge Function 客户端
+├── api/                         Nest API 客户端
 ├── bridge/                      Bridge 与宿主 OpenTab 适配
 ├── components/                  通用组件与重新登录弹窗
 ├── layouts/                     工作台布局、菜单、标签和主题
@@ -181,7 +165,7 @@ src/
 ├── utils/remoteComponentLoader  UMD/ESM 加载、Registry 与注册
 └── views/_builtin/iframe-page   iframe、远程 Vue 和 UMD 页面入口
 
-supabase/functions/              Edge Functions
+supabase/functions/              旧 Edge Functions，供迁移参考
 scripts/                         数据库、权限和 RLS 脚本
 public/umd-showcase/             可公开运行的 UMD 示例
 public/umd/                      随应用发布的 UMD 兼容性制品

@@ -17,7 +17,7 @@ const testEdgeApi = async () => {
     roles.value = await getCurrentUserRoles()
   } catch (error: any) {
     console.error('Error fetching users:', error)
-    errorMessage.value = error.message || '连接 Edge API 失败'
+    errorMessage.value = error.message || '连接 Dashboard API 失败'
   } finally {
     loading.value = false
   }
@@ -34,7 +34,7 @@ onMounted(() => {
     <div class="flex items-center justify-between">
       <h1 class="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
         <i class="fas fa-database text-green-500"></i>
-        Supabase 连接测试
+        Dashboard API 连接测试
       </h1>
       <button 
         @click="testEdgeApi"
@@ -49,7 +49,7 @@ onMounted(() => {
     <!-- 状态展示 -->
     <div v-if="loading" class="bg-white dark:bg-gray-800 rounded-xl p-12 shadow-sm text-center">
       <i class="fas fa-spinner fa-spin text-4xl text-blue-500 mb-4"></i>
-      <p class="text-gray-500">正在验证 Supabase 登录和 dashboard-admin Edge API...</p>
+      <p class="text-gray-500">正在验证 Nest 登录和 dashboard-admin API...</p>
     </div>
 
     <div v-else-if="errorMessage" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 text-red-600 dark:text-red-400">
@@ -61,8 +61,8 @@ onMounted(() => {
           <div class="mt-4 text-sm opacity-80 space-y-1">
             <p>可能的原因：</p>
             <ul class="list-disc pl-5">
-              <li>.env 中的 VITE_SUPABASE_URL 或 VITE_SUPABASE_ANON_KEY 不正确</li>
-              <li>dashboard-admin Edge Function 尚未部署</li>
+              <li>.env 中的 VITE_API_BASE_URL 不正确</li>
+              <li>Nest API 或 MySQL 尚未启动</li>
               <li>当前登录状态已经过期</li>
             </ul>
           </div>

@@ -86,6 +86,15 @@ export const autoRoutes: RouteRecordRaw[] = [
               icon: 'fa-sitemap',
             },
           },
+          {
+            path: 'file-storage',
+            name: 'file-storage',
+            component: () => import('../../views/file-storage/index.vue'),
+            meta: {
+              title: '文件存储',
+              icon: 'fa-hard-drive',
+            },
+          },
         ],
       },
       {

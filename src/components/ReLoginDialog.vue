@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
-import { supabase } from '@/utils/supabase'
+import { login } from '@/api/nest-client'
 import { clearDynamicRoutesCache } from '@/router/routes'
 
-const form = reactive({ email: 'admin@example.com', password: 'admin@123456' })
+const form = reactive({ email: '', password: '' })
 const isLoading = ref(false)
 const errorMsg = ref('')
 
-function getSupabaseErrorMessage(message: string): string {
+function getLoginErrorMessage(message: string): string {
   if (message.includes('Invalid login credentials')) return '邮箱或密码错误'
   if (message.includes('Email not confirmed')) return '邮箱未验证，请先前往邮箱完成验证'
   if (message.includes('Too many requests')) return '操作过于频繁，请稍后再试'
@@ -24,11 +24,7 @@ async function handleLogin() {
   errorMsg.value = ''
 
   try {
-    const { error } = await supabase.auth.signInWithPassword({
-      email: form.email,
-      password: form.password,
-    })
-    if (error) throw error
+    await login(form.email, form.password)
     form.email = ''
     form.password = ''
 
@@ -43,7 +39,7 @@ async function handleLogin() {
       window.location.reload()
     }
   } catch (e: any) {
-    errorMsg.value = getSupabaseErrorMessage(e?.message ?? '')
+    errorMsg.value = getLoginErrorMessage(e?.message ?? '')
   } finally {
     isLoading.value = false
   }

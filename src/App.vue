@@ -11,7 +11,7 @@
   <!-- KVID 动态页面的永久宿主，位于 router-view 外以保留真实页面实例。 -->
   <PageHostPilot />
   <!-- 登录过期弹窗 -->
-  <ReLoginDialog v-if="reLoginVisible" />
+  <ReLoginDialog v-if="reLoginVisible && !['/login', '/SpringLogin', '/update-password'].includes(route.path)" />
 </template>
 
 <script setup lang="ts">
@@ -60,6 +60,10 @@ watch(
           ? route.meta.pageHandler
           : undefined,
       handlerResolved: route.meta?.pageHandlerResolved === true,
+      scriptPath:
+        typeof route.meta?.pageScriptPath === 'string'
+          ? route.meta.pageScriptPath
+          : undefined,
     }
     const decision = getPageHostPilotDecision(getGlobalConfig(), pageRoute.kvid)
     if (!decision.eligible) {

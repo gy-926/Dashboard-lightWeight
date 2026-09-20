@@ -2505,7 +2505,7 @@
       }
 
       function onRelateScroll() {
-        // Supabase 数据源下当前使用本地筛选，无需分页加载
+        // Dashboard API 数据源下当前使用本地筛选，无需分页加载
       }
 
       function openRelatePicker() {

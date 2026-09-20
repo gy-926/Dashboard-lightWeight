@@ -1,9 +1,13 @@
 import { triggerReLogin } from '@/composables/useReLogin';
+import { getCurrentUser, isNestApiRequest } from '@/api/nest-client';
 
 const AUTH_ENDPOINTS = ['/auth/kivii.json'];
 
-function isAuthEndpoint(url: string): boolean {
-  return AUTH_ENDPOINTS.some(endpoint => url.includes(endpoint));
+function shouldPromptReLogin(url: string): boolean {
+  // Nest 请求由 apiRequest 负责静默刷新；初始化时 refresh 返回 401 也属于正常未登录状态。
+  if (isNestApiRequest(url) || AUTH_ENDPOINTS.some(endpoint => url.includes(endpoint))) return false;
+  if (!getCurrentUser()) return false;
+  return !['/login', '/SpringLogin', '/update-password'].includes(window.location.pathname);
 }
 
 function setupXHRInterceptor() {
@@ -26,7 +30,7 @@ function setupXHRInterceptor() {
   ) {
     this.addEventListener('readystatechange', () => {
       if (this.readyState === 4 && this.status === 401) {
-        if (this._interceptUrl && !isAuthEndpoint(this._interceptUrl)) {
+        if (this._interceptUrl && shouldPromptReLogin(this._interceptUrl)) {
           triggerReLogin();
         }
       }
@@ -42,7 +46,7 @@ function setupFetchInterceptor() {
     const response = await originalFetch.apply(window, args);
     if (response.status === 401) {
       const url = args[0] instanceof Request ? args[0].url : String(args[0]);
-      if (!isAuthEndpoint(url)) {
+      if (shouldPromptReLogin(url)) {
         triggerReLogin();
       }
     }

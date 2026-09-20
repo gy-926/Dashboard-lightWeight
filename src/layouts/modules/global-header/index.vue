@@ -8,7 +8,7 @@
   import type { MenuItem } from '../global-menu/types';
   import { kivii } from '@kivii.com/bridge';
   import { normalizeBrandText } from '@/utils/brand';
-  import { supabase } from '@/utils/supabase';
+  import { logout } from '@/api/nest-client';
   import { reloadDynamicRoutes, clearDynamicRoutesState } from '@/router';
   import { setAuthenticatedFlag } from '@/utils/auth-state';
   import { useTeleportManager } from '@/store/modules/teleport-manager';
@@ -119,9 +119,7 @@
       await router.replace('/login');
       teleportManager.clearUserRuntime();
 
-      // 1. 调用 Supabase 的退出接口，清除服务端的 session 状态
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      await logout();
 
       // [保留旧的后端退出逻辑，如有需要可以取消注释]
       // await kivii.request.post('/auth/logout.json', undefined, {

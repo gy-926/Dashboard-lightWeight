@@ -8,7 +8,6 @@ import {
   notifyUmdRegistryChanged,
 } from './umd/state';
 import { loadComponent, loadUMDComponent } from './umd/loader';
-import { storageClient } from '@/utils/supabase';
 
 // 公共 re-exports（维持现有外部导入路径不变）
 export type { RemoteLibraryInfo, ComponentConfig, Config } from './umd/types';
@@ -20,35 +19,10 @@ export {
 } from './umd/state';
 export { generateUmdRoutes } from './umd/routes';
 
-// 从 Supabase 存储桶中加载 UMD 组件配置
-// configPath 格式：'supabase:<BucketName>'
 const loadConfig = async (configPath: string): Promise<Config> => {
-  if (configPath.startsWith('supabase:')) {
-    const bucketName = configPath.slice('supabase:'.length);
-    const { data: files, error } = await storageClient.storage.from(bucketName).list();
-    if (error) throw error;
-
-    const components: ComponentConfig[] = (files ?? [])
-      .filter(f => f.name.endsWith('.js'))
-      .map(f => {
-        const name = f.name.replace(/(\.umd)?(\.min)?\.js$/i, '');
-        const { data } = storageClient.storage.from(bucketName).getPublicUrl(f.name);
-        return {
-          name,
-          type: 'umd' as const,
-          version: '1.0.0',
-          path: data.publicUrl,
-          globalName: 'VueComponent',
-          autoRegister: true,
-          // 固定存储桶是受信任的自动发现源，加载成功后应生成运行时菜单。
-          showInMenu: true,
-        };
-      });
-
-    return { components };
-  }
-
-  return { components: [] };
+  const response = await fetch(configPath);
+  if (!response.ok) throw new Error(`UMD 配置加载失败（HTTP ${response.status}）`);
+  return response.json() as Promise<Config>;
 };
 
 // 清理 UMD 脚本执行后意外插入 <body> 的 CSS 文本节点
@@ -260,7 +234,7 @@ export const loadUmdOnDemand = async (app: App, scriptPath: string): Promise<voi
 
 export const registerRemoteComponents = async (
   app: App,
-  configUrl = '/codes/umdComponents.json'
+  configUrl = 'empty_skip_load'
 ): Promise<void> => {
   if (!window.Vue) window.Vue = Vue;
 

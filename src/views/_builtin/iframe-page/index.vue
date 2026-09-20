@@ -1,6 +1,6 @@
 <script setup lang="ts">
   defineOptions({ name: 'IframePage' });
-  import { ref, onMounted, onUnmounted, onActivated, computed, watch } from 'vue';
+  import { ref, onMounted, onUnmounted, onActivated, computed, getCurrentInstance, watch } from 'vue';
   import { useRoute } from 'vue-router';
   import {
     useTeleportManager,
@@ -10,6 +10,7 @@
   import WebviewComponent from './webview.vue';
   import VueComponent from './vueComponent.vue';
   import UmdComponentPage from '../umd-component/index.vue';
+  import { loadUmdOnDemand } from '@/utils/remoteComponentLoader';
 
   // 路由 props
   const props = defineProps<{
@@ -18,12 +19,14 @@
     functionKvid?: string;
     handler?: string; // 关联函数的 handler，由路由层直接传入，无需再调接口
     handlerResolved?: boolean; // 即使 handler 为空，也表示菜单数据已完成解析
+    scriptPath?: string; // UMD 文件地址，供未启用 PageHost 的兼容路径使用
     type?: PageType;
     routeQuery?: Record<string, string>;
     backendOrigin?: string;
   }>();
 
   const route = useRoute();
+  const instance = getCurrentInstance();
   const { registerPage, unregisterPage, updatePageStatus, requestActivation, forceActivate } =
     useTeleportManager();
 
@@ -111,6 +114,17 @@
     }
   }
 
+  async function applyHandlerWithScript(handler: string, scriptPath?: string) {
+    applyHandler(handler);
+    if (
+      determineRenderTypeByHandler(handler) === 'umd' &&
+      scriptPath &&
+      instance?.appContext.app
+    ) {
+      await loadUmdOnDemand(instance.appContext.app, scriptPath);
+    }
+  }
+
   // 兜底：通过接口查询 handler（仅 handler prop 不存在时使用）
   async function fetchFunctionAccess(): Promise<boolean> {
     const requestId = ++functionAccessRequestId;
@@ -133,7 +147,7 @@
 
       if (data?.Results && data.Results.length > 0) {
         const handler = data.Results[0].Handler;
-        if (handler) applyHandler(handler);
+        if (handler) await applyHandlerWithScript(handler, data.Results[0].Remark);
       }
 
       if (!isCurrentRequest()) return false;
@@ -150,10 +164,10 @@
     }
   }
 
-  function applyRouteHandler(handler: string): boolean {
+  async function applyRouteHandler(handler: string): Promise<boolean> {
     functionAccessRequestId++;
     if (isDisposed) return false;
-    applyHandler(handler);
+    await applyHandlerWithScript(handler, props.scriptPath);
     isLoading.value = false;
     return true;
   }
@@ -237,7 +251,7 @@
   onMounted(async () => {
     // 路由层明确完成解析后，不再回退调用旧 Function Access 接口。
     const shouldInitialize = props.handlerResolved || !!props.handler
-      ? applyRouteHandler(props.handler || '')
+      ? await applyRouteHandler(props.handler || '')
       : await fetchFunctionAccess();
     if (!shouldInitialize) return;
 
@@ -260,7 +274,7 @@
 
   // 路由参数变化时更新
   watch(
-    () => [props.url, props.kvid, props.type, props.handler, props.handlerResolved],
+    () => [props.url, props.kvid, props.type, props.handler, props.handlerResolved, props.scriptPath],
     async () => {
       isLoading.value = true;
       dynamicHandler.value = '';
@@ -268,7 +282,7 @@
       dynamicRenderType.value = 'webview';
 
       const shouldInitialize = props.handlerResolved || !!props.handler
-        ? applyRouteHandler(props.handler || '')
+        ? await applyRouteHandler(props.handler || '')
         : await fetchFunctionAccess();
       if (!shouldInitialize) return;
 

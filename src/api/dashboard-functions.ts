@@ -24,6 +24,31 @@ interface ImportResult {
   skipped: number;
 }
 
+export interface UmdVersionRecord {
+  id: string;
+  module_key: string;
+  name: string;
+  version: string;
+  file_id: string;
+  original_name: string;
+  size: number;
+  sha256: string;
+  manifest: Record<string, any>;
+  is_current: boolean;
+  created_by: string;
+  created_at: string;
+  sourceUrl: string;
+}
+
+export interface UmdImportResult {
+  moduleKey: string;
+  name: string;
+  version: string;
+  versionId: string;
+  sourceUrl: string;
+  imported: number;
+}
+
 const request = <T>(path = '', init: RequestInit = {}) =>
   requestEdgeFunction<T>('dashboard-functions', path, init);
 
@@ -61,4 +86,31 @@ export function importDashboardFunctions(
     method: 'POST',
     body: JSON.stringify({ items }),
   });
+}
+
+export function importUmdPackage(input: {
+  file: File;
+  manifest: Record<string, any>;
+  components: Array<Record<string, any> | string>;
+  moduleKey: string;
+  name: string;
+  version: string;
+}): Promise<UmdImportResult> {
+  const body = new FormData();
+  body.append('file', input.file, input.file.name);
+  body.append('manifest', JSON.stringify(input.manifest));
+  body.append('components', JSON.stringify(input.components));
+  body.append('moduleKey', input.moduleKey);
+  body.append('name', input.name);
+  body.append('version', input.version);
+  return request<UmdImportResult>('/import-umd', { method: 'POST', body });
+}
+
+export function listUmdVersions(moduleKey = ''): Promise<UmdVersionRecord[]> {
+  const query = moduleKey ? `?moduleKey=${encodeURIComponent(moduleKey)}` : '';
+  return request<UmdVersionRecord[]>(`/umd-versions${query}`);
+}
+
+export function activateUmdVersion(versionId: string): Promise<{ versionId: string; moduleKey: string; version: string; sourceUrl: string }> {
+  return request(`/umd-versions/${encodeURIComponent(versionId)}/activate`, { method: 'PUT' });
 }

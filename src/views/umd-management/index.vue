@@ -1,11 +1,15 @@
 <script setup lang="ts">
-  import { ref } from 'vue';
+  import { getCurrentInstance, onMounted, ref } from 'vue';
   import {
-    importDashboardFunctions,
-    type DashboardFunctionRecord,
+    activateUmdVersion,
+    importUmdPackage,
+    listUmdVersions,
+    type UmdVersionRecord,
   } from '@/api/dashboard-functions';
   import { normalizeBrandText } from '@/utils/brand';
-  import { remoteLibraries } from '@/utils/remoteComponentLoader';
+  import { loadUmdOnDemand, remoteLibraries } from '@/utils/remoteComponentLoader';
+  import { loadUMDComponent } from '@/utils/umd/loader';
+  import { clearDynamicRoutesCache } from '@/router/routes';
 
   // 定义分析结果的数据结构，与原页面类似
   export interface AnalyzedLibrary {
@@ -20,6 +24,7 @@
     registeredCount?: number;
     rawFile?: File; // 用于保存原始文件以便上传
     isUploading?: boolean; // 上传状态
+    versionOverride?: string;
   }
 
   const analyzedLibraries = ref<AnalyzedLibrary[]>([]);
@@ -27,10 +32,9 @@
   const remoteUrl = ref('');
   const fileInput = ref<HTMLInputElement | null>(null);
   const isProcessing = ref(false);
-
-  function generateId(): string {
-    return crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36);
-  }
+  const versions = ref<UmdVersionRecord[]>([]);
+  const versionsLoading = ref(false);
+  const instance = getCurrentInstance();
 
   // 已勾选的组件名称集合（默认全选）
   const selectedComponents = ref<Set<string>>(new Set());
@@ -74,61 +78,22 @@
   };
 
   // 工具方法：动态加载并分析 UMD 文件
-  const analyzeUmdScript = (url: string, name: string) => {
-    return new Promise<AnalyzedLibrary>((resolve, reject) => {
-      // 记录加载前的全局变量
-      const keysBefore = new Set(Object.keys(window));
-
-      const script = document.createElement('script');
-      script.src = url;
-      script.onload = () => {
-        // 找出新增的全局变量
-        const keysAfter = Object.keys(window);
-        const newKeys = keysAfter.filter(k => !keysBefore.has(k) && k !== 'Vue' && k !== '__VUE__');
-
-        let globalName = newKeys.length > 0 ? newKeys[0] : 'VueComponent';
-        let component = (window as any)[globalName];
-
-        if (!component) {
-          // 尝试兜底策略
-          const possibleNames = ['VueComponent', name, name.replace(/[^a-zA-Z0-9]/g, '')];
-          for (const pName of possibleNames) {
-            if ((window as any)[pName]) {
-              component = (window as any)[pName];
-              globalName = pName;
-              break;
-            }
-          }
-        }
-
-        if (component) {
-          const lib: AnalyzedLibrary = {
-            name: globalName || name,
-            url: url.startsWith('blob:') ? '本地文件' : url,
-            status: 'success',
-            componentKeys: Object.keys(component),
-          };
-
-          if (component.manifest) {
-            lib.manifest = component.manifest;
-            if (!component.componentsDetailed && component.manifest.componentsDetailed) {
-              lib.componentsDetailed = component.manifest.componentsDetailed;
-            }
-          }
-          if (component.componentsDetailed) {
-            lib.componentsDetailed = component.componentsDetailed;
-          }
-
-          resolve(lib);
-        } else {
-          reject(new Error(`无法在全局对象中找到导出的模块，可能不是标准的 UMD 格式。`));
-        }
-      };
-      script.onerror = () => {
-        reject(new Error(`脚本加载失败: ${url}`));
-      };
-      document.head.appendChild(script);
-    });
+  const analyzeUmdScript = async (url: string, name: string): Promise<AnalyzedLibrary> => {
+    const component = await loadUMDComponent(url);
+    if (!component || typeof component !== 'object') {
+      throw new Error('无法读取 UMD 导出对象，请确认文件符合 UMD 接入规范。');
+    }
+    const manifest = component.manifest ?? {};
+    return {
+      name: manifest.zhName || manifest.libName || manifest.name || name,
+      url: url.startsWith('blob:') ? '本地文件' : url,
+      status: 'success',
+      manifest,
+      componentsDetailed: component.componentsDetailed ?? manifest.componentsDetailed,
+      componentsMap: component.componentsMap ?? manifest.componentsMap,
+      componentKeys: Object.keys(component),
+      versionOverride: String(manifest.version || ''),
+    };
   };
 
   const addAnalyzingCard = (name: string, url: string, file?: File) => {
@@ -204,6 +169,7 @@
         error: error.message || '分析失败',
       });
     } finally {
+      URL.revokeObjectURL(url);
       isProcessing.value = false;
       // 重置 input
       if (fileInput.value) fileInput.value.value = '';
@@ -217,55 +183,74 @@
       return;
     }
 
-    // 本地文件当前仅支持分析；若要按需加载，后续需补充可访问的 source_url
-    const sourceUrl = lib.rawFile ? null : lib.url;
-    const sourceModule = lib.manifest?.name || lib.name;
-
-    // 构造候选功能记录
-    const candidates: DashboardFunctionRecord[] = (lib.componentsDetailed ?? [])
-      .filter((comp: any) => selected.has(comp.name as string))
-      .map((comp: any, idx: number) => ({
-        kvid: generateId(),
-        title: (comp.zhName || comp.displayName || comp.name) as string,
-        handler: `<${comp.name as string}>`,
-        render_type: 'umd',
-        source_type: 'umd',
-        source_module: sourceModule,
-        source_url: sourceUrl,
-        source_component: comp.name as string,
-        icon: (comp.icon as string | undefined) || null,
-        sort_order: idx,
-        is_active: true,
-        remark: sourceUrl,
-        parameters: {},
-      }));
+    const components = (lib.componentsDetailed ?? []).filter((comp: any) => selected.has(comp.name as string));
+    const version = String(lib.versionOverride || lib.manifest?.version || '').trim();
+    if (!version) {
+      alert('请输入版本号');
+      return;
+    }
+    const sourceModule = String(lib.manifest?.libName || lib.manifest?.name || lib.name)
+      .trim()
+      .replace(/[^A-Za-z0-9._-]+/g, '-')
+      .replace(/^-+|-+$/g, '');
 
     updateAnalyzingCard(lib, { isUploading: true });
 
-    let result: { inserted: number; skipped: number };
     try {
-      result = await importDashboardFunctions(candidates);
+      let file = lib.rawFile;
+      if (!file) {
+        const response = await fetch(lib.url);
+        if (!response.ok) throw new Error(`下载远程文件失败（HTTP ${response.status}）`);
+        file = new File([await response.blob()], `${sourceModule}-${version}.umd.js`, { type: 'text/javascript' });
+      }
+      const result = await importUmdPackage({
+        file,
+        manifest: { ...(lib.manifest ?? {}), version },
+        components,
+        moduleKey: sourceModule,
+        name: String(lib.manifest?.zhName || lib.name),
+        version,
+      });
+      clearDynamicRoutesCache();
+      await loadVersions();
+      alert(`已保存 ${file.name}，并将 ${result.imported} 个组件导入功能列表。当前版本：${result.version}`);
+      closeModal();
     } catch (error: any) {
       updateAnalyzingCard(lib, { isUploading: false });
       alert('导入失败：' + (error?.message ?? '未知错误'));
       return;
     }
     updateAnalyzingCard(lib, { isUploading: false });
-
-    if (result.inserted === 0) {
-      alert(`所选的 ${candidates.length} 个组件均已存在，无需重复导入。`);
-      return;
-    }
-
-    const suffix = sourceUrl
-      ? ''
-      : ' 当前为本地分析导入，请在功能列表中补充可访问的来源地址后再用于运行时按需加载。';
-    const msg =
-      result.skipped > 0
-        ? `成功注册 ${result.inserted} 个功能，跳过 ${result.skipped} 个已存在的组件。${suffix}`
-        : `已成功将 ${result.inserted} 个组件注册到功能列表！${suffix}`;
-    alert(msg);
   };
+
+  async function loadVersions() {
+    versionsLoading.value = true;
+    try {
+      versions.value = await listUmdVersions();
+    } catch (error: any) {
+      console.error('加载 UMD 版本失败:', error);
+    } finally {
+      versionsLoading.value = false;
+    }
+  }
+
+  async function switchVersion(item: UmdVersionRecord) {
+    if (item.is_current) return;
+    try {
+      const result = await activateUmdVersion(item.id);
+      if (instance?.appContext.app) await loadUmdOnDemand(instance.appContext.app, result.sourceUrl);
+      clearDynamicRoutesCache();
+      await loadVersions();
+    } catch (error: any) {
+      alert('切换版本失败：' + (error?.message ?? '未知错误'));
+    }
+  }
+
+  function formatSize(size: number) {
+    return size < 1024 * 1024 ? `${(size / 1024).toFixed(1)} KB` : `${(size / 1024 / 1024).toFixed(1)} MB`;
+  }
+
+  onMounted(loadVersions);
 </script>
 
 <template>
@@ -295,6 +280,32 @@
         </span>
       </div>
     </div>
+
+    <section class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+      <div class="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-gray-700">
+        <div>
+          <h2 class="text-sm font-bold text-gray-800 dark:text-white">本地 UMD 版本</h2>
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">每次导入都会保存原始 JS；启用历史版本会同步更新功能列表的运行地址。</p>
+        </div>
+        <button class="text-xs font-bold text-blue-600 dark:text-blue-400" :disabled="versionsLoading" @click="loadVersions">
+          <i class="fas fa-rotate-right mr-1" :class="{ 'fa-spin': versionsLoading }" />刷新
+        </button>
+      </div>
+      <div v-if="versions.length === 0" class="px-5 py-8 text-center text-sm text-gray-400">暂无本地版本，请先分析并导入 UMD 文件。</div>
+      <div v-else class="divide-y divide-gray-100 dark:divide-gray-700">
+        <div v-for="item in versions" :key="item.id" class="flex flex-col gap-3 px-5 py-3 sm:flex-row sm:items-center">
+          <div class="flex min-w-0 flex-1 items-center gap-3">
+            <span class="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-violet-50 text-violet-600 dark:bg-violet-900/20 dark:text-violet-400"><i class="fas fa-code-branch" /></span>
+            <div class="min-w-0">
+              <p class="truncate text-sm font-bold text-gray-800 dark:text-white">{{ item.name }} <span class="font-mono text-blue-600 dark:text-blue-400">v{{ item.version }}</span></p>
+              <p class="truncate text-xs text-gray-400">{{ item.original_name }} · {{ formatSize(item.size) }} · SHA-256 {{ item.sha256.slice(0, 12) }}… · {{ new Date(item.created_at).toLocaleString('zh-CN') }}</p>
+            </div>
+          </div>
+          <span v-if="item.is_current" class="w-fit rounded-full bg-green-50 px-2.5 py-1 text-xs font-bold text-green-600 dark:bg-green-900/20 dark:text-green-400">当前版本</span>
+          <button v-else class="w-fit rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-bold text-gray-600 hover:border-blue-400 hover:text-blue-600 dark:border-gray-600 dark:text-gray-300" @click="switchVersion(item)">启用此版本</button>
+        </div>
+      </div>
+    </section>
 
     <!-- Modal (Dialog) Overlay using pure Tailwind CSS and Teleport -->
     <Teleport to="body">
@@ -441,9 +452,11 @@
                     >
                       <div class="flex items-center whitespace-nowrap">
                         <span class="text-gray-500 dark:text-gray-400 mr-1.5">版本:</span>
-                        <span class="font-bold text-gray-800 dark:text-gray-200">{{
-                          lib.manifest?.version || '-'
-                        }}</span>
+                        <input
+                          v-model="lib.versionOverride"
+                          class="w-24 rounded border border-gray-300 bg-white px-2 py-1 font-mono font-bold text-gray-800 outline-none focus:border-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+                          placeholder="1.0.0"
+                        />
                       </div>
                       <div class="hidden sm:block w-px h-3.5 bg-gray-300 dark:bg-gray-600"></div>
                       <div class="flex items-center whitespace-nowrap">

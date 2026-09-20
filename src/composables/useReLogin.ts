@@ -9,6 +9,11 @@ export function triggerReLogin() {
   visible.value = true;
 }
 
+export function clearReLogin() {
+  isTriggered = false;
+  visible.value = false;
+}
+
 export function useReLogin() {
   return { visible };
 }

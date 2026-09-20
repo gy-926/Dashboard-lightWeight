@@ -2,12 +2,14 @@
   import { ref, reactive, computed, onMounted, onUnmounted } from 'vue';
   import { useRouter } from 'vue-router';
   import { useMenuStore } from '@/layouts/modules/global-menu/store';
-  import { supabase } from '@/utils/supabase';
+  import { apiRequest, getCurrentUser, refreshAuth } from '@/api/nest-client';
+  import { validateNewPassword } from '@/utils/password-policy';
 
   const router = useRouter();
   const menuStore = useMenuStore();
 
   const form = reactive({
+    oldPassword: '',
     password: '',
     confirmPassword: '',
   });
@@ -34,19 +36,14 @@
 
   onMounted(() => {
     window.addEventListener('storage', onStorageChange);
-    // 检查是否处于重置密码的会话中
-    supabase.auth.getSession().then(({ data }) => {
-      if (!data.session) {
-        errorMsg.value = '无效或已过期的重置链接，请重新发送邮件。';
-      }
-    });
+    void refreshAuth().then(ok => { if (!ok && !getCurrentUser()) errorMsg.value = '请先登录后修改密码'; });
   });
 
   onUnmounted(() => window.removeEventListener('storage', onStorageChange));
 
   async function handleUpdatePassword() {
-    if (!form.password || !form.confirmPassword) {
-      errorMsg.value = '请输入新密码并确认';
+    if (!form.oldPassword || !form.password || !form.confirmPassword) {
+      errorMsg.value = '请输入原密码、新密码并确认';
       return;
     }
 
@@ -55,8 +52,9 @@
       return;
     }
 
-    if (form.password.length < 6) {
-      errorMsg.value = '密码长度不能少于 6 位';
+    const passwordError = validateNewPassword(form.password);
+    if (passwordError) {
+      errorMsg.value = passwordError;
       return;
     }
 
@@ -65,11 +63,7 @@
     successMsg.value = '';
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: form.password,
-      });
-
-      if (error) throw error;
+      await apiRequest('/auth/change-password', { method: 'POST', body: JSON.stringify({ oldPassword: form.oldPassword, newPassword: form.password }) });
 
       successMsg.value = '密码修改成功！即将跳转至登录页...';
 
@@ -271,6 +265,12 @@
       >
         <!-- 新密码 -->
         <div class="field-group">
+          <div class="field-label">原密码</div>
+          <div class="field-input-wrap" :class="{ disabled: isLoading }">
+            <input v-model="form.oldPassword" type="password" placeholder="请输入原密码" :disabled="isLoading" autocomplete="current-password" />
+          </div>
+        </div>
+        <div class="field-group">
           <div class="field-label">新密码</div>
           <div
             class="field-input-wrap"
@@ -304,7 +304,7 @@
               id="password"
               v-model="form.password"
               type="password"
-              placeholder="请输入新密码 (至少 6 位)"
+              placeholder="至少 8 位，含字母、数字和符号"
               :disabled="isLoading"
               autocomplete="new-password"
             />

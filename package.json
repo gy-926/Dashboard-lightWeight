@@ -26,6 +26,7 @@
     "@kivii.com/bridge": "^1.1.11",
     "@supabase/supabase-js": "^2.102.1",
     "@vueuse/core": "^14.2.0",
+    "echarts": "6.0.0",
     "kivii-public-components": "^0.2.40",
     "nprogress": "^0.2.0",
     "pinia": "^2.3.0",

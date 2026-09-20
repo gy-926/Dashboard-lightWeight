@@ -5,16 +5,17 @@
   // [MOCK MODE] 已注释掉后端请求依赖
   // import { kivii } from '@kivii.com/bridge';
   import { useMenuStore } from '@/layouts/modules/global-menu/store';
-  import { supabase } from '@/utils/supabase';
-  import { syncAuthenticatedFlagFromSession } from '@/utils/auth-state';
+  import { login, register } from '@/api/nest-client';
+  import { syncAuthState } from '@/utils/auth-state';
+  import { validateNewPassword, NEW_PASSWORD_HINT } from '@/utils/password-policy';
 
   const router = useRouter();
   const route = useRoute();
   const menuStore = useMenuStore();
 
   const form = reactive({
-    username: 'admin@example.com',
-    password: 'admin@123456',
+    username: '',
+    password: '',
   });
 
   const isLoading = ref(false);
@@ -53,6 +54,13 @@
       errorMsg.value = '请输入密码';
       return;
     }
+    if (isSignUp.value) {
+      const passwordError = validateNewPassword(form.password);
+      if (passwordError) {
+        errorMsg.value = passwordError;
+        return;
+      }
+    }
 
     isLoading.value = true;
     errorMsg.value = '';
@@ -60,43 +68,18 @@
 
     try {
       if (isForgotPassword.value) {
-        // 发送重置密码邮件
-        const { error } = await supabase.auth.resetPasswordForEmail(form.username, {
-          redirectTo: `${window.location.origin}/update-password`,
-        });
-        if (error) throw error;
-
-        successMsg.value = '重置链接已发送到您的邮箱，请查收（如果没收到请检查垃圾箱）。';
+        throw new Error('自建邮件重置服务尚未配置，请联系管理员重置密码');
         isLoading.value = false;
         return; // 发送邮件后停留在当前页
       } else if (isSignUp.value) {
         // 注册流程
-        const { data, error } = await supabase.auth.signUp({
-          email: form.username,
-          password: form.password,
-        });
-
-        if (error) throw error;
-
-        // 如果开启了邮箱验证，注册后不会立即返回会话
-        if (!data.session) {
-          errorMsg.value = '注册成功，请前往您的邮箱验证（如无验证邮件请检查垃圾箱）';
-          isLoading.value = false;
-          return;
-        }
-
-        syncAuthenticatedFlagFromSession(data.session);
+        await register(form.username, form.password);
       } else {
         // 登录流程
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: form.username,
-          password: form.password,
-        });
-
-        if (error) throw error;
-
-        syncAuthenticatedFlagFromSession(data.session);
+        await login(form.username, form.password);
       }
+
+      await syncAuthState();
 
       await reloadDynamicRoutes();
 
@@ -405,11 +388,12 @@
               id="password"
               v-model="form.password"
               type="password"
-              placeholder="请输入密码"
+              :placeholder="isSignUp ? '至少 8 位，含字母、数字和符号' : '请输入密码'"
               :disabled="isLoading"
-              autocomplete="current-password"
+              :autocomplete="isSignUp ? 'new-password' : 'current-password'"
             />
           </div>
+          <div v-if="isSignUp" class="text-xs text-slate-500 mt-2">{{ NEW_PASSWORD_HINT }}</div>
         </div>
 
         <!-- 错误提示 -->

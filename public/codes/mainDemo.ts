@@ -171,18 +171,9 @@ interface ComponentConfig {
 interface Config {
   components: ComponentConfig[];
 }
-// 加载配置文件
+// 旧演示入口不再发起 /codes 配置请求。
 const loadConfig = async (): Promise<Config> => {
-  try {
-    const response = await fetch('/codes/umdComponents.json');
-    if (!response.ok) {
-      throw new Error(`配置文件加载失败: ${response.status}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('Failed to load config:', error);
-    throw error;
-  }
+  return { components: [] };
 };
 
 // 动态加载远程UMD组件的函数

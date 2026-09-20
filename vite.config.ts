@@ -24,6 +24,7 @@ export default defineConfig({
         assetFileNames: 'Content/UmdDashboard/assets/[name].[hash].[ext]',
         manualChunks: {
           'vendor-vue': ['vue', 'vue-router', 'pinia'],
+          'vendor-echarts': ['echarts'],
           'vendor-sfc-loader': ['vue3-sfc-loader'],
           'vendor-kivii': ['@kivii.com/bridge'],
           'kivii-public-components': ['kivii-public-components'],
@@ -36,7 +37,14 @@ export default defineConfig({
     drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
   },
   server: {
+    host: '127.0.0.1',
     proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:3000',
+        changeOrigin: true,
+        rewrite: path => path.replace(/^\/api/, ''),
+        cookiePathRewrite: { '/auth': '/api/auth' },
+      },
       '/auth': {
         target: 'https://datav.kivii.org',
         changeOrigin: true,
@@ -49,23 +57,7 @@ export default defineConfig({
         target: 'https://datav.kivii.org',
         changeOrigin: true,
       },
-      '/codes': {
-        target: 'https://datav.kivii.org',
-        changeOrigin: true,
-      },
       '/codet': {
-        target: 'https://datav.kivii.org',
-        changeOrigin: true,
-      },
-      '/Storages': {
-        target: 'https://datav.kivii.org',
-        changeOrigin: true,
-      },
-      '/storages': {
-        target: 'https://datav.kivii.org',
-        changeOrigin: true,
-      },
-      '/Serve': {
         target: 'https://datav.kivii.org',
         changeOrigin: true,
       },

@@ -62,6 +62,31 @@ describe('PageHost pre-resolved menu Handler', () => {
     expect(store.allPages).toHaveLength(0);
   });
 
+  it('passes the local script URL when a resolved menu opens a UMD function', async () => {
+    const store = usePageHostPilotStore();
+    const registration = vi.fn().mockResolvedValue(true);
+    store.setUmdRegistrationBridge(registration);
+
+    await expect(store.resolveRoute({
+      path: '/root/widget',
+      name: 'root_widget',
+      kvid: 'widget-kvid',
+      handler: '<LocalWidget />',
+      handlerResolved: true,
+      scriptPath: '/api/dashboard-assets/version-id/widget.umd.js',
+    })).resolves.toBe(true);
+
+    expect(requestGet).not.toHaveBeenCalled();
+    expect(registration).toHaveBeenCalledWith(
+      'LocalWidget',
+      '/api/dashboard-assets/version-id/widget.umd.js'
+    );
+    expect(store.allPages[0]).toMatchObject({
+      descriptor: { type: 'umd' },
+      scriptPath: '/api/dashboard-assets/version-id/widget.umd.js',
+    });
+  });
+
   it('keeps the legacy Access endpoint fallback when no resolved marker exists', async () => {
     requestGet.mockResolvedValue({
       data: { Results: [{ Handler: '/legacy/form' }] },
