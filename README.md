@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/gy-926/Dashboard-lightWeight/actions/workflows/ci.yml/badge.svg)](https://github.com/gy-926/Dashboard-lightWeight/actions/workflows/ci.yml)
 
-一个经过持续试运行验证的 Vue 3 企业工作台，用统一的路由、标签、鉴权和运行时生命周期承载本地页面、远程 Vue SFC、UMD 业务组件与 iframe 系统。
+一个使用 Vue 3、Nest API、MySQL 和本地文件存储的企业工作台，用统一的路由、标签、鉴权和运行时生命周期承载本地页面、远程 Vue SFC、UMD 业务组件与 iframe 系统。`Dashboard-lightWeight-Api` 分支使用完整的自建后端，不依赖外部数据库、认证或对象存储服务。
 
 本项目不是通用 Vue Admin 皮肤，也不是带 JavaScript 沙箱的通用微前端框架。它面向来源可信、技术栈可控的企业业务模块，强调低成本接入、单文件交付和渐进式集成。
 
@@ -33,7 +33,8 @@
 - **多标签工作台**：统一处理打开、切换、刷新、关闭和批量关闭。
 - **缓存与竞争保护**：远程 Vue 加载去重，并阻止已失效异步任务重新写入缓存。
 - **会话隔离**：退出和重新认证后清理旧用户的标签、动态路由与页面运行时。
-- **自建鉴权与接口**：通过 Nest API 和 MySQL 管理登录、菜单、角色与用户权限。
+- **自建鉴权与接口**：通过 Nest API 和 MySQL 管理注册、登录、令牌续期、菜单、角色与用户权限。
+- **本地文件与 UMD 版本**：文件写入服务端持久目录，元数据和 UMD 版本关系保存在 MySQL。
 - **主题与响应式布局**：支持侧边、顶部和混合导航，以及亮色、暗色和窄屏布局。
 
 ## 主项目与 UMD 模板
@@ -110,14 +111,21 @@ VITE_API_BASE_URL=/api
 | `pnpm type-check` | 执行 Vue/TypeScript 类型检查 |
 | `pnpm build` | 类型检查并生成生产构建 |
 | `pnpm preview` | 预览生产构建 |
-| `pnpm edge:serve` | 仅用于旧 Supabase Edge Function 代码 |
-| `pnpm edge:deploy` | 仅用于旧 Supabase 部署 |
 
 ## 自建 API 初始化
 
-在 `nest-learning-api` 中配置 MySQL 并运行 `./node_modules/.bin/typeorm-ts-node-esm migration:run -d data-source.ts`。迁移创建 Dashboard 功能、菜单、角色及绑定表，并写入原始脚本中的示例菜单；仓库不包含旧 Supabase 数据导出。管理接口要求 `users.role=super_admin`，角色及菜单接口见该项目的 `doc/Dashboard 自建接口.md`。
+在 `nest-learning-api` 中配置 MySQL 和本地文件目录，然后执行迁移并启动服务：
 
-应用启动时不再请求 `/codes` 配置。UMD 文件仍可在功能页面中按明确的脚本地址加载，内置示例从 `/umd-showcase` 读取。
+```bash
+./node_modules/.bin/typeorm-ts-node-esm migration:run -d data-source.ts
+npm run start:dev
+```
+
+迁移创建用户、会话、文件、Dashboard 功能、菜单、角色、权限绑定和 UMD 版本表。管理接口要求 `users.role=super_admin`。浏览器统一通过 `VITE_API_BASE_URL` 指向的 Nest API 调用认证和业务接口；默认值为 `/api`。
+
+应用启动时不会请求 `/codes` 配置。随应用发布的示例从 `/umd-showcase` 读取；功能中心导入的 UMD 文件由 Nest 保存到 `FILE_STORAGE_ROOT`，并通过不可变的 `/dashboard-assets/:versionId/:fileName` 地址按需加载。
+
+接口、认证续期、权限和生产代理配置见 [自建 API 接入](docs/self-hosted-api.md)。
 
 ## UMD 接入契约
 
@@ -165,9 +173,7 @@ src/
 ├── utils/remoteComponentLoader  UMD/ESM 加载、Registry 与注册
 └── views/_builtin/iframe-page   iframe、远程 Vue 和 UMD 页面入口
 
-supabase/functions/              旧 Edge Functions，供迁移参考
-scripts/                         数据库、权限和 RLS 脚本
-public/umd-showcase/             可公开运行的 UMD 示例
+public/umd-showcase/             随前端发布的 UMD 示例
 public/umd/                      随应用发布的 UMD 兼容性制品
 tests/                           Vitest 回归测试
 docs/                            模块说明与实现记录
@@ -197,6 +203,7 @@ docs/                            模块说明与实现记录
 
 ## 文档
 
+- [自建 API 接入](docs/self-hosted-api.md)
 - [远程组件加载](docs/remote-component-loading.md)
 - [动态路由模块](docs/dynamic-routes-module.md)
 - [iframe 与动态页面](docs/iframe-page-module.md)

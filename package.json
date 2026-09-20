@@ -15,8 +15,6 @@
     "build-only": "vite build",
     "pretype-check": "node scripts/ensure-dependencies.mjs",
     "type-check": "vue-tsc --build",
-    "edge:serve": "supabase functions serve",
-    "edge:deploy": "supabase functions deploy dashboard-functions dashboard-admin",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test"
@@ -24,7 +22,6 @@
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.2.0",
     "@kivii.com/bridge": "^1.1.11",
-    "@supabase/supabase-js": "^2.102.1",
     "@vueuse/core": "^14.2.0",
     "echarts": "6.0.0",
     "kivii-public-components": "^0.2.40",
@@ -44,7 +41,6 @@
     "autoprefixer": "^10.4.21",
     "npm-run-all2": "^8.0.4",
     "postcss": "^8.4.35",
-    "supabase": "^2.109.1",
     "tailwindcss": "^3.4.1",
     "typescript": "~5.8.0",
     "vite": "^7.0.0",

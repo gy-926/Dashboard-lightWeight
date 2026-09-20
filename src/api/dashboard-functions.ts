@@ -1,4 +1,4 @@
-import { requestEdgeFunction } from './edge-client';
+import { requestDashboardModule } from './dashboard-client';
 
 export type DashboardFunctionRenderType = 'webview' | 'vue' | 'umd';
 export type DashboardFunctionSourceType = 'manual' | 'umd' | 'system';
@@ -50,7 +50,7 @@ export interface UmdImportResult {
 }
 
 const request = <T>(path = '', init: RequestInit = {}) =>
-  requestEdgeFunction<T>('dashboard-functions', path, init);
+  requestDashboardModule<T>('dashboard-functions', path, init);
 
 export function listDashboardFunctions(): Promise<DashboardFunctionRecord[]> {
   return request<DashboardFunctionRecord[]>();

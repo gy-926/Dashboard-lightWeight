@@ -21,7 +21,7 @@ PageHost 将“路由当前显示什么”与“标签实例是否继续存在�
 
 ## 当前接管范围
 
-PageHost 默认尝试接管所有带 KVID 的后端菜单动态页，不需要在打包时预知 KVID，也不需要配置白名单。Supabase 菜单已关联返回的 `Handler` 会由路由直接交给 PageHost，不再请求旧的 `Function/Access.json`；只有未携带“已解析”标记的兼容数据源才会使用旧接口兜底。Handler 当前可解析为：
+PageHost 默认尝试接管所有带 KVID 的后端菜单动态页，不需要在打包时预知 KVID，也不需要配置白名单。Nest 运行时菜单返回的 `Handler` 和 UMD `source_url` 会由路由直接交给 PageHost，不再请求旧的 `Function/Access.json`；只有未携带“已解析”标记的兼容数据源才会使用旧接口兜底。Handler 当前可解析为：
 
 - `webview`：iframe 或历史 Web 页面；
 - `vue`：运行时加载的远程 Vue SFC；

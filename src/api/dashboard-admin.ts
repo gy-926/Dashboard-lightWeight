@@ -1,6 +1,6 @@
 import type { MenuApiResponse } from '@/router/routes/types';
 import type { DashboardFunctionRecord } from './dashboard-functions';
-import { requestEdgeFunction } from './edge-client';
+import { requestDashboardModule } from './dashboard-client';
 
 export interface MenuRootRecord {
   kvid: string;
@@ -77,10 +77,10 @@ export interface PermissionConfigData {
 }
 
 const request = <T>(path = '', init: RequestInit = {}) =>
-  requestEdgeFunction<T>('dashboard-admin', path, init);
+  requestDashboardModule<T>('dashboard-admin', path, init);
 
 export function getCurrentUserRoles(accessToken?: string): Promise<AuthRoleRecord[]> {
-  return requestEdgeFunction<AuthRoleRecord[]>(
+  return requestDashboardModule<AuthRoleRecord[]>(
     'dashboard-admin',
     '/me/roles',
     {},

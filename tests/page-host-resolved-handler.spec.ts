@@ -28,7 +28,7 @@ describe('PageHost pre-resolved menu Handler', () => {
     vi.stubGlobal('window', { location: { origin: 'https://dashboard.test' } });
   });
 
-  it('hosts a Supabase menu Handler without requesting the legacy Access endpoint', async () => {
+  it('hosts a resolved backend menu Handler without requesting the legacy Access endpoint', async () => {
     const store = usePageHostPilotStore();
 
     await expect(store.resolveRoute({

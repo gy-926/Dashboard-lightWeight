@@ -1,6 +1,6 @@
 # 动态菜单与路由说明
 
-本文档对应 `githubDashboard` 分支当前实现，说明静态路由、后端菜单路由和 UMD 自动发现路由如何合并并注册到 Vue Router。
+本文档对应 `Dashboard-lightWeight-Api` 分支当前实现，说明静态路由、Nest 后端菜单路由和 UMD 路由如何合并并注册到 Vue Router。
 
 ## 组成结构
 
@@ -121,7 +121,7 @@ flowchart TD
 
 ## UMD 自动发现路由
 
-应用启动时会从受信任的 Supabase 存储桶发现并注册 UMD 脚本。动态路由生成会先等待 `umdComponentsReady`，然后只处理同时满足以下条件的库：
+应用启动时只注册随前端发布的内置 UMD 示例。通过功能中心导入的 UMD 原始文件保存在 Nest 本地文件存储中，版本记录的 `source_url` 会随运行时菜单返回；用户打开对应菜单时，PageHost 才按需请求该版本脚本。动态路由生成会先等待 `umdComponentsReady`，然后只处理同时满足以下条件的已加载库：
 
 - 加载状态为 `success`。
 - `showInMenu === true`。
