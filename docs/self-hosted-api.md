@@ -10,6 +10,23 @@ flowchart LR
   Nest --> Files[FILE_STORAGE_ROOT]
 ```
 
+## 一键演示
+
+当前分支将 Nest API 放在 `server/`，根目录的 `docker-compose.demo.yml` 编排四个服务：
+
+- `mysql`：MySQL 8.4 和持久化数据卷；
+- `api`：执行 TypeORM 迁移后启动 Nest；
+- `seed`：创建或确认演示账号并授予超级管理员角色；
+- `dashboard`：构建 Vue 应用，通过 Nginx 提供静态资源并代理 `/api`。
+
+```bash
+docker compose -f docker-compose.demo.yml up --build
+```
+
+`pnpm demo` 是同一命令的快捷方式。
+
+打开 `http://localhost:8080`，使用 `admin@example.com` / `admin@123456` 登录。该配置用于本机演示；公开部署必须替换默认账号和数据库密码，并使用 HTTPS。
+
 ## 前端配置
 
 复制环境变量示例并启动前端：

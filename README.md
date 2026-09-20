@@ -75,11 +75,30 @@ PageHost 不需要在构建时预知 KVID。可通过 `PageHostEnabled: false` �
 
 ## 快速开始
 
+### 一键演示
+
+仓库已经包含 `server/` Nest API。安装 Docker Desktop 后运行：
+
+```bash
+docker compose -f docker-compose.demo.yml up --build
+```
+
+已安装 pnpm 时也可以使用快捷命令 `pnpm demo`。
+
+首次启动会构建前端与 API、启动 MySQL、执行全部迁移并创建演示超级管理员。服务就绪后打开 [http://localhost:8080](http://localhost:8080)：
+
+- 邮箱：`admin@example.com`
+- 密码：`admin@123456`
+
+数据保存在 Docker volumes 中。停止服务使用 `Ctrl+C`；删除容器但保留数据使用 `pnpm demo:down`，需要完全重置时运行 `docker compose -f docker-compose.demo.yml down -v`。
+
+可通过 `DEMO_PORT`、`DEMO_ADMIN_EMAIL`、`DEMO_ADMIN_PASSWORD`、`DEMO_DB_PASSWORD` 环境变量覆盖演示默认值。默认凭据只适合本机演示，公开部署前必须替换。
+
 ### 环境要求
 
-- Node.js 20.19 或更高版本
-- pnpm 10（仓库锁定版本为 10.28.1）
-- 已启动的 `nest-learning-api` 和 MySQL
+- Node.js 24（同时开发前端和内置 API）；只开发前端时最低为 20.19
+- pnpm 10（前端）和 npm（内置 API）
+- 源码开发需要 MySQL；一键演示只需要 Docker Desktop
 
 ### 安装与启动
 
@@ -98,13 +117,15 @@ pnpm dev
 VITE_API_BASE_URL=/api
 ```
 
-开发服务器默认监听 `127.0.0.1:5173`，并将 `/api` 代理到本地 Nest 的 `127.0.0.1:3000`。启动前需先在 `nest-learning-api` 中执行数据库迁移。生产环境也需要把同源 `/api` 转发到 Nest，并将响应 cookie 的 `/auth` 路径改写为 `/api/auth`。
+前端开发服务器默认监听 `127.0.0.1:5173`，并将 `/api` 代理到内置 Nest API 的 `127.0.0.1:3000`。源码开发时先进入 `server/` 配置 MySQL、执行迁移并启动 API。生产环境也需要把同源 `/api` 转发到 Nest，并将响应 cookie 的 `/auth` 路径改写为 `/api/auth`。
 
 ### 常用命令
 
 | 命令 | 说明 |
 | --- | --- |
-| `pnpm dev` | 启动开发服务器 |
+| `pnpm demo` | 构建并启动前端、API、MySQL 和演示账号 |
+| `pnpm demo:down` | 停止并删除演示容器，保留数据卷 |
+| `pnpm dev` | 启动前端开发服务器 |
 | `pnpm test` | 运行 Vitest 回归测试 |
 | `pnpm test:e2e` | 运行 PageHost Playwright 浏览器测试 |
 | `pnpm test:watch` | 监听模式运行测试 |
@@ -114,10 +135,13 @@ VITE_API_BASE_URL=/api
 
 ## 自建 API 初始化
 
-在 `nest-learning-api` 中配置 MySQL 和本地文件目录，然后执行迁移并启动服务：
+进入仓库内置的 `server/`，配置 MySQL 和本地文件目录，然后执行迁移并启动服务：
 
 ```bash
-./node_modules/.bin/typeorm-ts-node-esm migration:run -d data-source.ts
+cd server
+cp .env.example .env
+npm install
+npm run migration:run
 npm run start:dev
 ```
 
@@ -163,6 +187,7 @@ window.__KIVII_UMD_REGISTRY__.byFileName[fileName]
 ## 目录结构
 
 ```text
+server/                            内置 Nest API、TypeORM 迁移与接口测试
 src/
 ├── api/                         Nest API 客户端
 ├── bridge/                      Bridge 与宿主 OpenTab 适配

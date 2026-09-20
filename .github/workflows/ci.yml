@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - main
+      - Dashboard-lightWeight-Api
   pull_request:
     branches:
       - main
+      - Dashboard-lightWeight-Api
 
 permissions:
   contents: read
@@ -17,7 +19,7 @@ concurrency:
 
 jobs:
   quality:
-    name: Type check, test and build
+    name: Frontend type check, test and build
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -45,3 +47,34 @@ jobs:
 
       - name: Build production bundle
         run: pnpm run build-only
+
+  api-quality:
+    name: API lint, test and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: server
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install API dependencies
+        run: npm ci
+
+      - name: Lint API
+        run: npm run lint
+
+      - name: Test API
+        run: npm test
+
+      - name: Build API
+        run: npm run build

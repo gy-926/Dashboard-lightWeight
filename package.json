@@ -17,7 +17,9 @@
     "type-check": "vue-tsc --build",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "demo": "docker compose -f docker-compose.demo.yml up --build",
+    "demo:down": "docker compose -f docker-compose.demo.yml down"
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.2.0",
