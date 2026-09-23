@@ -3,6 +3,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { basename } from 'node:path';
 import { DataSource } from 'typeorm';
 import { FilesService, type UploadedFile } from '../files/files.service.js';
+import { UserRole } from '../users/entities/user.entity.js';
 
 type Row = Record<string, any>;
 const specs = {
@@ -190,7 +191,7 @@ export class DashboardService {
           await manager.query(`INSERT INTO dashboard_functions
             (kvid, title, handler, remark, parameters, render_type, source_type, source_module, source_url, source_component, icon, sort_order, is_active)
             VALUES (?, ?, ?, ?, '{}', 'umd', 'umd', ?, ?, ?, ?, ?, true)
-            ON DUPLICATE KEY UPDATE title = VALUES(title), handler = VALUES(handler), remark = VALUES(remark), render_type = 'umd', source_type = 'umd', source_module = VALUES(source_module), source_url = VALUES(source_url), source_component = VALUES(source_component), icon = VALUES(icon)`,
+            ON DUPLICATE KEY UPDATE title = VALUES(title), handler = VALUES(handler), remark = VALUES(remark), render_type = 'umd', source_type = 'umd', source_module = VALUES(source_module), source_url = VALUES(source_url), source_component = VALUES(source_component), icon = VALUES(icon), is_active = true`,
           [kvid, component.title, `<${component.name} />`, component.description || null, moduleKey, assetUrl, component.name, component.icon, index]);
         }
         return { moduleKey, name, version, versionId, file: stored, sourceUrl: assetUrl, imported: components.length };
@@ -207,19 +208,23 @@ export class DashboardService {
     const values: unknown[] = [];
     const where = moduleKey ? 'WHERE p.module_key = ?' : '';
     if (moduleKey) values.push(moduleKey);
-    const rows: Row[] = await this.db.query(`SELECT v.id, p.module_key, p.name, v.version, v.file_id, f.original_name, f.size, f.sha256, v.manifest, v.is_current, v.created_by, v.created_at FROM dashboard_umd_versions v JOIN dashboard_umd_packages p ON p.id = v.package_id JOIN stored_files f ON f.id = v.file_id ${where} ORDER BY p.name, v.created_at DESC`, values);
-    return rows.map(row => ({
+    const rows: Row[] = await this.db.query(`SELECT v.id, p.module_key, p.name, v.version, v.file_id, f.original_name, f.stored_name, f.size, f.sha256, v.manifest, v.is_current, v.created_by, v.created_at FROM dashboard_umd_versions v JOIN dashboard_umd_packages p ON p.id = v.package_id JOIN stored_files f ON f.id = v.file_id ${where} ORDER BY p.name, v.created_at DESC`, values);
+    return Promise.all(rows.map(async ({ stored_name, ...row }) => ({
       ...row,
       manifest: typeof row.manifest === 'string' ? JSON.parse(row.manifest) : row.manifest ?? {},
       is_current: Boolean(row.is_current),
+      file_available: await this.files.isStoredFileAvailable(stored_name, Number(row.size)),
       sourceUrl: this.umdAssetUrl(row.id, row.original_name),
-    }));
+    })));
   }
 
   async activateUmdVersion(versionId: string) {
-    const rows: Row[] = await this.db.query(`SELECT v.id, v.package_id, v.version, p.module_key, f.original_name FROM dashboard_umd_versions v JOIN dashboard_umd_packages p ON p.id = v.package_id JOIN stored_files f ON f.id = v.file_id WHERE v.id = ?`, [versionId]);
+    const rows: Row[] = await this.db.query(`SELECT v.id, v.package_id, v.version, p.module_key, f.original_name, f.stored_name, f.size FROM dashboard_umd_versions v JOIN dashboard_umd_packages p ON p.id = v.package_id JOIN stored_files f ON f.id = v.file_id WHERE v.id = ?`, [versionId]);
     if (!rows.length) throw new NotFoundException('UMD 版本不存在');
     const version = rows[0];
+    if (!(await this.files.isStoredFileAvailable(version.stored_name, Number(version.size)))) {
+      throw new NotFoundException('本地 UMD 文件缺失或大小不匹配，无法启用此版本');
+    }
     const assetUrl = this.umdAssetUrl(version.id, version.original_name);
     await this.db.transaction(async manager => {
       await manager.query('UPDATE dashboard_umd_versions SET is_current = false WHERE package_id = ?', [version.package_id]);
@@ -236,13 +241,24 @@ export class DashboardService {
   }
 
   async userRoles(userId: string): Promise<Row[]> {
-    return this.db.query('SELECT r.kvid, r.code, r.name FROM dashboard_roles r JOIN dashboard_user_roles ur ON ur.role_kvid = r.kvid WHERE ur.user_id = ? AND r.is_active = true', [userId]);
+    const users: Row[] = await this.db.query('SELECT role FROM users WHERE id = ?', [userId]);
+    if (!users.length) return [];
+    const isAdmin = users[0].role === UserRole.SuperAdmin;
+    return [{ kvid: isAdmin ? 'app-role:admin' : 'app-role:user', code: isAdmin ? 'admin' : 'user', name: isAdmin ? '管理员' : '普通用户' }];
   }
 
   private async allowed(userId: string, isAdmin: boolean): Promise<Set<string> | null> {
     if (isAdmin) return null;
-    const rows: Row[] = await this.db.query('SELECT rf.function_kvid FROM dashboard_role_functions rf JOIN dashboard_user_roles ur ON ur.role_kvid = rf.role_kvid JOIN dashboard_roles r ON r.kvid = rf.role_kvid WHERE ur.user_id = ? AND r.is_active = true', [userId]);
-    return new Set(rows.map(row => row.function_kvid));
+    const [roleRows, departmentRows]: [Row[], Row[]] = await Promise.all([
+      this.db.query("SELECT rf.function_kvid FROM dashboard_role_functions rf JOIN dashboard_roles r ON r.kvid = rf.role_kvid WHERE r.code = 'user' AND r.is_active = true"),
+      this.db.query(`WITH RECURSIVE department_path AS (
+        SELECT d.id, d.parent_id FROM dashboard_departments d JOIN users u ON u.department_id = d.id WHERE u.id = ? AND d.is_active = true
+        UNION DISTINCT
+        SELECT parent.id, parent.parent_id FROM dashboard_departments parent JOIN department_path child ON child.parent_id = parent.id WHERE parent.is_active = true
+      ) SELECT DISTINCT df.function_kvid FROM dashboard_department_functions df JOIN department_path path ON path.id = df.department_id`, [userId]),
+    ]);
+    const ordinaryAccess = new Set(roleRows.map(row => row.function_kvid));
+    return new Set(departmentRows.map(row => row.function_kvid).filter(id => ordinaryAccess.has(id)));
   }
 
   async runtime(internalCode: string, userId: string, isAdmin: boolean) {
@@ -288,13 +304,136 @@ export class DashboardService {
   }
 
   async permissions() {
-    const [roles, roleFunctions, userRoles, users] = await Promise.all([
+    const [roles, roleFunctions, userRoles, users, departments, departmentFunctions] = await Promise.all([
       this.list('roles'),
       this.db.query('SELECT role_kvid, function_kvid FROM dashboard_role_functions'),
       this.db.query('SELECT user_id, role_kvid FROM dashboard_user_roles'),
-      this.db.query("SELECT id AS user_id, email, IF(role = 'super_admin', 'admin', NULL) AS app_role, created_at, NULL AS last_sign_in_at FROM users ORDER BY created_at DESC"),
+      this.db.query("SELECT id AS user_id, name, email, department_id, IF(role = 'super_admin', 'admin', NULL) AS app_role, created_at, NULL AS last_sign_in_at FROM users ORDER BY created_at DESC"),
+      this.departments(),
+      this.db.query('SELECT department_id, function_kvid FROM dashboard_department_functions'),
     ]);
-    return { roles, roleFunctions, userRoles, users };
+    return { roles, roleFunctions, userRoles, users, departments, departmentFunctions };
+  }
+
+  async departments(): Promise<Row[]> {
+    const rows: Row[] = await this.db.query('SELECT id, parent_id, code, name, kind, full_name, address, mnemonic_code, internal_code, manager_user_id, floor, is_active, sort_order FROM dashboard_departments ORDER BY sort_order, name');
+    return rows.map(row => ({ ...row, is_active: Boolean(row.is_active) }));
+  }
+
+  async saveDepartment(input: unknown): Promise<Row> {
+    if (!input || typeof input !== 'object' || Array.isArray(input)) throw new BadRequestException('部门信息必须是对象');
+    const source = input as Row;
+    const id = source.id ? String(source.id) : randomUUID();
+    const name = String(source.name ?? '').trim();
+    const parentId = source.parent_id ? String(source.parent_id).trim() : null;
+    const kind = source.kind ?? (parentId ? 'department' : 'organization');
+    const fullName = kind === 'department' ? name : String(source.full_name ?? name).trim();
+    const address = String(source.address ?? '').trim() || null;
+    const mnemonicCode = String(source.mnemonic_code ?? '').trim() || null;
+    const internalCode = String(source.internal_code ?? '').trim() || null;
+    const managerUserId = source.manager_user_id ? String(source.manager_user_id).trim() : null;
+    const floor = String(source.floor ?? '').trim() || null;
+    const sortOrder = Number(source.sort_order ?? 0);
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw new BadRequestException('部门 ID 不合法');
+    if (!name || name.length > 255) throw new BadRequestException('部门名称不能为空且不能超过 255 字');
+    if (!fullName || fullName.length > 255) throw new BadRequestException('机构全称不能为空且不能超过 255 字');
+    if (kind !== 'organization' && kind !== 'department') throw new BadRequestException('机构类型不合法');
+    if (parentId && kind !== 'department') throw new BadRequestException('下级节点只能创建部门');
+    if (!parentId && kind !== 'organization') throw new BadRequestException('顶层节点只能创建组织');
+    if (address && address.length > 500) throw new BadRequestException('机构地址不能超过 500 字');
+    if (mnemonicCode && mnemonicCode.length > 100) throw new BadRequestException('助记码不能超过 100 字');
+    if (internalCode && !/^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(internalCode)) throw new BadRequestException('内部编码不合法');
+    if (managerUserId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(managerUserId)) throw new BadRequestException('部门负责人不合法');
+    if (floor && floor.length > 100) throw new BadRequestException('部门楼层不能超过 100 字');
+    if (typeof source.is_active !== 'undefined' && typeof source.is_active !== 'boolean') throw new BadRequestException('启用状态必须是布尔值');
+    if (!Number.isSafeInteger(sortOrder) || sortOrder < 0) throw new BadRequestException('排序必须是非负整数');
+    if (parentId === id) throw new BadRequestException('部门不能成为自己的上级');
+    if (parentId) {
+      const visited = new Set([id]);
+      let cursor: string | null = parentId;
+      while (cursor) {
+        if (visited.has(cursor)) throw new BadRequestException('部门层级不能形成循环');
+        visited.add(cursor);
+        const rows: Row[] = await this.db.query('SELECT parent_id FROM dashboard_departments WHERE id = ?', [cursor]);
+        if (!rows.length) throw new NotFoundException('上级部门不存在');
+        cursor = rows[0].parent_id;
+      }
+    }
+    if (managerUserId) {
+      const managers: Row[] = await this.db.query('SELECT id FROM users WHERE id = ?', [managerUserId]);
+      if (!managers.length) throw new NotFoundException('部门负责人不存在');
+    }
+    try {
+      const existing: Row[] = await this.db.query('SELECT id, code FROM dashboard_departments WHERE id = ?', [id]);
+      const code = String(source.code || existing[0]?.code || internalCode || `dept_${id.replace(/-/g, '')}`).trim();
+      if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(code)) throw new BadRequestException('部门编码不合法');
+      if (existing.length) {
+        await this.db.query('UPDATE dashboard_departments SET parent_id = ?, code = ?, name = ?, kind = ?, full_name = ?, address = ?, mnemonic_code = ?, internal_code = ?, manager_user_id = ?, floor = ?, is_active = ?, sort_order = ? WHERE id = ?', [parentId, code, name, kind, fullName, address, mnemonicCode, internalCode, managerUserId, floor, source.is_active ?? true, sortOrder, id]);
+      } else {
+        await this.db.query('INSERT INTO dashboard_departments (id, parent_id, code, name, kind, full_name, address, mnemonic_code, internal_code, manager_user_id, floor, is_active, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [id, parentId, code, name, kind, fullName, address, mnemonicCode, internalCode, managerUserId, floor, source.is_active ?? true, sortOrder]);
+      }
+    } catch (error) {
+      if ((error as { code?: string }).code === 'ER_DUP_ENTRY') throw new ConflictException('部门编码已存在');
+      throw error;
+    }
+    const rows: Row[] = await this.db.query('SELECT id, parent_id, code, name, kind, full_name, address, mnemonic_code, internal_code, manager_user_id, floor, is_active, sort_order FROM dashboard_departments WHERE id = ?', [id]);
+    return { ...rows[0], is_active: Boolean(rows[0].is_active) };
+  }
+
+  async deleteDepartment(id: string): Promise<null> {
+    const rows: Row[] = await this.db.query('SELECT id FROM dashboard_departments WHERE id = ?', [id]);
+    if (!rows.length) throw new NotFoundException('部门不存在');
+    const [children, users]: [Row[], Row[]] = await Promise.all([
+      this.db.query('SELECT id FROM dashboard_departments WHERE parent_id = ? LIMIT 1', [id]),
+      this.db.query('SELECT id FROM users WHERE department_id = ? LIMIT 1', [id]),
+    ]);
+    if (children.length || users.length) throw new ConflictException('部门仍有下级或成员，请先调整归属');
+    await this.db.query('DELETE FROM dashboard_departments WHERE id = ?', [id]);
+    return null;
+  }
+
+  async assignUserDepartment(userId: string, departmentId: unknown): Promise<null> {
+    if (departmentId !== null && (typeof departmentId !== 'string' || !departmentId.trim())) throw new BadRequestException('部门 ID 不合法');
+    const users: Row[] = await this.db.query('SELECT id FROM users WHERE id = ?', [userId]);
+    if (!users.length) throw new NotFoundException('用户不存在');
+    if (departmentId) {
+      const departments: Row[] = await this.db.query('SELECT id FROM dashboard_departments WHERE id = ?', [departmentId]);
+      if (!departments.length) throw new NotFoundException('部门不存在');
+    }
+    await this.db.query('UPDATE users SET department_id = ? WHERE id = ?', [departmentId, userId]);
+    return null;
+  }
+
+  async setUserAppRole(userId: string, role: unknown): Promise<{ role: UserRole }> {
+    if (role !== UserRole.User && role !== UserRole.SuperAdmin) {
+      throw new BadRequestException('用户角色只能是普通用户或管理员');
+    }
+    return this.db.transaction(async manager => {
+      const admins: Row[] = await manager.query("SELECT id FROM users WHERE role = 'super_admin' FOR UPDATE");
+      const users: Row[] = await manager.query('SELECT id, role FROM users WHERE id = ? FOR UPDATE', [userId]);
+      if (!users.length) throw new NotFoundException('用户不存在');
+      if (users[0].role === role) return { role };
+      if (users[0].role === UserRole.SuperAdmin && role === UserRole.User && admins.length <= 1) {
+        throw new ConflictException('至少需要保留一位管理员');
+      }
+      await manager.query('UPDATE users SET role = ?, updated_at = CURRENT_TIMESTAMP(6) WHERE id = ?', [role, userId]);
+      await manager.query('UPDATE auth_sessions SET revoked_at = CURRENT_TIMESTAMP(6) WHERE user_id = ? AND revoked_at IS NULL', [userId]);
+      return { role };
+    });
+  }
+
+  async addDepartmentUsers(departmentId: string, userIds: unknown): Promise<{ assigned: number }> {
+    const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!Array.isArray(userIds) || userIds.length < 1 || userIds.length > 500 || userIds.some(id => typeof id !== 'string' || !uuid.test(id))) {
+      throw new BadRequestException('请选择有效的用户');
+    }
+    const uniqueIds = [...new Set(userIds as string[])];
+    const departments: Row[] = await this.db.query('SELECT id FROM dashboard_departments WHERE id = ?', [departmentId]);
+    if (!departments.length) throw new NotFoundException('部门不存在');
+    const users: Row[] = await this.db.query(`SELECT id FROM users WHERE id IN (${uniqueIds.map(() => '?').join(', ')})`, uniqueIds);
+    if (users.length !== uniqueIds.length) throw new BadRequestException('包含不存在的用户');
+    await this.db.query(`UPDATE users SET department_id = ? WHERE id IN (${uniqueIds.map(() => '?').join(', ')})`, [departmentId, ...uniqueIds]);
+    return { assigned: uniqueIds.length };
   }
 
   async replaceBindings(kind: 'role' | 'user', id: string, ids: unknown): Promise<null> {
@@ -308,6 +447,68 @@ export class DashboardService {
     await this.db.transaction(async manager => {
       await manager.query(`DELETE FROM ${table} WHERE ${key} = ?`, [id]);
       for (const value of unique) await manager.query(`INSERT INTO ${table} (${key}, ${target}) VALUES (?, ?)`, [id, value]);
+    });
+    return null;
+  }
+
+  async replaceFunctionRoles(functionKvid: string, ids: unknown): Promise<null> {
+    if (!Array.isArray(ids) || ids.some(value => typeof value !== 'string' || !value.trim() || value.trim().length > 100) || ids.length > 500) {
+      throw new BadRequestException('角色 ID 列表不合法');
+    }
+    await this.one('functions', functionKvid);
+    const unique = [...new Set(ids.map((value: string) => value.trim()))];
+    if (unique.length) {
+      const existing: Row[] = await this.db.query(`SELECT kvid FROM dashboard_roles WHERE kvid IN (${unique.map(() => '?').join(', ')})`, unique);
+      if (existing.length !== unique.length) throw new BadRequestException('包含不存在的角色');
+    }
+    await this.db.transaction(async manager => {
+      await manager.query('DELETE FROM dashboard_role_functions WHERE function_kvid = ?', [functionKvid]);
+      for (const roleKvid of unique) {
+        await manager.query('INSERT INTO dashboard_role_functions (role_kvid, function_kvid) VALUES (?, ?)', [roleKvid, functionKvid]);
+      }
+    });
+    return null;
+  }
+
+  async replaceFunctionDepartments(functionKvid: string, ids: unknown): Promise<null> {
+    if (!Array.isArray(ids) || ids.some(value => typeof value !== 'string' || !value.trim() || value.trim().length > 36) || ids.length > 500) {
+      throw new BadRequestException('部门 ID 列表不合法');
+    }
+    await this.one('functions', functionKvid);
+    const unique = [...new Set(ids.map((value: string) => value.trim()))];
+    if (unique.length) {
+      const existing: Row[] = await this.db.query(`SELECT id FROM dashboard_departments WHERE id IN (${unique.map(() => '?').join(', ')})`, unique);
+      if (existing.length !== unique.length) throw new BadRequestException('包含不存在的部门');
+    }
+    await this.db.transaction(async manager => {
+      await manager.query('DELETE FROM dashboard_department_functions WHERE function_kvid = ?', [functionKvid]);
+      for (const departmentId of unique) {
+        await manager.query('INSERT INTO dashboard_department_functions (department_id, function_kvid) VALUES (?, ?)', [departmentId, functionKvid]);
+      }
+    });
+    return null;
+  }
+
+  async replaceFunctionAccess(functionKvid: string, roleIds: unknown, departmentIds: unknown): Promise<null> {
+    const validIds = (ids: unknown, maxLength: number) =>
+      Array.isArray(ids) && ids.length <= 500 && ids.every(value => typeof value === 'string' && value.trim().length > 0 && value.trim().length <= maxLength);
+    if (!validIds(roleIds, 100) || !validIds(departmentIds, 36)) throw new BadRequestException('授权 ID 列表不合法');
+    await this.one('functions', functionKvid);
+    const uniqueRoles = [...new Set((roleIds as string[]).map(value => value.trim()))];
+    const uniqueDepartments = [...new Set((departmentIds as string[]).map(value => value.trim()))];
+    if (uniqueRoles.length) {
+      const rows: Row[] = await this.db.query("SELECT kvid FROM dashboard_roles WHERE code = 'user' AND is_active = true");
+      if (uniqueRoles.length !== 1 || uniqueRoles[0] !== rows[0]?.kvid) throw new BadRequestException('只能授权普通用户');
+    }
+    if (uniqueDepartments.length) {
+      const rows: Row[] = await this.db.query(`SELECT id FROM dashboard_departments WHERE id IN (${uniqueDepartments.map(() => '?').join(', ')})`, uniqueDepartments);
+      if (rows.length !== uniqueDepartments.length) throw new BadRequestException('包含不存在的部门');
+    }
+    await this.db.transaction(async manager => {
+      await manager.query('DELETE FROM dashboard_role_functions WHERE function_kvid = ?', [functionKvid]);
+      await manager.query('DELETE FROM dashboard_department_functions WHERE function_kvid = ?', [functionKvid]);
+      for (const roleId of uniqueRoles) await manager.query('INSERT INTO dashboard_role_functions (role_kvid, function_kvid) VALUES (?, ?)', [roleId, functionKvid]);
+      for (const departmentId of uniqueDepartments) await manager.query('INSERT INTO dashboard_department_functions (department_id, function_kvid) VALUES (?, ?)', [departmentId, functionKvid]);
     });
     return null;
   }

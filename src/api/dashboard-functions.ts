@@ -35,6 +35,7 @@ export interface UmdVersionRecord {
   sha256: string;
   manifest: Record<string, any>;
   is_current: boolean;
+  file_available: boolean;
   created_by: string;
   created_at: string;
   sourceUrl: string;
@@ -77,6 +78,27 @@ export function updateDashboardFunction(
 
 export async function deleteDashboardFunction(kvid: string): Promise<void> {
   await request<null>(`/${encodeURIComponent(kvid)}`, { method: 'DELETE' });
+}
+
+export async function replaceFunctionRoles(kvid: string, roleKvids: string[]): Promise<void> {
+  await request<null>(`/${encodeURIComponent(kvid)}/roles`, {
+    method: 'PUT',
+    body: JSON.stringify({ roleKvids }),
+  });
+}
+
+export async function replaceFunctionDepartments(kvid: string, departmentIds: string[]): Promise<void> {
+  await request<null>(`/${encodeURIComponent(kvid)}/departments`, {
+    method: 'PUT',
+    body: JSON.stringify({ departmentIds }),
+  });
+}
+
+export async function replaceFunctionAccess(kvid: string, roleKvids: string[], departmentIds: string[]): Promise<void> {
+  await request<null>(`/${encodeURIComponent(kvid)}/access`, {
+    method: 'PUT',
+    body: JSON.stringify({ roleKvids, departmentIds }),
+  });
 }
 
 export function importDashboardFunctions(

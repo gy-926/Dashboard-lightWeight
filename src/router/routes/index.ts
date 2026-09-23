@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue';
 import type { RouteRecordRaw } from 'vue-router';
 import { autoRoutes } from '../auto/routes';
+import { getCurrentUser } from '@/api/nest-client';
 import type { MenuItem, GlobalConfig, CachedRoutes, ElegantRoute } from './types';
 import { fetchMenuData, fetchAutoStartupKvid } from './menu-service';
 import { generateUmdRoutes, umdComponentsReady } from '@/utils/remoteComponentLoader';
@@ -610,30 +611,20 @@ export async function generateDynamicRoutes(): Promise<{
   // 始终生成 UMD 路由（组件在 main.ts 中已触发加载，并在上面等待完成，此处直接读取）
   const umdVueRoutes = transformRoutesToVueRoutes(generateUmdRoutes());
 
-  // 1. 尝试从缓存恢复（后端菜单路由）
-  const cachedRoutes = restoreDynamicRoutesFromCache();
-
-  let authRoutes: RouteRecordRaw[];
-  if (cachedRoutes) {
-    authRoutes = [...autoRoutes, ...cachedRoutes, ...umdVueRoutes];
-  } else {
-    // 2. 获取菜单数据
-    const menuItems = await getRootMenu();
-
-    // 3. 构建菜单树
-    const menuTree = getMenuTree(menuItems);
-
-    // 4. 生成路由
-    const elegantRoutes = generateRoutes(menuTree);
-
-    // 5. 转换为 Vue 路由
-    const vueRoutes = transformRoutesToVueRoutes(elegantRoutes);
-
-    // 6. 缓存（含 menuRootKvid，供下次从缓存恢复时使用）
-    cacheDynamicRoutes(elegantRoutes);
-
-    authRoutes = [...autoRoutes, ...vueRoutes, ...umdVueRoutes];
-  }
+  // 权限可能随角色和部门变化，登录后必须从服务端获取当前可见菜单。
+  const menuItems = await getRootMenu();
+  const menuTree = getMenuTree(menuItems);
+  const elegantRoutes = generateRoutes(menuTree);
+  const vueRoutes = transformRoutesToVueRoutes(elegantRoutes);
+  const isSuperAdmin = getCurrentUser()?.role === 'super_admin';
+  const visibleAutoRoutes = autoRoutes.map(route => {
+    if (route.path !== '/' || !('children' in route) || !route.children) return route;
+    return {
+      ...route,
+      children: route.children.filter(child => child.path !== 'system' || isSuperAdmin),
+    } satisfies RouteRecordRaw;
+  });
+  const authRoutes: RouteRecordRaw[] = [...visibleAutoRoutes, ...vueRoutes, ...umdVueRoutes];
 
   // 7. 查询 AutoStartup 菜单项：写入响应式 ref 供 home.vue 监听；initialRedirect 仅作备用
   const kvid = _menuRootKvid ? await fetchAutoStartupKvid(_menuRootKvid) : null;

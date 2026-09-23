@@ -1,6 +1,7 @@
 import type { Router } from 'vue-router';
 import { waitForRoutesReady, isDynamicRoutesReady, setTargetNavigation } from './index';
 import { getGlobalConfig, syncInternalCodeToEntryPath } from '@/router/routes';
+import { getCurrentUser } from '@/api/nest-client';
 import NProgress from 'nprogress';
 import 'nprogress/nprogress.css';
 
@@ -84,6 +85,12 @@ export function setupRouteGuards(router: Router) {
 
     if (!isDynamicRoutesReady()) {
       await waitForRoutesReady();
+    }
+
+    if ((to.path === '/system' || to.path.startsWith('/system/') || to.meta?.requiresSuperAdmin)
+      && getCurrentUser()?.role !== 'super_admin') {
+      next('/home');
+      return;
     }
 
     const title = (to.meta?.title as string) || guardsConfig.defaultTitle;

@@ -53,6 +53,7 @@ let routesLoadPromise: Promise<void> | null = null;
 let originalAuthRoutes: RouteRecordRaw[] = []; // 保存原始路由树
 let targetNavigation: string | null = null; // 目标导航路径（用于刷新时保存原路径）
 let dynamicRouteNames: string[] = []; // 记录动态添加的路由名，用于重置时清理
+let routeGeneration = 0;
 
 // 递归收集所有路由的 name
 function collectRouteNames(routes: RouteRecordRaw[]): string[] {
@@ -94,6 +95,7 @@ async function initRoutes() {
   if (routesLoadPromise) return routesLoadPromise;
 
   routesLoadPromise = (async () => {
+    const generation = ++routeGeneration;
     try {
       // 优先使用 targetNavigation（来自 guards），否则使用当前路由
       const restorePath = targetNavigation || router.currentRoute.value.path;
@@ -141,7 +143,8 @@ async function initRoutes() {
       ) {
         const target = isDefaultHomePath(restorePath) ? defaultHome : restorePath;
         targetNavigation = null;
-        updateMenuFromRoutes().finally(() => {
+        updateMenuFromRoutes(generation).finally(() => {
+          if (generation !== routeGeneration) return;
           router.replace(target).catch(() => {});
         });
         return;
@@ -151,7 +154,8 @@ async function initRoutes() {
       const currentPath = router.currentRoute.value.path;
       if (currentPath === '/404' || currentPath === '/:pathMatch(.*)*') {
         targetNavigation = null;
-        updateMenuFromRoutes().finally(() => {
+        updateMenuFromRoutes(generation).finally(() => {
+          if (generation !== routeGeneration) return;
           router.replace(defaultHome).catch(() => {});
         });
         return;
@@ -160,12 +164,13 @@ async function initRoutes() {
       // 正常情况（当前停在 / 或 /home）：跳转到 defaultHome，更新菜单
       targetNavigation = null;
       if (initialRedirect && isDefaultHomePath(currentPath)) {
-        updateMenuFromRoutes().finally(() => {
+        updateMenuFromRoutes(generation).finally(() => {
+          if (generation !== routeGeneration) return;
           router.replace(initialRedirect).catch(() => {});
         });
         return;
       }
-      updateMenuFromRoutes();
+      void updateMenuFromRoutes(generation);
     } catch (error) {
       // 401：权限不足，跳转到登录页
       if (error instanceof UnauthorizedError) {
@@ -209,9 +214,10 @@ async function initRoutes() {
 }
 
 // 更新菜单
-async function updateMenuFromRoutes() {
+async function updateMenuFromRoutes(generation: number) {
   try {
     const { useMenuStore } = await import('@/layouts/modules/global-menu/store');
+    if (generation !== routeGeneration) return;
     const menuStore = useMenuStore();
 
     // 使用原始路由树来构建菜单，避免 Vue Router 展平 children 导致的问题
@@ -262,6 +268,11 @@ export async function reloadDynamicRoutes(): Promise<void> {
   if (routesLoadPromise) {
     await routesLoadPromise.catch(() => {});
   }
+  routeGeneration++;
+
+  // 登录账号可能与上一会话不同，先丢弃旧账号的菜单和标签。
+  const { useMenuStore } = await import('@/layouts/modules/global-menu/store');
+  useMenuStore().resetState();
 
   // 1. 清理上一会话的动态页面实例、远程 Vue 缓存和在途加载
   const { useTeleportManager } = await import('@/store/modules/teleport-manager');
@@ -291,6 +302,7 @@ export async function reloadDynamicRoutes(): Promise<void> {
 
 // 清除动态路由状态（仅用于退出登录，不重新请求菜单接口）
 export function clearDynamicRoutesState(): void {
+  routeGeneration++;
   clearDynamicRoutesCache();
 
   dynamicRouteNames.forEach(name => {

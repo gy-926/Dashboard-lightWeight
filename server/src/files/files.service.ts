@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createHash, randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
-import { mkdir, rename, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, rename, stat, unlink, writeFile } from 'node:fs/promises';
 import { basename, resolve } from 'node:path';
 import { Repository } from 'typeorm';
 import { UserRole } from '../users/entities/user.entity.js';
@@ -25,6 +25,7 @@ export interface PublicStoredFile {
   sha256: string;
   createdAt: Date;
   downloadUrl: string;
+  fileAvailable: boolean;
 }
 
 function positiveInteger(config: ConfigService, key: string, fallback: number): number {
@@ -52,7 +53,7 @@ export class FilesService {
     this.userQuota = positiveInteger(config, 'FILE_USER_QUOTA_BYTES', 1024 * 1024 * 1024);
   }
 
-  private publicFile(file: StoredFile): PublicStoredFile {
+  private publicFile(file: StoredFile, fileAvailable = true): PublicStoredFile {
     return {
       id: file.id,
       ownerUserId: file.ownerUserId,
@@ -62,11 +63,22 @@ export class FilesService {
       sha256: file.sha256,
       createdAt: file.createdAt,
       downloadUrl: `/files/${file.id}/download`,
+      fileAvailable,
     };
   }
 
   private path(storedName: string): string {
     return resolve(this.root, storedName);
+  }
+
+  async isStoredFileAvailable(storedName: string, expectedSize: number): Promise<boolean> {
+    try {
+      const file = await stat(this.path(storedName));
+      return file.isFile() && file.size === expectedSize;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
+      throw error;
+    }
   }
 
   async store(userId: string, upload?: UploadedFile): Promise<PublicStoredFile> {
@@ -113,7 +125,9 @@ export class FilesService {
   async list(userId: string, role: UserRole): Promise<PublicStoredFile[]> {
     const where = role === UserRole.SuperAdmin ? {} : { ownerUserId: userId };
     const files = await this.files.find({ where, order: { createdAt: 'DESC' } });
-    return files.map(file => this.publicFile(file));
+    return Promise.all(files.map(async file =>
+      this.publicFile(file, await this.isStoredFileAvailable(file.storedName, file.size))
+    ));
   }
 
   private async authorized(id: string, userId: string, role: UserRole): Promise<StoredFile> {
@@ -127,6 +141,9 @@ export class FilesService {
 
   async download(id: string, userId: string, role: UserRole) {
     const file = await this.authorized(id, userId, role);
+    if (!(await this.isStoredFileAvailable(file.storedName, file.size))) {
+      throw new NotFoundException('文件记录存在，但本地文件缺失或大小不匹配');
+    }
     return { file: this.publicFile(file), stream: createReadStream(this.path(file.storedName)) };
   }
 
@@ -140,6 +157,9 @@ export class FilesService {
   async openStored(id: string) {
     const file = await this.files.findOneBy({ id });
     if (!file) throw new NotFoundException('文件不存在');
+    if (!(await this.isStoredFileAvailable(file.storedName, file.size))) {
+      throw new NotFoundException('文件记录存在，但本地文件缺失或大小不匹配');
+    }
     return { file: this.publicFile(file), stream: createReadStream(this.path(file.storedName)) };
   }
 

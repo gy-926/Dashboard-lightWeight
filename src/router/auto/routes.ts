@@ -66,6 +66,7 @@ export const autoRoutes: RouteRecordRaw[] = [
           title: '系统功能',
           icon: 'fa-cog',
           passthrough: true,
+          requiresSuperAdmin: true,
         },
         children: [
           {
@@ -75,6 +76,24 @@ export const autoRoutes: RouteRecordRaw[] = [
             meta: {
               title: '功能列表',
               icon: 'fa-list-alt',
+            },
+          },
+          {
+            path: 'user-list',
+            name: 'user-list',
+            component: () => import('../../views/user-list/index.vue'),
+            meta: {
+              title: '用户列表',
+              icon: 'fa-users',
+            },
+          },
+          {
+            path: 'organization',
+            name: 'organization',
+            component: () => import('../../views/organization/index.vue'),
+            meta: {
+              title: '组织机构',
+              icon: 'fa-sitemap',
             },
           },
           {

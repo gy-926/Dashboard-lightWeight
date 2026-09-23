@@ -17,7 +17,8 @@ const search = ref('');
 const notice = ref<{ type: 'success' | 'error'; text: string } | null>(null);
 
 const isSuperAdmin = computed(() => getCurrentUser()?.role === 'super_admin');
-const totalSize = computed(() => files.value.reduce((total, file) => total + file.size, 0));
+const availableFiles = computed(() => files.value.filter(file => file.fileAvailable));
+const totalSize = computed(() => availableFiles.value.reduce((total, file) => total + file.size, 0));
 const filteredFiles = computed(() => {
   const keyword = search.value.trim().toLowerCase();
   if (!keyword) return files.value;
@@ -151,7 +152,7 @@ onMounted(loadFiles);
       <section class="grid gap-4 sm:grid-cols-3">
         <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <p class="text-sm text-slate-500 dark:text-slate-400">文件数量</p>
-          <p class="mt-2 text-2xl font-bold">{{ files.length }}</p>
+          <p class="mt-2 text-2xl font-bold">{{ availableFiles.length }}</p>
         </div>
         <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <p class="text-sm text-slate-500 dark:text-slate-400">已用空间</p>
@@ -202,8 +203,8 @@ onMounted(loadFiles);
         <i class="fas mr-2" :class="notice.type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation'"></i>{{ notice.text }}
       </div>
 
-      <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <div class="flex flex-col gap-3 border-b border-slate-200 p-5 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
+      <section class="admin-list-panel">
+        <div class="admin-list-header">
           <h2 class="font-semibold">文件列表</h2>
           <div class="relative w-full sm:w-72">
             <i class="fas fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400"></i>
@@ -219,16 +220,16 @@ onMounted(loadFiles);
         </div>
         <div v-else class="overflow-x-auto">
           <table class="w-full min-w-[760px] text-left text-sm">
-            <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-950/60 dark:text-slate-400">
+            <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-900/30 dark:text-slate-400">
               <tr><th class="px-5 py-3.5">文件</th><th class="px-5 py-3.5">大小</th><th v-if="isSuperAdmin" class="px-5 py-3.5">所有者</th><th class="px-5 py-3.5">上传时间</th><th class="px-5 py-3.5 text-right">操作</th></tr>
             </thead>
-            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-              <tr v-for="file in filteredFiles" :key="file.id" class="transition hover:bg-slate-50/80 dark:hover:bg-slate-800/40">
-                <td class="px-5 py-4"><div class="flex min-w-0 items-center gap-3"><span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-300"><i class="fas" :class="iconFor(file)"></i></span><div class="min-w-0"><p class="max-w-sm truncate font-medium" :title="file.originalName">{{ file.originalName }}</p><p class="mt-0.5 max-w-xs truncate text-xs text-slate-400">{{ file.mimeType }}</p></div></div></td>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+              <tr v-for="file in filteredFiles" :key="file.id" class="transition hover:bg-slate-50 dark:hover:bg-slate-700/20">
+                <td class="px-5 py-4"><div class="flex min-w-0 items-center gap-3"><span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-300"><i class="fas" :class="iconFor(file)"></i></span><div class="min-w-0"><p class="max-w-sm truncate font-medium" :title="file.originalName">{{ file.originalName }}</p><p class="mt-0.5 max-w-xs truncate text-xs text-slate-400">{{ file.mimeType }} <span v-if="!file.fileAvailable" class="ml-2 font-semibold text-red-600 dark:text-red-400">本地文件缺失或大小不匹配</span></p></div></div></td>
                 <td class="px-5 py-4 text-slate-600 dark:text-slate-300">{{ formatBytes(file.size) }}</td>
                 <td v-if="isSuperAdmin" class="px-5 py-4 font-mono text-xs text-slate-500">{{ file.ownerUserId }}</td>
                 <td class="px-5 py-4 whitespace-nowrap text-slate-500 dark:text-slate-400">{{ formatDate(file.createdAt) }}</td>
-                <td class="px-5 py-4"><div class="flex justify-end gap-2"><button class="grid h-9 w-9 place-items-center rounded-lg text-blue-600 transition hover:bg-blue-50 disabled:opacity-50 dark:hover:bg-blue-950/40" :disabled="downloadingId === file.id" title="下载" @click="handleDownload(file)"><i class="fas" :class="downloadingId === file.id ? 'fa-spinner fa-spin' : 'fa-download'"></i></button><button class="grid h-9 w-9 place-items-center rounded-lg text-red-500 transition hover:bg-red-50 disabled:opacity-50 dark:hover:bg-red-950/40" :disabled="deletingId === file.id" title="删除" @click="handleDelete(file)"><i class="fas" :class="deletingId === file.id ? 'fa-spinner fa-spin' : 'fa-trash-can'"></i></button></div></td>
+                <td class="px-5 py-4"><div class="admin-list-actions"><button class="admin-list-action admin-list-action-primary" :disabled="!file.fileAvailable || downloadingId === file.id" :title="file.fileAvailable ? '下载' : '本地文件不可用'" :aria-label="`下载 ${file.originalName}`" @click="handleDownload(file)"><i class="fas" :class="downloadingId === file.id ? 'fa-spinner fa-spin' : 'fa-download'"></i>下载</button><button class="admin-list-action admin-list-action-danger" :disabled="deletingId === file.id" :aria-label="`删除 ${file.originalName}`" @click="handleDelete(file)"><i class="fas" :class="deletingId === file.id ? 'fa-spinner fa-spin' : 'fa-trash-can'"></i>删除</button></div></td>
               </tr>
             </tbody>
           </table>

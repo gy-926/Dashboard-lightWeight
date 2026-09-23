@@ -7,6 +7,7 @@ import { useTeleportManager } from '@/store/modules/teleport-manager';
 import { usePageHostObserver } from '@/runtime/page-host/observer';
 import { usePageHostPilotStore } from '@/runtime/page-host/pilot-store';
 import type { PageDestroyReason } from '@/runtime/page-host/types';
+import { getCurrentUser, onAuthChange } from '@/api/nest-client';
 
 const THEME_STORAGE_KEY = 'kivii-theme';
 
@@ -129,8 +130,21 @@ function getTabKvid(tab: MenuItem): string | undefined {
 export const useMenuStore = defineStore('global-menu', () => {
   const teleportManager = useTeleportManager();
 
-  const menuList = ref<MenuItem[]>([]);
+  const allMenuItems = ref<MenuItem[]>([]);
+  const currentRole = ref(getCurrentUser()?.role);
+  const menuList = computed(() => currentRole.value === 'super_admin'
+    ? allMenuItems.value
+    : allMenuItems.value.filter(item => item.key !== 'system' && item.path !== '/system')
+  );
   const tabsList = ref<MenuItem[]>([]);
+  onAuthChange(() => {
+    currentRole.value = getCurrentUser()?.role;
+    if (currentRole.value !== 'super_admin') {
+      const removed = tabsList.value.filter(tab => tab.path === '/system' || tab.path.startsWith('/system/'));
+      tabsList.value = tabsList.value.filter(tab => !removed.includes(tab));
+      removed.forEach(tab => cleanupTabCache(tab));
+    }
+  });
   const openKeys = ref<string[]>([]);
   const selectedKey = ref('');
   const siderCollapsed = ref(false);
@@ -178,7 +192,7 @@ export const useMenuStore = defineStore('global-menu', () => {
   }
 
   function setMenuFromRoutes(routes: RouteRecordRaw[]) {
-    menuList.value = transformRouteToMenu(routes);
+    allMenuItems.value = transformRouteToMenu(routes);
     if (!mixActiveRootKey.value && menuList.value.length > 0) {
       mixActiveRootKey.value = menuList.value[0].key;
     }
@@ -223,6 +237,7 @@ export const useMenuStore = defineStore('global-menu', () => {
 
   function addTab(item: MenuItem) {
     if (!item?.path) return;
+    if ((item.path === '/system' || item.path.startsWith('/system/')) && currentRole.value !== 'super_admin') return;
 
     const existingIndex = tabsList.value.findIndex(tab => tab.path === item.path);
     if (existingIndex !== -1) {
@@ -308,7 +323,7 @@ export const useMenuStore = defineStore('global-menu', () => {
   }
 
   function resetState() {
-    menuList.value = [];
+    allMenuItems.value = [];
     tabsList.value = [];
     openKeys.value = [];
     selectedKey.value = '';

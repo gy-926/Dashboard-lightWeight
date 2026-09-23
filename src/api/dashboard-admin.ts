@@ -51,10 +51,33 @@ export interface UserRoleRecord {
 
 export interface UserDirectoryRecord {
   user_id: string;
+  name: string | null;
   email: string | null;
   app_role: string | null;
   created_at: string | null;
   last_sign_in_at: string | null;
+  department_id: string | null;
+}
+
+export interface DepartmentRecord {
+  id: string;
+  parent_id: string | null;
+  code: string;
+  name: string;
+  kind: 'organization' | 'department';
+  full_name: string;
+  address: string | null;
+  mnemonic_code: string | null;
+  internal_code: string | null;
+  manager_user_id: string | null;
+  floor: string | null;
+  is_active: boolean;
+  sort_order: number;
+}
+
+export interface DepartmentFunctionRecord {
+  department_id: string;
+  function_kvid: string;
 }
 
 export interface AuthRoleRecord {
@@ -74,6 +97,8 @@ export interface PermissionConfigData {
   roleFunctions: RoleFunctionRecord[];
   userRoles: UserRoleRecord[];
   users: UserDirectoryRecord[];
+  departments: DepartmentRecord[];
+  departmentFunctions: DepartmentFunctionRecord[];
 }
 
 const request = <T>(path = '', init: RequestInit = {}) =>
@@ -128,6 +153,35 @@ export async function deleteMenu(kvid: string): Promise<void> {
 
 export function getPermissionConfig(): Promise<PermissionConfigData> {
   return request<PermissionConfigData>('/admin/permissions');
+}
+
+export function saveDepartment(item: DepartmentRecord): Promise<DepartmentRecord> {
+  return request<DepartmentRecord>('/admin/departments', { method: 'POST', body: JSON.stringify(item) });
+}
+
+export async function deleteDepartment(id: string): Promise<void> {
+  await request<null>(`/admin/departments/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+export async function assignUserDepartment(userId: string, departmentId: string | null): Promise<void> {
+  await request<null>(`/admin/users/${encodeURIComponent(userId)}/department`, {
+    method: 'PUT',
+    body: JSON.stringify({ departmentId }),
+  });
+}
+
+export function setUserAppRole(userId: string, role: 'user' | 'super_admin'): Promise<{ role: 'user' | 'super_admin' }> {
+  return request<{ role: 'user' | 'super_admin' }>(`/admin/users/${encodeURIComponent(userId)}/app-role`, {
+    method: 'PUT',
+    body: JSON.stringify({ role }),
+  });
+}
+
+export function addDepartmentUsers(departmentId: string, userIds: string[]): Promise<{ assigned: number }> {
+  return request<{ assigned: number }>(`/admin/departments/${encodeURIComponent(departmentId)}/users`, {
+    method: 'PUT',
+    body: JSON.stringify({ userIds }),
+  });
 }
 
 export function saveRole(item: RoleRecord): Promise<RoleRecord> {

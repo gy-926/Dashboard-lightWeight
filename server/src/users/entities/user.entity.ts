@@ -29,6 +29,9 @@ export class User {
   @Column({ type: 'enum', enum: UserRole, default: UserRole.User })
   role: UserRole;
 
+  @Column({ name: 'department_id', type: 'char', length: 36, nullable: true })
+  departmentId: string | null;
+
   // 旧账号暂时没有密码，不能登录；查询用户时不读取此列。
   @Column({
     name: 'password_hash',

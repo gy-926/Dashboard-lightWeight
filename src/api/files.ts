@@ -9,6 +9,7 @@ export interface StoredFileRecord {
   sha256: string;
   createdAt: string;
   downloadUrl: string;
+  fileAvailable: boolean;
 }
 
 export function listFiles(): Promise<StoredFileRecord[]> {

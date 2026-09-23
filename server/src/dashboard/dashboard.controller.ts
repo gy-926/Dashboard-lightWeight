@@ -20,6 +20,9 @@ export class DashboardFunctionsController {
   importUmd(@Req() request: AuthenticatedRequest, @UploadedFile() file: Upload | undefined, @Body() body: Record<string, string>) { this.admin(request); return this.dashboard.importUmd(request.authUserId, file, body); }
   @Get('umd-versions') versions(@Req() request: AuthenticatedRequest, @Query('moduleKey') moduleKey?: string) { this.admin(request); return this.dashboard.umdVersions(moduleKey); }
   @Put('umd-versions/:id/activate') activateVersion(@Req() request: AuthenticatedRequest, @Param('id', ParseUUIDPipe) id: string) { this.admin(request); return this.dashboard.activateUmdVersion(id); }
+  @Put(':kvid/roles') replaceFunctionRoles(@Req() request: AuthenticatedRequest, @Param('kvid') kvid: string, @Body() body: { roleKvids?: unknown }) { this.admin(request); return this.dashboard.replaceFunctionRoles(kvid, body?.roleKvids); }
+  @Put(':kvid/departments') replaceFunctionDepartments(@Req() request: AuthenticatedRequest, @Param('kvid') kvid: string, @Body() body: { departmentIds?: unknown }) { this.admin(request); return this.dashboard.replaceFunctionDepartments(kvid, body?.departmentIds); }
+  @Put(':kvid/access') replaceFunctionAccess(@Req() request: AuthenticatedRequest, @Param('kvid') kvid: string, @Body() body: { roleKvids?: unknown; departmentIds?: unknown }) { this.admin(request); return this.dashboard.replaceFunctionAccess(kvid, body?.roleKvids, body?.departmentIds); }
   @Patch(':kvid') patch(@Req() request: AuthenticatedRequest, @Param('kvid') kvid: string, @Body() body: unknown) { this.admin(request); return this.dashboard.patchFunction(kvid, body); }
   @Delete(':kvid') remove(@Req() request: AuthenticatedRequest, @Param('kvid') kvid: string) { this.admin(request); return this.dashboard.remove('functions', kvid); }
 }
@@ -59,8 +62,14 @@ export class DashboardAdminController {
   @Post('admin/menus') @HttpCode(200) saveMenu(@Req() request: AuthenticatedRequest, @Body() body: unknown) { this.admin(request); return this.dashboard.upsert('menus', body); }
   @Delete('admin/menus/:kvid') deleteMenu(@Req() request: AuthenticatedRequest, @Param('kvid') kvid: string) { this.admin(request); return this.dashboard.remove('menus', kvid); }
   @Get('admin/permissions') permissions(@Req() request: AuthenticatedRequest) { this.admin(request); return this.dashboard.permissions(); }
+  @Get('admin/departments') departments(@Req() request: AuthenticatedRequest) { this.admin(request); return this.dashboard.departments(); }
+  @Post('admin/departments') @HttpCode(200) saveDepartment(@Req() request: AuthenticatedRequest, @Body() body: unknown) { this.admin(request); return this.dashboard.saveDepartment(body); }
+  @Delete('admin/departments/:id') deleteDepartment(@Req() request: AuthenticatedRequest, @Param('id', ParseUUIDPipe) id: string) { this.admin(request); return this.dashboard.deleteDepartment(id); }
+  @Put('admin/departments/:id/users') addDepartmentUsers(@Req() request: AuthenticatedRequest, @Param('id', ParseUUIDPipe) id: string, @Body() body: { userIds?: unknown }) { this.admin(request); return this.dashboard.addDepartmentUsers(id, body?.userIds); }
   @Post('admin/roles') @HttpCode(200) saveRole(@Req() request: AuthenticatedRequest, @Body() body: unknown) { this.admin(request); return this.dashboard.upsert('roles', body); }
   @Delete('admin/roles/:kvid') deleteRole(@Req() request: AuthenticatedRequest, @Param('kvid') kvid: string) { this.admin(request); return this.dashboard.remove('roles', kvid); }
   @Put('admin/roles/:kvid/functions') replaceRoleFunctions(@Req() request: AuthenticatedRequest, @Param('kvid') kvid: string, @Body() body: {functionKvids?: unknown}) { this.admin(request); return this.dashboard.replaceBindings('role', kvid, body?.functionKvids); }
   @Put('admin/users/:userId/roles') replaceUserRoles(@Req() request: AuthenticatedRequest, @Param('userId') userId: string, @Body() body: {roleKvids?: unknown}) { this.admin(request); return this.dashboard.replaceBindings('user', userId, body?.roleKvids); }
+  @Put('admin/users/:userId/app-role') setUserAppRole(@Req() request: AuthenticatedRequest, @Param('userId', ParseUUIDPipe) userId: string, @Body() body: { role?: unknown }) { this.admin(request); return this.dashboard.setUserAppRole(userId, body?.role); }
+  @Put('admin/users/:userId/department') assignUserDepartment(@Req() request: AuthenticatedRequest, @Param('userId', ParseUUIDPipe) userId: string, @Body() body: { departmentId?: unknown }) { this.admin(request); return this.dashboard.assignUserDepartment(userId, body?.departmentId); }
 }

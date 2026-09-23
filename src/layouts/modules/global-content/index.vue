@@ -112,6 +112,8 @@
       'umd-showcase',
       'umd-menu-config',
       'feature-list',
+      'user-list',
+      'organization',
       'menu-config',
     ].includes(String(route.name));
   });
@@ -169,12 +171,13 @@
     </div>
 
     <!-- 内容区域 -->
-    <div class="flex-1 overflow-y-auto p-0 relative">
+    <div class="relative min-h-0 flex-1 overflow-y-auto p-0">
       <div
         ref="pageHostAnchor"
         :class="[
           'min-h-full relative',
-          isFullWidthLayout ? 'w-full px-4 md:px-6 py-6' : 'mx-auto',
+          route.name === 'menu-config' ? 'flex h-full w-full flex-col p-6' : isFullWidthLayout ? 'w-full px-4 md:px-6 py-6' : 'mx-auto',
+          route.name === 'organization' ? 'flex h-full flex-col' : '',
         ]"
       >
         <div

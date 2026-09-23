@@ -88,8 +88,19 @@ JSON 接口使用统一响应格式：
 | `GET` | `/dashboard-admin/menus/autostart?menuRootKvid=...` | 自动启动菜单 |
 | `GET` | `/dashboard-admin/admin/menu-config` | 管理端菜单、菜单根和功能配置 |
 | `GET` | `/dashboard-admin/admin/permissions` | 管理端用户、角色和权限配置 |
+| `PUT` | `/dashboard-functions/:kvid/access` | 同时替换普通用户功能授权和部门授权，提交 `roleKvids`（空数组或普通用户角色 ID）、`departmentIds` |
+| `GET` | `/dashboard-admin/admin/departments` | 组织部门列表 |
+| `POST` | `/dashboard-admin/admin/departments` | 新增或更新组织部门，包含类型、简称、全称、上级，以及可选的地址、助记码和内部编码 |
+| `DELETE` | `/dashboard-admin/admin/departments/:id` | 删除无下级和成员的部门 |
+| `PUT` | `/dashboard-admin/admin/departments/:id/users` | 将所选用户批量添加到部门，提交 `userIds` |
+| `PUT` | `/dashboard-admin/admin/users/:userId/department` | 设置用户所属部门，提交 `departmentId`，传 `null` 可清空 |
+| `PUT` | `/dashboard-admin/admin/users/:userId/app-role` | 设置账号角色，提交 `role` 为 `user` 或 `super_admin`；变更后撤销该用户现有会话 |
 
 带 `/dashboard-admin/admin/` 的接口和功能写接口要求超级管理员。普通用户只能读取自己的角色以及经过权限过滤的运行时菜单。
+
+每位用户最多属于一个部门。普通用户可见功能为**普通用户功能授权与部门授权的交集**；部门继承启用的上级部门授权，停用节点会中断向更上级的继承。超级管理员不受此交集限制。迁移清空已有普通用户功能授权；旧自定义角色及用户绑定不参与访问判断。`dashboard_departments`、`dashboard_department_functions` 和 `users.department_id` 由迁移创建；现有用户默认未分配部门，需由管理员分配后才能访问依赖部门授权的功能。修改授权后，新生成的运行时菜单会使用当前权限。
+
+组织节点使用 `kind`（`organization` 或 `department`）。顶层组织填写简称、全称、地址和可选的内部编码；部门填写名称、负责人 `manager_user_id`、楼层 `floor` 和可选的内部编码。负责人必须是已有用户，未指定时为 `null`。顶层节点只能是组织，下级节点只能是部门；画布顶部创建顶层组织，节点上的“+”创建下级部门。内部编码填写时必须在组织内唯一。旧节点的类型和全称由迁移补齐。
 
 ## 文件存储接口
 

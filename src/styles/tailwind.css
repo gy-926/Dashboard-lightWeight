@@ -124,6 +124,44 @@
   background-color: var(--color-primary-hover);
 }
 
+@layer components {
+  .admin-list-panel {
+    @apply overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800;
+  }
+
+  .admin-list-header {
+    @apply flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-700;
+  }
+
+  .admin-list-row {
+    @apply flex flex-wrap items-center gap-3 px-5 py-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/20;
+  }
+
+  .admin-list-actions {
+    @apply ml-auto flex flex-wrap items-center justify-end gap-1.5;
+  }
+
+  .admin-list-action {
+    @apply inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-transparent px-3 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .admin-list-action-primary {
+    @apply border-blue-100 bg-blue-50 text-blue-700 hover:border-blue-200 hover:bg-blue-100 dark:border-blue-900 dark:bg-blue-900/20 dark:text-blue-300 dark:hover:bg-blue-900/40;
+  }
+
+  .admin-list-action-neutral {
+    @apply border-slate-200 bg-white text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700;
+  }
+
+  .admin-list-action-danger {
+    @apply border-red-100 bg-white text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:bg-slate-800 dark:text-red-400 dark:hover:bg-red-900/20;
+  }
+
+  .admin-list-select {
+    @apply h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200;
+  }
+}
+
 /* 隐藏滚动条样式 */
 .scrollbar-hide {
   /* IE, Edge, Firefox */
