@@ -11,13 +11,19 @@ async function bootstrap() {
   // HTTPS 选项在 Nest 初始化前读取，因此先加载本地 .env。
   if (existsSync('.env')) loadEnvFile('.env');
   const isProduction = process.env.NODE_ENV === 'production';
+  const host = process.env.HOST ?? (isProduction ? '0.0.0.0' : '127.0.0.1');
+  const tlsTerminatedByProxy =
+    isProduction &&
+    process.env.HTTPS_TERMINATED_BY_PROXY === '1' &&
+    host === '127.0.0.1';
   if (
     isProduction &&
+    !tlsTerminatedByProxy &&
     (!process.env.HTTPS_KEY_PATH || !process.env.HTTPS_CERT_PATH)
   ) {
-    throw new Error('生产环境必须配置 HTTPS_KEY_PATH 和 HTTPS_CERT_PATH');
+    throw new Error('生产环境必须配置 HTTPS 证书，或在本机监听并由反向代理终止 HTTPS');
   }
-  const httpsOptions = isProduction
+  const httpsOptions = isProduction && !tlsTerminatedByProxy
     ? {
         key: readFileSync(process.env.HTTPS_KEY_PATH!),
         cert: readFileSync(process.env.HTTPS_CERT_PATH!),
@@ -56,7 +62,7 @@ async function bootstrap() {
   // 优先使用环境变量 PORT；本地默认监听 3000 端口。
   await app.listen(
     process.env.PORT ?? 3000,
-    process.env.HOST ?? (isProduction ? '0.0.0.0' : '127.0.0.1'),
+    host,
   );
 }
 
