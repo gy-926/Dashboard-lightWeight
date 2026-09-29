@@ -40,14 +40,14 @@
     {
       id: 1,
       name: 'runtime:init',
-      detail: '主框架已启动 UMD Showcase 加载任务',
+      detail: '主应用已启动 UMD 示例加载任务',
       time: new Date().toLocaleTimeString(),
       tone: 'blue',
     },
     {
       id: 2,
       name: 'host:ready',
-      detail: 'Props、Events 和 Expose 通信通道已准备',
+      detail: '参数传入、事件回传和方法调用已准备就绪',
       time: new Date().toLocaleTimeString(),
       tone: 'emerald',
     },
@@ -57,7 +57,7 @@
     {
       key: 'overview',
       component: 'RuntimeOverview',
-      title: 'Runtime Overview',
+      title: '运行概览',
       description: '查看远程模块从解析、加载、发现到挂载的完整链路。',
       icon: 'fas fa-gauge-high',
       exposedMethod: 'resetComponent',
@@ -65,15 +65,15 @@
     {
       key: 'interaction',
       component: 'HostInteractionDemo',
-      title: 'Host Interaction',
-      description: '实际演示宿主 Props、远程 Events 与 Expose 方法调用。',
+      title: '页面交互',
+      description: '演示主页面如何向模块传递信息、接收事件并调用模块操作。',
       icon: 'fas fa-tower-broadcast',
       exposedMethod: 'receiveHostMessage',
     },
     {
       key: 'workspace',
       component: 'DataWorkspaceDemo',
-      title: 'Data Workspace',
+      title: '业务工作台',
       description: '运行一个包含筛选、选择和导出事件的完整业务页面。',
       icon: 'fas fa-table',
       exposedMethod: 'resetFilters',
@@ -137,13 +137,21 @@
       : ''
   );
 
+  const statusLabel = computed(() => {
+    const status = showcaseLibrary.value?.status;
+    if (status === 'success') return '加载成功';
+    if (status === 'error') return '加载失败';
+    if (status === 'loading') return '加载中';
+    return '等待加载';
+  });
+
   const componentProps = computed(() => ({
     theme: theme.value,
     hostName: 'GavinYinHub Dashboard Host',
     version: showcaseLibrary.value?.manifest?.version || '1.1.2',
     registeredCount: registeredComponentCount.value,
     initialCount: 2,
-    title: 'Runtime Module Workspace',
+    title: '运行模块工作区',
   }));
 
   function formatPayload(payload: unknown): string {
@@ -197,7 +205,7 @@
       const method = currentDemo.value.exposedMethod;
       const args =
         activeDemo.value === 'interaction'
-          ? ['来自主框架的消息：Expose 调用成功']
+          ? ['来自主页面的消息：方法调用成功']
           : [];
       const result = remote.invoke(method, ...args);
       hostCallResult.value = formatPayload(result);
@@ -221,9 +229,9 @@
           <div>
             <div class="showcase-badge inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-black uppercase tracking-[0.18em]">
               <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_#34d399]" />
-              Live UMD integration
+              UMD 模块实时接入
             </div>
-            <h1 class="mt-3 text-2xl font-black text-slate-900 dark:text-white sm:text-3xl">UMD Runtime Showcase</h1>
+            <h1 class="mt-3 text-2xl font-black text-slate-900 dark:text-white sm:text-3xl">UMD 运行示例</h1>
             <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
               下方页面来自独立的
               <code class="showcase-code rounded px-1.5 py-0.5">Gy-umd-demo</code>
@@ -234,15 +242,15 @@
           <div class="grid grid-cols-3 gap-2 text-center">
             <div class="header-metric">
               <strong>{{ registeredDemoNames.length }}/{{ demos.length }}</strong>
-              <span>DEMO READY</span>
+              <span>可用示例</span>
             </div>
             <div class="header-metric">
               <strong>{{ showcaseLibrary?.manifest?.version || '1.1.2' }}</strong>
-              <span>VERSION</span>
+              <span>版本</span>
             </div>
             <div class="header-metric">
-              <strong>{{ showcaseLibrary?.status || 'loading' }}</strong>
-              <span>STATUS</span>
+              <strong>{{ statusLabel }}</strong>
+              <span>状态</span>
             </div>
           </div>
         </div>
@@ -251,7 +259,7 @@
       <div class="grid gap-0 lg:grid-cols-[260px_1fr]">
         <aside class="border-b border-slate-200 p-4 dark:border-slate-700 lg:border-b-0 lg:border-r">
           <p class="mb-3 px-2 text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-            Remote pages
+            示例页面
           </p>
           <div class="grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
             <button
@@ -272,7 +280,7 @@
           <div class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/50">
             <div class="flex items-center justify-between">
               <span class="text-xs font-black uppercase tracking-wider text-slate-400">
-                Host control
+                主页面操作
               </span>
               <i class="fas fa-terminal text-xs text-violet-500" />
             </div>
@@ -292,7 +300,7 @@
           >
             <i class="fas fa-circle-notch fa-spin text-3xl text-blue-500" />
             <p class="mt-4 text-sm font-bold">正在加载 Gy-umd-demo 构建产物...</p>
-            <code class="mt-2 text-xs">GavinYinHub Runtime Bundle</code>
+            <span class="mt-2 text-xs">正在准备演示模块</span>
           </div>
 
           <div
@@ -329,15 +337,15 @@
       <div class="flex flex-col justify-between gap-3 border-b border-slate-100 pb-4 dark:border-slate-700 sm:flex-row sm:items-center">
         <div>
           <p class="text-xs font-black uppercase tracking-[0.16em] text-violet-600 dark:text-violet-400">
-            Integration evidence
+            交互记录
           </p>
           <h2 class="mt-1 text-lg font-black text-slate-900 dark:text-white">宿主通信事件流</h2>
         </div>
         <div class="flex flex-wrap gap-2 text-xs font-bold">
-          <span class="contract-chip"><i class="fas fa-arrow-down" /> Props</span>
-          <span class="contract-chip"><i class="fas fa-arrow-up" /> Events</span>
-          <span class="contract-chip"><i class="fas fa-code" /> Expose</span>
-          <span class="contract-chip"><i class="fas fa-palette" /> Theme</span>
+          <span class="contract-chip"><i class="fas fa-arrow-down" /> 参数传入</span>
+          <span class="contract-chip"><i class="fas fa-arrow-up" /> 事件回传</span>
+          <span class="contract-chip"><i class="fas fa-code" /> 方法调用</span>
+          <span class="contract-chip"><i class="fas fa-palette" /> 主题同步</span>
         </div>
       </div>
 

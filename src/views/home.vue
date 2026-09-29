@@ -43,7 +43,7 @@
     {
       value: String(registeredComponentCount.value),
       label: '已注册组件',
-      detail: '来自实时 Runtime 状态',
+      detail: '来自实时运行状态',
     },
     {
       value: '3',
@@ -53,14 +53,14 @@
     {
       value: '3',
       label: '布局模式',
-      detail: 'Side · Top · Mixed',
+      detail: '侧边 · 顶部 · 混合',
     },
   ]);
 
   const runtimeFlow = [
     {
       index: '01',
-      title: 'Resolve source',
+      title: '解析功能配置',
       subtitle: '定位模块来源',
       detail: '从功能配置解析 UMD 地址、导出名称和目标组件，无需重新构建宿主应用。',
       code: 'source_url → globalName → component',
@@ -68,23 +68,23 @@
     },
     {
       index: '02',
-      title: 'Inject script',
+      title: '加载模块文件',
       subtitle: '运行时加载',
-      detail: '按需注入远程脚本，共享宿主 Vue Runtime，并跟踪 pending、loading、success、error 状态。',
+      detail: '按需加载远程脚本，共享主应用的 Vue 环境，并跟踪加载状态。',
       code: 'loadUMDComponent(sourceUrl)',
       icon: 'fas fa-bolt',
     },
     {
       index: '03',
-      title: 'Read manifest',
+      title: '读取组件清单',
       subtitle: '发现模块能力',
-      detail: '读取 Manifest、组件清单和描述信息，将远程模块转化为可管理的功能记录。',
+      detail: '读取模块清单、组件名称和描述信息，将远程模块转化为可管理的功能记录。',
       code: 'manifest.componentsDetailed',
       icon: 'fas fa-file-code',
     },
     {
       index: '04',
-      title: 'Mount & manage',
+      title: '注册并管理页面',
       subtitle: '注册与生命周期',
       detail: '动态注册组件，并接入标签页、路由、缓存、刷新和销毁等统一生命周期。',
       code: 'app.component() → route → cache',
@@ -98,9 +98,9 @@
       label: '核心能力',
       icon: 'fab fa-vuejs',
       tone: 'emerald',
-      load: 'Script Runtime',
+      load: '运行时加载脚本',
       lifecycle: '动态注册 / 卸载',
-      communication: 'Props / Events / Expose',
+      communication: '传入参数 / 接收事件 / 调用方法',
       description: '无需重新打包主应用，运行时发现并注册远程组件库。',
     },
     {
@@ -108,20 +108,20 @@
       label: '动态适配',
       icon: 'fas fa-file-code',
       tone: 'blue',
-      load: 'Remote Source',
+      load: '加载远程源码',
       lifecycle: '编译 / 缓存',
-      communication: 'Route Query / Context',
+      communication: '路由参数 / 页面上下文',
       description: '加载远程 Vue 单文件组件，并复用组件缓存与页面激活机制。',
     },
     {
-      name: 'WebView / Legacy',
+      name: '内嵌页面 / 旧系统',
       label: '存量接入',
       icon: 'fas fa-window-restore',
       tone: 'amber',
-      load: 'Iframe / Bridge',
+      load: '内嵌页面 / 页面桥接',
       lifecycle: '挂载 / 显隐',
-      communication: 'Bridge / Event Bus',
-      description: '以 WebView 和 Bridge 承载传统页面及 ExtJS 等存量系统。',
+      communication: '页面桥接 / 事件通信',
+      description: '通过内嵌页面承载旧系统，并保持页面间通信。',
     },
   ];
 
@@ -152,30 +152,30 @@
   const dashboardProfiles = [
     {
       code: 'umdDashboard',
-      name: 'Runtime Console',
+      name: '运行管理工作台',
       description: '远程模块管理与运行状态',
       icon: 'fas fa-cubes-stacked',
       tone: 'blue',
       menus: ['运行总览', 'UMD 模块', '菜单配置', '系统功能'],
-      widgets: ['Runtime health', 'Module registry', 'Activity stream'],
+      widgets: ['运行状态', '模块清单', '操作记录'],
     },
     {
       code: 'operationsDashboard',
-      name: 'Operations Center',
+      name: '业务运营中心',
       description: '业务运营与任务协同',
       icon: 'fas fa-chart-line',
       tone: 'emerald',
       menus: ['运营总览', '客户中心', '订单任务', '数据报表'],
-      widgets: ['Business metrics', 'Task queue', 'Live orders'],
+      widgets: ['业务指标', '待办事项', '订单动态'],
     },
     {
       code: 'analyticsDashboard',
-      name: 'Analytics Workspace',
+      name: '数据分析工作台',
       description: '分析模型与数据洞察',
       icon: 'fas fa-chart-pie',
       tone: 'violet',
       menus: ['指标看板', '分析模型', '数据资产', '报告中心'],
-      widgets: ['Metric board', 'Model output', 'Insight feed'],
+      widgets: ['指标看板', '分析结果', '数据洞察'],
     },
   ];
   const currentDashboard = computed(() => dashboardProfiles[activeDashboardIndex.value]);
@@ -199,7 +199,7 @@
         <div class="max-w-2xl">
           <div class="mb-6 inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-cyan-300">
             <span class="runtime-dot" />
-            Runtime module platform
+            模块化工作台
           </div>
 
           <p class="mb-3 text-sm font-semibold tracking-wide text-blue-300">{{ systemName }}</p>
@@ -225,19 +225,19 @@
               @click="goTo('/umd-management')"
             >
               <i class="fas fa-flask" />
-              打开 Runtime Lab
+              打开模块管理
             </button>
           </div>
 
           <div class="mt-9 flex flex-wrap gap-x-6 gap-y-3 text-xs text-slate-400">
             <span class="inline-flex items-center gap-2">
-              <i class="fas fa-circle-check text-emerald-400" /> Runtime loading
+              <i class="fas fa-circle-check text-emerald-400" /> 模块加载
             </span>
             <span class="inline-flex items-center gap-2">
-              <i class="fas fa-circle-check text-emerald-400" /> Manifest discovery
+              <i class="fas fa-circle-check text-emerald-400" /> 组件发现
             </span>
             <span class="inline-flex items-center gap-2">
-              <i class="fas fa-circle-check text-emerald-400" /> Lifecycle control
+              <i class="fas fa-circle-check text-emerald-400" /> 页面生命周期
             </span>
           </div>
         </div>
@@ -250,7 +250,7 @@
               <span class="window-dot bg-emerald-400" />
             </div>
             <div class="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-              live runtime
+              实时运行状态
             </div>
           </div>
 
@@ -258,43 +258,43 @@
             <div class="flex items-center justify-between gap-4 border-b border-slate-200 pb-5 dark:border-slate-800">
               <div>
                 <p class="font-mono text-[11px] text-primary dark:text-cyan-400">$ gavinyinhub runtime inspect</p>
-                <p class="mt-2 text-sm font-semibold text-slate-800 dark:text-slate-200">Module registry snapshot</p>
+                <p class="mt-2 text-sm font-semibold text-slate-800 dark:text-slate-200">模块注册概览</p>
               </div>
               <span class="rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-300">
-                READY
+                就绪
               </span>
             </div>
 
             <div class="runtime-log mt-5 space-y-3 font-mono text-[11px]">
               <div class="log-row">
                 <span class="text-slate-400 dark:text-slate-600">01</span>
-                <span class="text-blue-600 dark:text-blue-300">runtime</span>
-                <span class="text-slate-600 dark:text-slate-300">Vue 3 shared context detected</span>
-                <span class="ml-auto text-emerald-600 dark:text-emerald-400">OK</span>
+                <span class="text-blue-600 dark:text-blue-300">运行环境</span>
+                <span class="text-slate-600 dark:text-slate-300">已连接共享的 Vue 3 环境</span>
+                <span class="ml-auto text-emerald-600 dark:text-emerald-400">正常</span>
               </div>
               <div class="log-row">
                 <span class="text-slate-400 dark:text-slate-600">02</span>
-                <span class="text-violet-600 dark:text-violet-300">libraries</span>
-                <span class="text-slate-600 dark:text-slate-300">{{ remoteLibraries.length }} remote source(s)</span>
-                <span class="ml-auto text-sky-600 dark:text-sky-400">LIVE</span>
+                <span class="text-violet-600 dark:text-violet-300">组件库</span>
+                <span class="text-slate-600 dark:text-slate-300">{{ remoteLibraries.length }} 个远程来源</span>
+                <span class="ml-auto text-sky-600 dark:text-sky-400">实时</span>
               </div>
               <div class="log-row">
                 <span class="text-slate-400 dark:text-slate-600">03</span>
-                <span class="text-amber-600 dark:text-amber-300">registry</span>
-                <span class="text-slate-600 dark:text-slate-300">{{ registeredComponentCount }} component(s)</span>
-                <span class="ml-auto text-emerald-600 dark:text-emerald-400">OK</span>
+                <span class="text-amber-600 dark:text-amber-300">组件注册</span>
+                <span class="text-slate-600 dark:text-slate-300">{{ registeredComponentCount }} 个组件</span>
+                <span class="ml-auto text-emerald-600 dark:text-emerald-400">正常</span>
               </div>
               <div class="log-row">
                 <span class="text-slate-400 dark:text-slate-600">04</span>
-                <span class="text-cyan-600 dark:text-cyan-300">adapters</span>
-                <span class="text-slate-600 dark:text-slate-300">umd · vue · webview</span>
-                <span class="ml-auto text-emerald-600 dark:text-emerald-400">OK</span>
+                <span class="text-cyan-600 dark:text-cyan-300">页面类型</span>
+                <span class="text-slate-600 dark:text-slate-300">UMD · Vue · WebView</span>
+                <span class="ml-auto text-emerald-600 dark:text-emerald-400">正常</span>
               </div>
             </div>
 
             <div class="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/80">
               <div class="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                <span>Registration pipeline</span>
+                <span>模块接入进度</span>
                 <span>{{ successfulLibraries.length }}/{{ remoteLibraries.length || 0 }}</span>
               </div>
               <div class="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
@@ -313,7 +313,7 @@
               class="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-semibold text-slate-700 transition hover:border-primary/40 hover:bg-primary-bg hover:text-primary dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-200 dark:hover:border-blue-500/50 dark:hover:bg-blue-500/10 dark:hover:text-blue-200"
               @click="goTo('/umd-management')"
             >
-              Inspect a UMD package
+              查看 UMD 模块
               <i class="fas fa-arrow-up-right-from-square text-[10px]" />
             </button>
           </div>
@@ -338,7 +338,7 @@
     <section class="rounded-[22px] border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800 sm:p-7">
       <div class="section-heading">
         <div>
-          <p class="eyebrow">Runtime pipeline</p>
+          <p class="eyebrow">模块加载流程</p>
           <h2>一次远程模块如何进入工作台</h2>
         </div>
         <p>从 URL 到可交互页面，加载链路中的每一步都由宿主统一管理。</p>
@@ -384,7 +384,7 @@
     <section>
       <div class="section-heading mb-5">
         <div>
-          <p class="eyebrow">Adapter matrix</p>
+          <p class="eyebrow">支持的页面类型</p>
           <h2>同一个容器，适配不同技术形态</h2>
         </div>
         <p>不是用一种技术重写所有系统，而是给不同模块提供一致的运行边界。</p>
@@ -420,7 +420,7 @@
     <section class="architecture-section overflow-hidden rounded-[22px] border border-blue-200/60 bg-blue-50/60 p-5 dark:border-blue-900/50 dark:bg-blue-950/20 sm:p-7">
       <div class="section-heading">
         <div>
-          <p class="eyebrow">Architecture</p>
+          <p class="eyebrow">平台组成</p>
           <h2>模块加载之外，还有完整的平台支撑</h2>
         </div>
         <button class="text-link-btn" @click="goTo('/system/menu-config')">
@@ -430,7 +430,7 @@
 
       <div class="architecture-flow mt-7">
         <div class="architecture-layer">
-          <span class="layer-label">CONFIG</span>
+          <span class="layer-label">功能配置</span>
           <div><i class="fas fa-database" /> 功能配置</div>
           <div><i class="fas fa-sitemap" /> 菜单编排</div>
           <div><i class="fas fa-user-shield" /> 权限控制</div>
@@ -441,11 +441,11 @@
           <span />
         </div>
         <div class="architecture-layer architecture-layer-runtime">
-          <span class="layer-label">RUNTIME</span>
-          <div><i class="fas fa-download" /> Loader</div>
-          <div><i class="fas fa-code-branch" /> Router</div>
-          <div><i class="fas fa-box-archive" /> Cache</div>
-          <div><i class="fas fa-tower-broadcast" /> Bridge</div>
+          <span class="layer-label">运行环境</span>
+          <div><i class="fas fa-download" /> 加载器</div>
+          <div><i class="fas fa-code-branch" /> 路由</div>
+          <div><i class="fas fa-box-archive" /> 缓存</div>
+          <div><i class="fas fa-tower-broadcast" /> 页面桥接</div>
         </div>
         <div class="architecture-connector">
           <span />
@@ -453,7 +453,7 @@
           <span />
         </div>
         <div class="architecture-layer">
-          <span class="layer-label">ADAPTERS</span>
+          <span class="layer-label">页面类型</span>
           <div><i class="fab fa-vuejs" /> Vue UMD</div>
           <div><i class="fas fa-file-code" /> Vue SFC</div>
           <div><i class="fas fa-window-maximize" /> WebView</div>
@@ -464,8 +464,8 @@
     <section class="dashboard-composer overflow-hidden rounded-[22px] border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800 sm:p-7">
       <div class="section-heading">
         <div>
-          <p class="eyebrow">Dashboard composition</p>
-          <h2>切换 InternalCode，组合不同 Dashboard</h2>
+          <p class="eyebrow">工作台组合示意</p>
+          <h2>切换菜单编码，展示不同工作台</h2>
         </div>
         <p>框架保持不变，菜单编码决定导航树、功能模块与权限范围，让一套运行时承载多个业务工作台。</p>
       </div>
@@ -473,7 +473,7 @@
       <div class="dashboard-composer-grid mt-7">
         <div class="dashboard-profile-list">
           <div class="composer-label">
-            <span>MENU PROFILES</span>
+            <span>菜单方案</span>
             <span>选择配置示意</span>
           </div>
           <button
@@ -511,8 +511,8 @@
               <span class="window-dot bg-amber-400" />
               <span class="window-dot bg-emerald-400" />
             </div>
-            <span>LIVE MENU COMPOSITION</span>
-            <span class="dashboard-preview-status">READY</span>
+            <span>菜单预览</span>
+            <span class="dashboard-preview-status">就绪</span>
           </div>
           <div class="dashboard-preview-body">
             <aside>
@@ -536,7 +536,7 @@
             <main>
               <div class="dashboard-preview-heading">
                 <div>
-                  <small>DASHBOARD / OVERVIEW</small>
+                  <small>工作台 / 概览</small>
                   <strong>{{ currentDashboard.name }}</strong>
                 </div>
                 <code>{{ currentDashboard.code }}</code>
@@ -566,7 +566,7 @@
           <span><i class="fas fa-check" /> 无需重新构建</span>
         </div>
         <button class="text-link-btn" @click="goTo('/system/menu-config')">
-          配置 Dashboard <i class="fas fa-arrow-right" />
+          配置工作台 <i class="fas fa-arrow-right" />
         </button>
       </div>
     </section>
@@ -574,10 +574,10 @@
     <section>
       <div class="section-heading mb-5">
         <div>
-          <p class="eyebrow">Platform proof</p>
+          <p class="eyebrow">平台能力</p>
           <h2>把技术能力放进真实使用场景</h2>
         </div>
-        <p>这些配套能力证明 Runtime 不只是一段加载脚本，而是一套可使用的应用容器。</p>
+        <p>这些配套能力让独立模块能够在同一个工作台中运行和管理。</p>
       </div>
 
       <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -597,14 +597,14 @@
       <div class="final-cta-grid absolute inset-0" />
       <div class="relative flex flex-col justify-between gap-7 lg:flex-row lg:items-center">
         <div>
-          <p class="text-xs font-bold uppercase tracking-[0.2em] text-blue-200">Try it yourself</p>
+          <p class="text-xs font-bold uppercase tracking-[0.2em] text-blue-200">亲自体验</p>
           <h2 class="mt-2 text-2xl font-black sm:text-3xl">不要只看介绍，直接加载一个 UMD 包</h2>
           <p class="mt-3 max-w-2xl text-sm leading-6 text-blue-100">
-            输入远程 URL 或选择本地 UMD 文件，查看导出对象、Manifest 与组件清单，再将组件注册到功能中心。
+            输入远程地址或选择本地 UMD 文件，查看模块信息与组件清单，再将组件注册到功能中心。
           </p>
         </div>
         <button class="cta-light-btn" @click="goTo('/umd-management')">
-          进入 Runtime Lab
+          进入模块管理
           <i class="fas fa-arrow-right" />
         </button>
       </div>

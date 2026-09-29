@@ -259,11 +259,11 @@
       <div>
         <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-blue-600 dark:text-blue-400">
           <i class="fas fa-flask"></i>
-          Runtime experiment
+          模块接入与检查
         </div>
-        <h1 class="mt-1.5 text-2xl font-bold text-gray-800 dark:text-white">UMD Runtime Lab</h1>
+        <h1 class="mt-1.5 text-2xl font-bold text-gray-800 dark:text-white">UMD 模块管理</h1>
         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          加载远程 URL 或本地 UMD 文件，检查导出对象、Manifest 与可注册组件。
+          加载远程地址或本地 UMD 文件，检查模块信息与可注册组件。
         </p>
       </div>
       <div class="flex items-center gap-3">

@@ -26,7 +26,7 @@ export const autoRoutes: RouteRecordRaw[] = [
         name: 'umd-management',
         component: () => import('../../views/umd-management/index.vue'),
         meta: {
-          title: 'UMD Runtime Lab',
+          title: 'UMD 模块管理',
           icon: 'fa-cubes',
         },
       },
