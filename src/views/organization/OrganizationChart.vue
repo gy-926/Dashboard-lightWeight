@@ -249,13 +249,13 @@ watch(() => props.departments, () => nextTick(fitChart));
         @wheel="onWheel"
       >
         <div v-if="departments.length === 0" class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center">
-          <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-xl text-indigo-500"><i class="fas fa-sitemap" /></span>
+          <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-xl text-indigo-500 dark:bg-indigo-900/40 dark:text-indigo-300"><i class="fas fa-sitemap" /></span>
           <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">还没有组织机构</p>
           <button class="btn-primary rounded-lg px-4 py-2 text-sm" @click="emit('create', null)">创建顶层机构</button>
         </div>
         <div v-else class="absolute left-0 top-0 origin-top-left" :style="{ width: `${chart.width}px`, height: `${chart.height}px`, transform: `translate(${offsetX}px, ${offsetY}px) scale(${scale})` }">
-          <svg class="pointer-events-none absolute inset-0 overflow-visible" :width="chart.width" :height="chart.height" aria-hidden="true">
-            <path v-for="(edge, index) in chart.edges" :key="index" :d="edge" fill="none" stroke="#cbd5e1" stroke-width="1.5" />
+          <svg class="pointer-events-none absolute inset-0 overflow-visible text-slate-300 dark:text-slate-600" :width="chart.width" :height="chart.height" aria-hidden="true">
+            <path v-for="(edge, index) in chart.edges" :key="index" :d="edge" fill="none" stroke="currentColor" stroke-width="1.5" />
           </svg>
           <article
             v-for="node in chart.nodes"
@@ -284,9 +284,9 @@ watch(() => props.departments, () => nextTick(fitChart));
               ><i class="fas fa-users mr-1" />{{ departmentStats.get(node.department.id)?.users ?? 0 }}</button>
             </div>
             <div class="organization-actions pointer-events-none absolute right-2 top-2 flex flex-col gap-1 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
-              <button class="flex h-7 w-7 items-center justify-center rounded-full bg-blue-50 text-sm text-blue-600 hover:bg-blue-100" :aria-label="`向 ${node.department.name} 添加部门或人员`" title="添加部门或人员" @click="emit('add', node.department)"><i class="fas fa-plus" /></button>
-              <button class="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-xs text-slate-600 hover:bg-slate-200" :aria-label="`编辑 ${node.department.name}`" title="编辑" @click="emit('edit', node.department)"><i class="fas fa-pen" /></button>
-              <button class="flex h-7 w-7 items-center justify-center rounded-full bg-red-50 text-xs text-red-500 hover:bg-red-100" :aria-label="`删除 ${node.department.name}`" title="删除" @click="emit('remove', node.department)"><i class="fas fa-trash-can" /></button>
+              <button class="flex h-7 w-7 items-center justify-center rounded-full bg-blue-50 text-sm text-blue-600 hover:bg-blue-100 dark:bg-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-900/60" :aria-label="`向 ${node.department.name} 添加部门或人员`" title="添加部门或人员" @click="emit('add', node.department)"><i class="fas fa-plus" /></button>
+              <button class="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-xs text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600" :aria-label="`编辑 ${node.department.name}`" title="编辑" @click="emit('edit', node.department)"><i class="fas fa-pen" /></button>
+              <button class="flex h-7 w-7 items-center justify-center rounded-full bg-red-50 text-xs text-red-500 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50" :aria-label="`删除 ${node.department.name}`" title="删除" @click="emit('remove', node.department)"><i class="fas fa-trash-can" /></button>
             </div>
           </article>
         </div>
@@ -329,7 +329,7 @@ watch(() => props.departments, () => nextTick(fitChart));
 .secondary-button {
   @apply inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white;
 }
-:global(.dark) .organization-viewport {
+:global(html.dark .organization-chart .organization-viewport) {
   background-color: #0f172a;
   background-image: radial-gradient(#334155 1px, transparent 1px);
 }

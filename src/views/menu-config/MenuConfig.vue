@@ -2889,7 +2889,7 @@
     color: #64748b;
   }
 
-  :global(.dark) .field-label {
+  :global(html.dark .menu-config .field-label) {
     color: #94a3b8;
   }
 
@@ -2908,8 +2908,7 @@
       color 150ms;
   }
 
-  :global(html.dark) .field-input,
-  :global(.dark) .field-input {
+  :global(html.dark .menu-config .field-input) {
     background: #1e293b !important;
     border-color: #334155 !important;
     color: #e2e8f0 !important;
@@ -2919,13 +2918,18 @@
     color: #94a3b8;
   }
 
-  :global(.dark) .field-input::placeholder {
+  :global(html.dark .menu-config .field-input::placeholder) {
     color: #64748b;
   }
 
   .field-input:focus {
     border-color: #818cf8;
     box-shadow: 0 0 0 2px rgba(238, 242, 255, 1);
+  }
+
+  :global(html.dark .menu-config .field-input:focus) {
+    border-color: #818cf8 !important;
+    box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.25);
   }
 
   .abs-arrow {
