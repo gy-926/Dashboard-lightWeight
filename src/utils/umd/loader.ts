@@ -1,5 +1,6 @@
 import type { ComponentConfig } from './types';
 import { umdLoadingCount } from './state';
+import { createUmdRequestUrl } from '@/utils/umd-cache';
 
 const umdLoadPromises = new Map<string, Promise<any>>();
 
@@ -99,7 +100,8 @@ export function relocateUmdStyles(existingStyleSet: Set<Element>): void {
 }
 
 export function loadUMDComponent(url: string, globalName?: string): Promise<any> {
-  const absoluteUrl = new URL(url, document.baseURI).href;
+  const requestUrl = createUmdRequestUrl(url);
+  const absoluteUrl = new URL(requestUrl, document.baseURI).href;
   const loadKey = `${absoluteUrl}::${globalName || 'auto'}`;
   const pendingLoad = umdLoadPromises.get(loadKey);
   if (pendingLoad) return pendingLoad;
@@ -112,7 +114,7 @@ export function loadUMDComponent(url: string, globalName?: string): Promise<any>
     );
 
     const resolveGlobalComponent = () => {
-      const resolved = resolveLoadedUmdLibrary(url, globalName);
+      const resolved = resolveLoadedUmdLibrary(requestUrl, globalName);
       if (resolved) {
         console.log(`[UMD] ${url} resolved by ${resolved.resolvedBy}`);
         resolve(resolved.library);
@@ -151,7 +153,7 @@ export function loadUMDComponent(url: string, globalName?: string): Promise<any>
 
     const existingStyles = new Set<Element>(document.head.querySelectorAll('style'));
     const script = document.createElement('script');
-    script.src = url;
+    script.src = requestUrl;
     script.dataset.umdLoadState = 'loading';
     script.onload = () => {
       script.dataset.umdLoadState = 'loaded';
