@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException, PayloadTooLargeException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, PayloadTooLargeException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createHash, randomUUID } from 'node:crypto';
@@ -149,7 +149,53 @@ export class FilesService {
 
   async remove(id: string, userId: string, role: UserRole): Promise<null> {
     const file = await this.authorized(id, userId, role);
-    await this.files.remove(file);
+    try {
+      await this.files.manager.transaction(async manager => {
+        const versions = await manager.query(
+          `SELECT v.id, v.package_id
+           FROM dashboard_umd_versions v
+           WHERE v.file_id = ?`,
+          [file.id],
+        ) as Array<{ id: string; package_id: string }>;
+
+        if (versions.length) {
+          const usedByFunctions = await manager.query(
+            `SELECT f.kvid
+             FROM dashboard_functions f
+             JOIN dashboard_umd_versions v
+               ON f.source_url LIKE CONCAT('/api/dashboard-assets/', v.id, '/%')
+             WHERE v.file_id = ?
+             LIMIT 1`,
+            [file.id],
+          ) as Array<{ kvid: string }>;
+          if (usedByFunctions.length) {
+            throw new ConflictException('文件正在被功能模块使用，无法删除');
+          }
+
+          await manager.query('DELETE FROM dashboard_umd_versions WHERE file_id = ?', [file.id]);
+          for (const packageId of new Set(versions.map(version => version.package_id))) {
+            await manager.query(
+              `DELETE p FROM dashboard_umd_packages p
+               LEFT JOIN dashboard_umd_versions v ON v.package_id = p.id
+               LEFT JOIN dashboard_functions f
+                 ON f.render_type = 'umd' AND f.source_module = p.module_key
+               WHERE p.id = ? AND v.id IS NULL AND f.kvid IS NULL`,
+              [packageId],
+            );
+          }
+        }
+
+        await manager.delete(StoredFile, file.id);
+      });
+    } catch (error) {
+      if (error instanceof ConflictException) throw error;
+      const databaseError = error as { code?: string; driverError?: { code?: string } };
+      const code = databaseError.code ?? databaseError.driverError?.code;
+      if (code === 'ER_ROW_IS_REFERENCED' || code === 'ER_ROW_IS_REFERENCED_2') {
+        throw new ConflictException('文件正在被其他功能使用，无法删除');
+      }
+      throw error;
+    }
     await unlink(this.path(file.storedName)).catch(() => undefined);
     return null;
   }
