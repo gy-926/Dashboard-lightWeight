@@ -7,7 +7,7 @@ function shouldPromptReLogin(url: string): boolean {
   // Nest 请求由 apiRequest 负责静默刷新；初始化时 refresh 返回 401 也属于正常未登录状态。
   if (isNestApiRequest(url) || AUTH_ENDPOINTS.some(endpoint => url.includes(endpoint))) return false;
   if (!getCurrentUser()) return false;
-  return !['/login', '/SpringLogin', '/update-password'].includes(window.location.pathname);
+  return !['/login', '/update-password'].includes(window.location.pathname);
 }
 
 function setupXHRInterceptor() {

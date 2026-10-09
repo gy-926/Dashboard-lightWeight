@@ -6,7 +6,7 @@ import { setGlobalConfig, clearDynamicRoutesCache } from '@/router/routes';
 import { useMenuStore } from '@/layouts/modules/global-menu/store';
 import { clearReLogin } from '@/composables/useReLogin';
 
-const LOGIN_PATHS = ['/login', '/SpringLogin', '/update-password'];
+const LOGIN_PATHS = ['/login', '/update-password'];
 export interface AuthRoleInfo { kvid: string; code: string; name: string }
 export interface AuthUserInfo { id: string; email: string; displayName: string; appRole: string; roleCodes: string[]; roles: AuthRoleInfo[] }
 

@@ -38,7 +38,7 @@ export function setupRouteGuards(router: Router) {
     }
     const config = getGlobalConfig();
     syncInternalCodeToEntryPath(config.InternalCode);
-    const loginPaths = ['/login', '/SpringLogin'];
+    const loginPaths = ['/login'];
 
     // 如果未登录且当前访问的不是登录页面
     if (!config.IsAuthenticated && !loginPaths.includes(to.path)) {

@@ -19,12 +19,6 @@ const initialRoutes: RouteRecordRaw[] = [
     meta: { hidden: true },
   },
   {
-    path: '/SpringLogin',
-    name: 'SpringLogin',
-    component: () => import('../views/login/SpringLogin.vue'),
-    meta: { hidden: true },
-  },
-  {
     path: '/',
     component: () => import('../layouts/base-layout/index.vue'),
     redirect: '/home',
@@ -138,7 +132,6 @@ async function initRoutes() {
         restorePath &&
         restorePath !== '/' &&
         restorePath !== '/login' &&
-        restorePath !== '/SpringLogin' &&
         restorePath !== '/404'
       ) {
         const target = isDefaultHomePath(restorePath) ? defaultHome : restorePath;
@@ -196,7 +189,6 @@ async function initRoutes() {
           const redirect =
             currentPath &&
             currentPath !== '/login' &&
-            currentPath !== '/SpringLogin' &&
             currentPath !== '/'
               ? `?redirect=${encodeURIComponent(currentPath)}`
               : '';

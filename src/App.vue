@@ -1,6 +1,6 @@
 <template>
   <!-- 加载遮罩层：动态路由加载完成前显示，但登录页除外 -->
-  <div v-if="!isReady && $route.path !== '/login' && $route.path !== '/SpringLogin'" class="app-loading-overlay">
+  <div v-if="!isReady && $route.path !== '/login'" class="app-loading-overlay">
     <div class="app-loading-content">
       <div class="app-loading-spinner"></div>
       <p class="app-loading-text">加载中...</p>
@@ -11,7 +11,7 @@
   <!-- KVID 动态页面的永久宿主，位于 router-view 外以保留真实页面实例。 -->
   <PageHostPilot />
   <!-- 登录过期弹窗 -->
-  <ReLoginDialog v-if="reLoginVisible && !['/login', '/SpringLogin', '/update-password'].includes(route.path)" />
+  <ReLoginDialog v-if="reLoginVisible && !['/login', '/update-password'].includes(route.path)" />
 </template>
 
 <script setup lang="ts">
