@@ -85,6 +85,39 @@ test('home renders the runtime overview and interactive previews', async ({ page
   await expect(page.locator('.dashboard-preview-heading code')).toHaveText('operationsDashboard');
 });
 
+test('header and theme drawer keep dark mode synchronized across edits and reopening', async ({ page }) => {
+  await page.goto('/#/home');
+  const headerToggle = page.getByRole('button', { name: '切换主题', exact: true });
+  const openSettings = page.getByRole('button', { name: '主题设置', exact: true });
+  const darkToggle = page.locator('label').filter({ has: page.getByText('暗色模式', { exact: true }) }).locator('div').first();
+  const tabsToggle = page.locator('label').filter({ has: page.getByText('显示标签页', { exact: true }) }).locator('div').first();
+
+  await headerToggle.click();
+  await openSettings.click();
+  await expect(darkToggle).toHaveClass(/bg-primary/);
+  await expect(page.locator('html')).toHaveClass(/dark/);
+
+  // Changing another setting must preserve the mode selected in the header.
+  await tabsToggle.click();
+  await expect(darkToggle).toHaveClass(/bg-primary/);
+  await expect(page.locator('html')).toHaveClass(/dark/);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('kivii-theme')!).darkMode)).toBe(true);
+
+  await darkToggle.click();
+  await expect(page.locator('html')).not.toHaveClass(/dark/);
+  await page.getByRole('button', { name: '确定', exact: true }).click();
+  await expect(headerToggle.locator('i')).toHaveClass(/fa-moon/);
+
+  await headerToggle.click();
+  await openSettings.click();
+  await expect(darkToggle).toHaveClass(/bg-primary/);
+  await page.getByRole('button', { name: '确定', exact: true }).click();
+  await headerToggle.click();
+  await openSettings.click();
+  await expect(darkToggle).not.toHaveClass(/bg-primary/);
+  await expect(page.locator('html')).not.toHaveClass(/dark/);
+});
+
 test('feature editor keeps an invalid JSON draft and saves corrected parameters', async ({
   page,
 }) => {

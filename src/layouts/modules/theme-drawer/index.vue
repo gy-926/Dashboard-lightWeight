@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
+import type { ThemeConfig } from '@/layouts/modules/global-menu/types'
 import { useMenuStore } from '@/layouts/modules/global-menu/store'
 
 const props = withDefaults(defineProps<{
@@ -37,23 +38,12 @@ const colorPresets = [
 const customColorInput = ref(menuStore.theme.primaryColor)
 const showCustomColor = ref(false)
 
-// 主题配置（本地副本）
-const localTheme = ref({
-  layout: menuStore.theme.layout,
-  primaryColor: menuStore.theme.primaryColor,
-  darkMode: menuStore.theme.darkMode,
-  showTabs: menuStore.theme.showTabs,
-  showBreadcrumb: menuStore.theme.showBreadcrumb,
-  showFooter: menuStore.theme.showFooter,
-  showWatermark: menuStore.theme.showWatermark,
-  watermarkText: menuStore.theme.watermarkText,
-  preserveHomeTab: menuStore.theme.preserveHomeTab,
-})
+// 直接读取共享配置，保持 header 和设置面板同步。
+const theme = computed(() => menuStore.theme)
 
-// 同步本地配置到 store
-watch(localTheme, (val) => {
-  menuStore.setTheme(val)
-}, { deep: true })
+watch(() => theme.value.primaryColor, (color) => {
+  customColorInput.value = color
+})
 
 // 关闭抽屉
 function closeDrawer() {
@@ -62,7 +52,7 @@ function closeDrawer() {
 
 // 选择预设颜色
 function selectColor(color: string) {
-  localTheme.value.primaryColor = color
+  menuStore.setTheme({ primaryColor: color })
   customColorInput.value = color
   showCustomColor.value = false
 }
@@ -72,7 +62,7 @@ function handleCustomColorChange(e: Event) {
   const input = e.target as HTMLInputElement
   const color = input.value
   customColorInput.value = color
-  localTheme.value.primaryColor = color
+  menuStore.setTheme({ primaryColor: color })
 }
 
 // 切换自定义颜色面板
@@ -136,14 +126,14 @@ function toggleCustomColor() {
                 :key="option.value"
                 class="flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all"
                 :class="[
-                  localTheme.layout === option.value
+                  theme.layout === option.value
                     ? 'border-primary bg-primary-bg'
                     : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                 ]"
-                @click="localTheme.layout = option.value as any"
+                @click="menuStore.setTheme({ layout: option.value as ThemeConfig['layout'] })"
               >
-                <i :class="['fas', option.icon, 'text-xl', localTheme.layout === option.value ? 'text-primary' : 'text-gray-400']" />
-                <span class="text-xs" :class="localTheme.layout === option.value ? 'text-primary' : 'text-gray-500 dark:text-gray-400'">
+                <i :class="['fas', option.icon, 'text-xl', theme.layout === option.value ? 'text-primary' : 'text-gray-400']" />
+                <span class="text-xs" :class="theme.layout === option.value ? 'text-primary' : 'text-gray-500 dark:text-gray-400'">
                   {{ option.label }}
                 </span>
               </button>
@@ -161,7 +151,7 @@ function toggleCustomColor() {
                 :key="color"
                 class="w-8 h-8 rounded-full transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2"
                 :style="{ backgroundColor: color }"
-                :class="{ 'ring-2 ring-offset-2': localTheme.primaryColor === color, 'ring-white dark:ring-gray-800': localTheme.primaryColor !== color }"
+                :class="{ 'ring-2 ring-offset-2': theme.primaryColor === color, 'ring-white dark:ring-gray-800': theme.primaryColor !== color }"
                 @click="selectColor(color)"
               />
             </div>
@@ -205,12 +195,12 @@ function toggleCustomColor() {
                 <span class="text-sm text-gray-600 dark:text-gray-400">暗色模式</span>
                 <div
                   class="relative w-11 h-6 rounded-full transition-colors cursor-pointer"
-                  :class="localTheme.darkMode ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'"
-                  @click="localTheme.darkMode = !localTheme.darkMode"
+                  :class="theme.darkMode ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'"
+                  @click="menuStore.setTheme({ darkMode: !theme.darkMode })"
                 >
                   <div
                     class="absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform"
-                    :class="localTheme.darkMode ? 'translate-x-5' : 'translate-x-0'"
+                    :class="theme.darkMode ? 'translate-x-5' : 'translate-x-0'"
                   />
                 </div>
               </label>
@@ -219,12 +209,12 @@ function toggleCustomColor() {
                 <span class="text-sm text-gray-600 dark:text-gray-400">显示标签页</span>
                 <div
                   class="relative w-11 h-6 rounded-full transition-colors cursor-pointer"
-                  :class="localTheme.showTabs ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'"
-                  @click="localTheme.showTabs = !localTheme.showTabs"
+                  :class="theme.showTabs ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'"
+                  @click="menuStore.setTheme({ showTabs: !theme.showTabs })"
                 >
                   <div
                     class="absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform"
-                    :class="localTheme.showTabs ? 'translate-x-5' : 'translate-x-0'"
+                    :class="theme.showTabs ? 'translate-x-5' : 'translate-x-0'"
                   />
                 </div>
               </label>
@@ -233,12 +223,12 @@ function toggleCustomColor() {
                 <span class="text-sm text-gray-600 dark:text-gray-400">显示面包屑</span>
                 <div
                   class="relative w-11 h-6 rounded-full transition-colors cursor-pointer"
-                  :class="localTheme.showBreadcrumb ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'"
-                  @click="localTheme.showBreadcrumb = !localTheme.showBreadcrumb"
+                  :class="theme.showBreadcrumb ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'"
+                  @click="menuStore.setTheme({ showBreadcrumb: !theme.showBreadcrumb })"
                 >
                   <div
                     class="absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform"
-                    :class="localTheme.showBreadcrumb ? 'translate-x-5' : 'translate-x-0'"
+                    :class="theme.showBreadcrumb ? 'translate-x-5' : 'translate-x-0'"
                   />
                 </div>
               </label>
@@ -247,12 +237,12 @@ function toggleCustomColor() {
                 <span class="text-sm text-gray-600 dark:text-gray-400">显示页脚</span>
                 <div
                   class="relative w-11 h-6 rounded-full transition-colors cursor-pointer"
-                  :class="localTheme.showFooter ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'"
-                  @click="localTheme.showFooter = !localTheme.showFooter"
+                  :class="theme.showFooter ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'"
+                  @click="menuStore.setTheme({ showFooter: !theme.showFooter })"
                 >
                   <div
                     class="absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform"
-                    :class="localTheme.showFooter ? 'translate-x-5' : 'translate-x-0'"
+                    :class="theme.showFooter ? 'translate-x-5' : 'translate-x-0'"
                   />
                 </div>
               </label>
@@ -269,12 +259,12 @@ function toggleCustomColor() {
                 <span class="text-sm text-gray-600 dark:text-gray-400">关闭全部/左侧/右侧时保留首页</span>
                 <div
                   class="relative w-11 h-6 rounded-full transition-colors cursor-pointer"
-                  :class="localTheme.preserveHomeTab ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'"
-                  @click="localTheme.preserveHomeTab = !localTheme.preserveHomeTab"
+                  :class="theme.preserveHomeTab ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'"
+                  @click="menuStore.setTheme({ preserveHomeTab: !theme.preserveHomeTab })"
                 >
                   <div
                     class="absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform"
-                    :class="localTheme.preserveHomeTab ? 'translate-x-5' : 'translate-x-0'"
+                    :class="theme.preserveHomeTab ? 'translate-x-5' : 'translate-x-0'"
                   />
                 </div>
               </label>
