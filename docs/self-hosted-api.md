@@ -141,6 +141,7 @@ location /api/ {
   proxy_pass http://127.0.0.1:3000/;
   proxy_set_header Host $host;
   proxy_set_header X-Forwarded-Proto $scheme;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
   proxy_cookie_path /auth /api/auth;
 }
 
@@ -148,5 +149,9 @@ location / {
   try_files $uri $uri/ /index.html;
 }
 ```
+
+`HTTPS_TERMINATED_BY_PROXY=1` 时 API 只信任本机代理追加的 `X-Forwarded-For`，按 IP 的登录和注册限流依赖这个请求头；缺少时所有请求会共用代理 IP 的额度。限流计数保存在进程内存中，多实例部署需要改为共享存储。每个限流器最多保存 10,000 个 IP，每分钟清理过期记录；容量达到上限时，新来源返回 503 和 `Retry-After`，已有来源继续按原额度限流。
+
+公开演示环境应设置 `DEMO_READONLY=1`：`DEMO_ADMIN_EMAIL` 对应的账号仍可浏览全部管理界面，但所有写操作（上传、导入 UMD、修改菜单与权限、修改密码等）返回 403。
 
 部署前在后端运行 TypeORM 迁移，并配置 MySQL、`FRONTEND_ORIGIN`、JWT 密钥、HTTPS 证书和 `FILE_STORAGE_ROOT`。

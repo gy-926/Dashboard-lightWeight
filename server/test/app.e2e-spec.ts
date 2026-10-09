@@ -12,6 +12,10 @@ import { LoginAttempt } from './../src/auth/entities/login-attempt.entity.js';
 import { tokenHash } from './../src/auth/auth.service.js';
 import { FilesService } from './../src/files/files.service.js';
 
+// 所有用例都来自同一 IP，放宽按 IP 的限流，避免测试互相影响。
+process.env.LOGIN_IP_LIMIT = '10000';
+process.env.REGISTER_IP_LIMIT = '10000';
+
 describe('AppController (e2e)', () => {
   // 完整 Nest 应用实例，用于从 HTTP 层测试接口。
   let app: INestApplication<App>;

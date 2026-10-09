@@ -1,6 +1,7 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -10,6 +11,18 @@ import { IsNull, Repository } from 'typeorm';
 import { tokenHash } from './auth.service.js';
 import { AuthSession } from './entities/auth-session.entity.js';
 import { User, UserRole } from '../users/entities/user.entity.js';
+
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
+// DEMO_READONLY=1 时，公开的演示账号可以浏览全部管理界面，但不能写入任何数据。
+// 登录、续期和退出不经过此守卫，因此不受影响。
+export function isDemoReadonlyUser(email: string): boolean {
+  if (process.env.DEMO_READONLY !== '1') return false;
+  const demoEmail = (process.env.DEMO_ADMIN_EMAIL || 'admin@example.com')
+    .trim()
+    .toLowerCase();
+  return email.trim().toLowerCase() === demoEmail;
+}
 
 export interface AuthenticatedRequest extends Request {
   authUserId: string;
@@ -40,6 +53,9 @@ export class AccessTokenGuard implements CanActivate {
     }
     const user = await this.users.findOneBy({ id: session.userId });
     if (!user) throw new UnauthorizedException('账号不存在');
+    if (!SAFE_METHODS.has(request.method) && isDemoReadonlyUser(user.email)) {
+      throw new ForbiddenException('演示账号为只读，不能修改数据');
+    }
     request.authUserId = session.userId;
     request.authRole = user.role;
     return true;

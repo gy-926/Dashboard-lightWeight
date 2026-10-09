@@ -11,12 +11,20 @@ import {
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { AccessTokenGuard } from './access-token.guard.js';
+import { envLimit, IpRateLimitGuard } from '../common/guards/ip-rate-limit.guard.js';
 import type { AuthenticatedRequest } from './access-token.guard.js';
 import { AuthService, REFRESH_TOKEN_SECONDS } from './auth.service.js';
 import { ChangePasswordDto } from './dto/change-password.dto.js';
 import { LoginDto } from './dto/login.dto.js';
 
 const COOKIE_NAME = 'refresh_token';
+
+// 按邮箱的失败锁定之外，再按来源 IP 限制登录次数，防止对大量账号逐一尝试同一密码。
+const loginRateLimit = new IpRateLimitGuard(
+  '登录',
+  envLimit('LOGIN_IP_LIMIT', 30),
+  15 * 60 * 1000,
+);
 
 function readRefreshCookie(request: Request): string | undefined {
   const value = request.headers.cookie
@@ -42,6 +50,7 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(200)
+  @UseGuards(loginRateLimit)
   async login(
     @Body() body: LoginDto,
     @Res({ passthrough: true }) response: Response,

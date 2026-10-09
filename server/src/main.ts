@@ -1,5 +1,6 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { existsSync, readFileSync } from 'node:fs';
 import { loadEnvFile } from 'node:process';
 import type { NextFunction, Request, Response } from 'express';
@@ -30,7 +31,11 @@ async function bootstrap() {
       }
     : undefined;
   // 创建 Nest 应用；AppModule 是所有功能模块的根入口。
-  const app = await NestFactory.create(AppModule, { httpsOptions });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { httpsOptions });
+  if (tlsTerminatedByProxy) {
+    // 只信任本机代理追加的 X-Forwarded-For，限流才能拿到真实客户端 IP。
+    app.set('trust proxy', 'loopback');
+  }
   app.enableCors({
     origin: process.env.FRONTEND_ORIGIN?.split(',').map(value => value.trim()) ?? ['http://localhost:5173', 'http://127.0.0.1:5173'],
     credentials: true,

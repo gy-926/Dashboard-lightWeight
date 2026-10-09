@@ -13,12 +13,20 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AccessTokenGuard } from '../auth/access-token.guard.js';
+import { envLimit, IpRateLimitGuard } from '../common/guards/ip-rate-limit.guard.js';
 import type { AuthenticatedRequest } from '../auth/access-token.guard.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { QueryUsersDto } from './dto/query-users.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
 import { UsersService } from './users.service.js';
 import { UserRole } from './entities/user.entity.js';
+
+// 注册接口公开，按来源 IP 限制创建账号的频率。
+const registerRateLimit = new IpRateLimitGuard(
+  '注册',
+  envLimit('REGISTER_IP_LIMIT', 5),
+  60 * 60 * 1000,
+);
 
 @Controller('users')
 export class UsersController {
@@ -27,6 +35,7 @@ export class UsersController {
 
   // 匹配 POST /users。Body 会先按 CreateUserDto 经过全局校验。
   @Post()
+  @UseGuards(registerRateLimit)
   create(@Body() body: CreateUserDto) {
     return this.usersService.create(body.name, body.email, body.password);
   }
