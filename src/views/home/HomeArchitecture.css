@@ -1,0 +1,94 @@
+.showcase-page .architecture-flow {
+  display: grid;
+  gap: 10px;
+}
+
+.showcase-page .architecture-layer {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 15px;
+  padding: 26px 10px 10px;
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.showcase-page .architecture-layer-runtime {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-color: rgba(59, 130, 246, 0.28);
+  background: rgba(239, 246, 255, 0.88);
+}
+
+.showcase-page .architecture-layer > div {
+  display: flex;
+  min-height: 52px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 10px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #475569;
+  background: white;
+}
+
+.showcase-page .architecture-layer-runtime > div {
+  color: #1d4ed8;
+}
+
+.showcase-page .layer-label {
+  position: absolute;
+  left: 12px;
+  top: 7px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.56rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  color: #94a3b8;
+}
+
+.showcase-page .architecture-connector {
+  display: flex;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+}
+
+.showcase-page .architecture-connector span {
+  width: 34px;
+  height: 1px;
+  background: #cbd5e1;
+}
+
+.showcase-page .architecture-connector i {
+  margin: 0 8px;
+  font-size: 0.55rem;
+}
+
+.showcase-page.home-dark .architecture-layer {
+  border-color: rgba(71, 85, 105, 0.7);
+  background: rgba(15, 23, 42, 0.5);
+}
+
+.showcase-page.home-dark .architecture-layer-runtime {
+  border-color: color-mix(in srgb, var(--color-primary) 42%, #334155);
+  background: color-mix(in srgb, var(--color-primary) 14%, #0f172a);
+}
+
+.showcase-page.home-dark .architecture-layer > div {
+  color: #cbd5e1;
+  background: rgba(30, 41, 59, 0.9);
+}
+
+.showcase-page.home-dark .architecture-layer-runtime > div {
+  color: color-mix(in srgb, var(--color-primary) 55%, white);
+}
+
+@media (max-width: 640px) {
+  .showcase-page .architecture-layer,
+  .showcase-page .architecture-layer-runtime {
+    grid-template-columns: 1fr;
+  }
+}

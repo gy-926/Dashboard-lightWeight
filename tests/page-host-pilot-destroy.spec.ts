@@ -36,6 +36,16 @@ describe('PageHost pilot destroy reasons', () => {
     expect(destroyHostedPageLifecycle).toHaveBeenCalledWith(instanceKey, 'close');
   });
 
+  it('keeps a destroyed active route reserved until the next navigation', () => {
+    const store = usePageHostPilotStore();
+    store.hostResolvedPage(page, page.url);
+    store.removeByPath(page.path);
+    expect(store.allPages).toHaveLength(0);
+    expect(store.isReservedPath(page.path)).toBe(true);
+    store.prepareRoute({ path: '/home' }, false);
+    expect(store.isReservedPath(page.path)).toBe(false);
+  });
+
   it('forwards refresh when the current tab is rebuilt', () => {
     const store = usePageHostPilotStore();
     const instanceKey = store.hostResolvedPage(page, page.url);

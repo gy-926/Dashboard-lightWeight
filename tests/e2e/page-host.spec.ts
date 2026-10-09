@@ -21,85 +21,71 @@ async function installPageHostFixtures(page: Page) {
     window.b64_md5 = value => `e2e-${value}`;
   });
 
-  await page.route('**/Content/UmdDashboard/UmdResources/kivii-component-System.umd.js', route =>
-    route.fulfill({
-      contentType: 'application/javascript',
-      body: `window.VueComponent={manifest:{fileName:'kivii-component-System.umd.js'}};`,
-    })
+  await page.route(
+    url => url.pathname.startsWith('/api/'),
+    async route => {
+      const path = new URL(route.request().url()).pathname;
+      let result: unknown = null;
+      if (path === '/api/auth/refresh' || path === '/api/auth/login') {
+        result = {
+          accessToken: 'a'.repeat(43),
+          expiresIn: 900,
+          user: { id: 'e2e-user', name: 'E2E', email: 'e2e@example.com', role: 'super_admin' },
+        };
+      } else if (path.endsWith('/me/roles')) {
+        result = [{ kvid: 'admin', code: 'admin', name: '管理员' }];
+      } else if (path.endsWith('/menus/runtime')) {
+        result = {
+          MenuRoot: { Kvid: 'E2E-MENU-ROOT', Title: 'E2E Root' },
+          MenusMain: {
+            Results: [
+              { Kvid: rootKvid, Title: 'E2E 页面', Type: 'Folder', ParentKvid: null },
+              {
+                Kvid: firstKvid,
+                ParentKvid: rootKvid,
+                Title: '表单页面 A',
+                Type: 'Page',
+                FunctionKvid: 'FUNCTION-A',
+                Handler: '/e2e/page-a.html',
+              },
+              {
+                Kvid: secondKvid,
+                ParentKvid: rootKvid,
+                Title: '表单页面 B',
+                Type: 'Page',
+                FunctionKvid: 'FUNCTION-B',
+                Handler: '/e2e/page-b.html',
+              },
+              {
+                Kvid: umdKvid,
+                ParentKvid: rootKvid,
+                Title: 'UMD 表单页面',
+                Type: 'Page',
+                FunctionKvid: 'FUNCTION-UMD',
+                Handler: '<E2EUmdForm />',
+                Remark: '/e2e/e2e-umd.js',
+              },
+              {
+                Kvid: vueKvid,
+                ParentKvid: rootKvid,
+                Title: '远程 Vue 表单',
+                Type: 'Page',
+                FunctionKvid: 'remote-form.vue',
+                Handler: '/e2e/remote-form.vue',
+              },
+            ],
+            Total: 5,
+          },
+        };
+      }
+      await route.fulfill({ json: { status: 200, message: 'success', Results: result } });
+    }
   );
-
-  await page.route('**/Restful/Kivii.Basic.Entities.Menu/Show.json?**', route =>
-    route.fulfill({
-      json: {
-        MenusMain: {
-          Results: [
-            { Kvid: rootKvid, Title: 'E2E 页面', Type: 'Folder', ParentKvid: null },
-            {
-              Kvid: firstKvid,
-              ParentKvid: rootKvid,
-              Title: '表单页面 A',
-              Type: 'Page',
-              FunctionKvid: 'FUNCTION-A',
-            },
-            {
-              Kvid: secondKvid,
-              ParentKvid: rootKvid,
-              Title: '表单页面 B',
-              Type: 'Page',
-              FunctionKvid: 'FUNCTION-B',
-            },
-            {
-              Kvid: umdKvid,
-              ParentKvid: rootKvid,
-              Title: 'UMD 表单页面',
-              Type: 'Page',
-              FunctionKvid: 'FUNCTION-UMD',
-            },
-            {
-              Kvid: vueKvid,
-              ParentKvid: rootKvid,
-              Title: '远程 Vue 表单',
-              Type: 'Page',
-              FunctionKvid: 'remote-form.vue',
-            },
-          ],
-        },
-        MenuRoot: { Kvid: 'E2E-MENU-ROOT', Title: 'E2E Root' },
-      },
-    })
-  );
-
-  await page.route('**/Restful/Kivii.Basic.Entities.Menu/Query.json?**', route =>
-    route.fulfill({ json: { Results: [] } })
-  );
-
-  // 启动阶段会预加载 UMD 文件清单；固定为空，避免真实后端内容和大脚本加载影响路由时序。
-  await page.route('**/Restful/Kivii.Storages.Entities.DbFile/Query.json?**', route =>
-    route.fulfill({ json: { Results: [] } })
-  );
-
-  await page.route('**/auth/logout.json', route => route.fulfill({ json: { success: true } }));
-  await page.route('**/auth/kivii.json', route => route.fulfill({ json: { success: true } }));
   await page.route('**/e2e/protected.json', route =>
     route.fulfill({ status: 401, json: { message: 'expired' } })
   );
 
-  await page.route('**/Restful/Kivii.Basic.Entities.Function/Access.json?**', async route => {
-    const url = new URL(route.request().url());
-    const kvid = url.searchParams.get('MenuKvids');
-    const result = kvid === umdKvid
-      ? { Handler: '<E2EUmdForm>', Remark: '/e2e/e2e-umd.js' }
-      : kvid === vueKvid
-        ? { Handler: '/e2e/remote-form.vue' }
-        : { Handler: kvid === firstKvid ? '/e2e/page-a.html' : '/e2e/page-b.html' };
-    await route.fulfill({
-      json: {
-        Results: [result],
-      },
-    });
-  });
-
-  await page.route('**/e2e/e2e-umd.js', route =>
+  await page.route('**/e2e/e2e-umd.js*', route =>
     route.fulfill({
       contentType: 'application/javascript',
       body: `(() => {
@@ -173,18 +159,20 @@ async function diagnosticSummary(page: Page) {
 
 test.beforeEach(async ({ page }) => {
   await installPageHostFixtures(page);
-  await page.goto(`/#${firstPath}`);
+  await page.goto(`/entry/page-host-e2e#${firstPath}`);
   await expect(page.locator('#page-host-root iframe')).toHaveCount(1);
   await expect.poll(async () => (await diagnosticSummary(page))?.hosted).toBeGreaterThan(0);
 });
 
-test('keeps form state while switching tabs and destroys the instance on close', async ({ page }) => {
+test('keeps form state while switching tabs and destroys the instance on close', async ({
+  page,
+}) => {
   const firstFrame = page.frameLocator(`iframe[src$="/e2e/page-a.html"]`);
   await firstFrame.locator('#draft').fill('unfinished form');
 
-  await page.goto(`/#${secondPath}`);
+  await page.goto(`/entry/page-host-e2e#${secondPath}`);
   await expect(page.locator('#page-host-root iframe')).toHaveCount(2);
-  await page.goto(`/#${firstPath}`);
+  await page.goto(`/entry/page-host-e2e#${firstPath}`);
 
   await expect(firstFrame.locator('#draft')).toHaveValue('unfinished form');
 
@@ -206,21 +194,28 @@ test('refresh rebuilds the active PageHost instance exactly once', async ({ page
 
   await expect.poll(async () => (await diagnosticSummary(page))?.destroy).toBe(destroyBefore + 1);
   await expect(frame.locator('#draft')).toHaveValue('');
-  await expect.poll(async () => frame.locator('body').getAttribute('data-mount-id')).not.toBe(mountIdBefore);
+  await expect
+    .poll(async () => frame.locator('body').getAttribute('data-mount-id'))
+    .not.toBe(mountIdBefore);
   await expect(page.locator('#page-host-root iframe')).toHaveCount(1);
 });
 
-test('keeps a Hosted UMD component alive across tab switches and destroys it on close', async ({ page }) => {
-  await page.goto(`/#${umdPath}`);
+test('keeps a Hosted UMD component alive across tab switches and destroys it on close', async ({
+  page,
+}) => {
+  await page.goto(`/entry/page-host-e2e#${umdPath}`);
   const umdInput = page.locator('#page-host-root #umd-draft');
   await umdInput.fill('unfinished UMD form');
   const mountIdBefore = await page.locator('[data-umd-mount-id]').getAttribute('data-umd-mount-id');
 
-  await page.goto(`/#${firstPath}`);
-  await page.goto(`/#${umdPath}`);
+  await page.goto(`/entry/page-host-e2e#${firstPath}`);
+  await page.goto(`/entry/page-host-e2e#${umdPath}`);
 
   await expect(umdInput).toHaveValue('unfinished UMD form');
-  await expect(page.locator('[data-umd-mount-id]')).toHaveAttribute('data-umd-mount-id', mountIdBefore!);
+  await expect(page.locator('[data-umd-mount-id]')).toHaveAttribute(
+    'data-umd-mount-id',
+    mountIdBefore!
+  );
 
   const destroyBefore = (await diagnosticSummary(page))?.destroy ?? 0;
   const umdTab = page.locator('.tab-item', { hasText: 'UMD 表单页面' });
@@ -231,7 +226,7 @@ test('keeps a Hosted UMD component alive across tab switches and destroys it on 
 });
 
 test('body teleported UMD dialogs appear above hosted page content', async ({ page }) => {
-  await page.goto(`/#${umdPath}`);
+  await page.goto(`/entry/page-host-e2e#${umdPath}`);
   await expect(page.locator('#page-host-root #umd-draft')).toBeVisible();
 
   const topElementId = await page.evaluate(() => {
@@ -241,7 +236,10 @@ test('body teleported UMD dialogs appear above hosted page content', async ({ pa
     document.body.appendChild(overlay);
     const input = document.querySelector('#page-host-root #umd-draft')!;
     const bounds = input.getBoundingClientRect();
-    const topElement = document.elementFromPoint(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2);
+    const topElement = document.elementFromPoint(
+      bounds.left + bounds.width / 2,
+      bounds.top + bounds.height / 2
+    );
     overlay.remove();
     return topElement?.id;
   });
@@ -250,8 +248,8 @@ test('body teleported UMD dialogs appear above hosted page content', async ({ pa
 });
 
 test('close all destroys every hosted page through the public tab menu', async ({ page }) => {
-  await page.goto(`/#${secondPath}`);
-  await page.goto(`/#${umdPath}`);
+  await page.goto(`/entry/page-host-e2e#${secondPath}`);
+  await page.goto(`/entry/page-host-e2e#${umdPath}`);
   await expect(page.locator('#page-host-root [data-page-host-instance]')).toHaveCount(3);
   const destroyBefore = (await diagnosticSummary(page))?.destroy ?? 0;
 
@@ -262,20 +260,24 @@ test('close all destroys every hosted page through the public tab menu', async (
   await expect.poll(async () => (await diagnosticSummary(page))?.destroy).toBe(destroyBefore + 3);
 });
 
-test('keeps a remote Vue instance alive and removes its scoped resources on close', async ({ page }) => {
-  await page.goto(`/#${vuePath}`);
+test('keeps a remote Vue instance alive and removes its scoped resources on close', async ({
+  page,
+}) => {
+  await page.goto(`/entry/page-host-e2e#${vuePath}`);
   const vueInput = page.locator('#page-host-root #vue-draft');
   await vueInput.fill('unfinished remote Vue form');
   const componentRoot = page.locator('[data-vue-mount-id]');
   const mountIdBefore = await componentRoot.getAttribute('data-vue-mount-id');
-  const hasRemoteStyle = () => page.evaluate(() =>
-    Array.from(document.head.querySelectorAll('style'))
-      .some(style => style.textContent?.includes('e2e-remote-style-marker'))
-  );
+  const hasRemoteStyle = () =>
+    page.evaluate(() =>
+      Array.from(document.head.querySelectorAll('style')).some(style =>
+        style.textContent?.includes('e2e-remote-style-marker')
+      )
+    );
   await expect.poll(hasRemoteStyle).toBe(true);
 
-  await page.goto(`/#${firstPath}`);
-  await page.goto(`/#${vuePath}`);
+  await page.goto(`/entry/page-host-e2e#${firstPath}`);
+  await page.goto(`/entry/page-host-e2e#${vuePath}`);
 
   await expect(vueInput).toHaveValue('unfinished remote Vue form');
   await expect(componentRoot).toHaveAttribute('data-vue-mount-id', mountIdBefore!);
@@ -289,9 +291,11 @@ test('keeps a remote Vue instance alive and removes its scoped resources on clos
   await expect.poll(hasRemoteStyle).toBe(false);
 });
 
-test('normal logout destroys every PageHost instance and clears the session tabs', async ({ page }) => {
-  await page.goto(`/#${vuePath}`);
-  await page.goto(`/#${umdPath}`);
+test('normal logout destroys every PageHost instance and clears the session tabs', async ({
+  page,
+}) => {
+  await page.goto(`/entry/page-host-e2e#${vuePath}`);
+  await page.goto(`/entry/page-host-e2e#${umdPath}`);
   await expect(page.locator('#page-host-root [data-page-host-instance]')).toHaveCount(3);
   const destroyBefore = (await diagnosticSummary(page))?.destroy ?? 0;
 
@@ -305,7 +309,9 @@ test('normal logout destroys every PageHost instance and clears the session tabs
   await expect.poll(() => page.evaluate(() => window.uiGlobalConfig?.IsAuthenticated)).toBe(false);
 });
 
-test('401 relogin clears stale persistence and rebuilds the current PageHost page', async ({ page }) => {
+test('401 relogin clears stale persistence and rebuilds the current PageHost page', async ({
+  page,
+}) => {
   const firstFrame = page.frameLocator(`iframe[src$="/e2e/page-a.html"]`);
   await firstFrame.locator('#draft').fill('stale session form');
   const mountIdBefore = await firstFrame.locator('body').getAttribute('data-mount-id');
@@ -316,7 +322,7 @@ test('401 relogin clears stale persistence and rebuilds the current PageHost pag
 
   await page.evaluate(() => fetch('/e2e/protected.json'));
   await expect(page.getByText('登录已过期', { exact: true })).toBeVisible();
-  await page.getByPlaceholder('请输入用户名').fill('e2e-user');
+  await page.getByPlaceholder('请输入邮箱').fill('e2e@example.com');
   await page.getByPlaceholder('请输入密码').fill('e2e-password');
 
   const reloaded = page.waitForEvent('framenavigated', frame => frame === page.mainFrame());
@@ -326,17 +332,23 @@ test('401 relogin clears stale persistence and rebuilds the current PageHost pag
   await expect(page).toHaveURL(new RegExp(`#${firstPath}$`));
   await expect(page.locator('#page-host-root iframe')).toHaveCount(1);
   await expect(firstFrame.locator('#draft')).toHaveValue('');
-  await expect.poll(async () => firstFrame.locator('body').getAttribute('data-mount-id')).not.toBe(mountIdBefore);
-  await expect.poll(() => page.evaluate(() => ({
-    routes: localStorage.getItem('DYNAMIC_ROUTES_CACHE'),
-    tabs: localStorage.getItem('kivii-tabs'),
-  }))).not.toEqual({ routes: 'stale-routes', tabs: 'stale-tabs' });
-  await expect.poll(() => page.evaluate(() => {
-    const routes = localStorage.getItem('DYNAMIC_ROUTES_CACHE');
-    const tabs = localStorage.getItem('kivii-tabs');
-    return {
-      hasFreshRoutes: !!routes && routes.includes('E2E-PAGE-A'),
-      hasFreshTabs: !!tabs && tabs.includes('E2E-PAGE-A'),
-    };
-  })).toEqual({ hasFreshRoutes: true, hasFreshTabs: true });
+  await expect
+    .poll(async () => firstFrame.locator('body').getAttribute('data-mount-id'))
+    .not.toBe(mountIdBefore);
+  await expect
+    .poll(() =>
+      page.evaluate(() => ({
+        routes: localStorage.getItem('DYNAMIC_ROUTES_CACHE'),
+        tabs: localStorage.getItem('kivii-tabs'),
+      }))
+    )
+    .not.toEqual({ routes: 'stale-routes', tabs: 'stale-tabs' });
+  await expect
+    .poll(() =>
+      page.evaluate(() => ({
+        routes: localStorage.getItem('DYNAMIC_ROUTES_CACHE'),
+        tabs: localStorage.getItem('kivii-tabs'),
+      }))
+    )
+    .toEqual({ routes: null, tabs: null });
 });

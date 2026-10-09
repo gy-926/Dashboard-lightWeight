@@ -1,0 +1,21 @@
+.showcase-page .proof-card {
+  transition: 180ms ease;
+}
+
+.showcase-page .proof-card > i {
+  color: var(--color-primary);
+}
+
+.showcase-page .proof-card h3 {
+  margin-top: 15px;
+  font-size: 0.83rem;
+  font-weight: 900;
+  color: #1e293b;
+}
+
+.showcase-page .proof-card p {
+  margin-top: 7px;
+  font-size: 0.72rem;
+  line-height: 1.25rem;
+  color: #64748b;
+}

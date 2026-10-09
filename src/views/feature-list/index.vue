@@ -1,14 +1,43 @@
 <script setup lang="ts">
-import { usePermissionAdmin } from '@/composables/usePermissionAdmin';
-defineOptions({ name: 'FeatureListPage' });
-const {
-  functions, loading, error, isModalOpen, isSaving, editingKvid,
-  ordinaryRole, functionRoleDrafts, departments, functionDepartmentDrafts, expandedFunctionId, savingFunctionId,
-  featureSearch, permissionLoading, permissionError, form, parametersText, renderTypeLabel, filteredFeatures,
-  departmentTree, roleIdsForFunction, departmentIdsForFunction, functionHasChanges, toggleFunctionExpanded, toggleFunctionRole,
-  toggleFunctionDepartment, saveFunctionAccess, openCreate, openEdit, closeModal, saveFunction,
-  deleteFunction, toggleEnabled, refreshAll,
-} = usePermissionAdmin('functions');
+  import { usePermissionAdmin } from '@/composables/usePermissionAdmin';
+  defineOptions({ name: 'FeatureListPage' });
+  const {
+    functions,
+    loading,
+    error,
+    isModalOpen,
+    isSaving,
+    editingKvid,
+    ordinaryRole,
+    functionRoleDrafts,
+    departments,
+    functionDepartmentDrafts,
+    expandedFunctionId,
+    savingFunctionId,
+    featureSearch,
+    permissionLoading,
+    permissionError,
+    form,
+    parametersText,
+    parametersError,
+    renderTypeLabel,
+    filteredFeatures,
+    departmentTree,
+    roleIdsForFunction,
+    departmentIdsForFunction,
+    functionHasChanges,
+    toggleFunctionExpanded,
+    toggleFunctionRole,
+    toggleFunctionDepartment,
+    saveFunctionAccess,
+    openCreate,
+    openEdit,
+    closeModal,
+    saveFunction,
+    deleteFunction,
+    toggleEnabled,
+    refreshAll,
+  } = usePermissionAdmin('functions');
 </script>
 
 <template>
@@ -20,64 +49,244 @@ const {
       </div>
       <div class="flex items-center gap-3">
         <span class="text-xs text-slate-500">{{ `${functions.length} 项功能` }}</span>
-        <button class="secondary-button" :disabled="loading || permissionLoading" @click="refreshAll"><i class="fas fa-rotate-right" />刷新</button>
+        <button
+          class="secondary-button"
+          :disabled="loading || permissionLoading"
+          @click="refreshAll"
+        >
+          <i class="fas fa-rotate-right" />刷新
+        </button>
       </div>
     </header>
-    <div v-if="error" class="rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-600">{{ error }}</div>
+    <div
+      v-if="error"
+      class="rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-600"
+    >
+      {{ error }}
+    </div>
     <section class="admin-list-panel">
       <div class="admin-list-header">
         <div>
           <h2 class="font-bold text-slate-900 dark:text-white">功能列表</h2>
-          <p class="mt-1 text-xs text-slate-500">普通用户须同时获得功能授权和部门授权；管理员可访问全部功能</p>
+          <p class="mt-1 text-xs text-slate-500">
+            普通用户须同时获得功能授权和部门授权；管理员可访问全部功能
+          </p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
-          <input v-model="featureSearch" type="search" placeholder="搜索功能" aria-label="搜索功能列表" class="form-input w-44 text-sm" />
-          <button class="btn-primary rounded-lg px-4 py-2 text-sm font-semibold" @click="openCreate"><i class="fas fa-plus mr-1" />新增功能</button>
+          <input
+            v-model="featureSearch"
+            type="search"
+            placeholder="搜索功能"
+            aria-label="搜索功能列表"
+            class="form-input w-44 text-sm"
+          />
+          <button
+            class="btn-primary rounded-lg px-4 py-2 text-sm font-semibold"
+            @click="openCreate"
+          >
+            <i class="fas fa-plus mr-1" />新增功能
+          </button>
         </div>
       </div>
-      <div v-if="permissionError" class="border-b border-red-100 bg-red-50 px-5 py-3 text-sm text-red-600 dark:bg-red-900/20">{{ permissionError }}</div>
-      <div v-if="loading || permissionLoading" class="p-12 text-center text-sm text-slate-500">加载中...</div>
-      <div v-else-if="functions.length === 0 && !error" class="p-12 text-center text-sm text-slate-500">暂无功能，可从 UMD 模块管理导入或手动新增。</div>
-      <div v-else-if="filteredFeatures.length === 0" class="p-12 text-center text-sm text-slate-500">没有匹配的功能。</div>
-      <div v-else class="divide-y divide-slate-100 dark:divide-slate-700">
-        <div v-for="item in filteredFeatures" :key="item.kvid">
+      <div
+        v-if="permissionError"
+        class="border-b border-red-100 bg-red-50 px-5 py-3 text-sm text-red-600 dark:bg-red-900/20"
+      >
+        {{ permissionError }}
+      </div>
+      <div
+        v-if="loading || permissionLoading"
+        class="p-12 text-center text-sm text-slate-500"
+      >
+        加载中...
+      </div>
+      <div
+        v-else-if="functions.length === 0 && !error"
+        class="p-12 text-center text-sm text-slate-500"
+      >
+        暂无功能，可从 UMD 模块管理导入或手动新增。
+      </div>
+      <div
+        v-else-if="filteredFeatures.length === 0"
+        class="p-12 text-center text-sm text-slate-500"
+      >
+        没有匹配的功能。
+      </div>
+      <div
+        v-else
+        class="divide-y divide-slate-100 dark:divide-slate-700"
+      >
+        <div
+          v-for="item in filteredFeatures"
+          :key="item.kvid"
+        >
           <div class="admin-list-row">
-            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-900/20"><i :class="item.icon || 'fas fa-puzzle-piece'" /></span>
+            <span
+              class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-900/20"
+              ><i :class="item.icon || 'fas fa-puzzle-piece'"
+            /></span>
             <div class="min-w-[180px] flex-1">
-              <div class="truncate text-sm font-semibold text-slate-800 dark:text-white">{{ item.title || item.handler }}</div>
-              <div class="truncate text-xs text-slate-500" :title="item.source_url || item.handler">{{ renderTypeLabel[item.render_type] }} · {{ item.source_component || item.handler }}</div>
+              <div class="truncate text-sm font-semibold text-slate-800 dark:text-white">
+                {{ item.title || item.handler }}
+              </div>
+              <div
+                class="truncate text-xs text-slate-500"
+                :title="item.source_url || item.handler"
+              >
+                {{ renderTypeLabel[item.render_type] }} ·
+                {{ item.source_component || item.handler }}
+              </div>
             </div>
-            <div class="flex min-w-[110px] items-center gap-1 text-xs text-slate-600 dark:text-slate-300">
-              <i class="fas fa-user-shield text-slate-400" />普通用户：{{ roleIdsForFunction(item.kvid).length ? '已授权' : '未授权' }}
+            <div
+              class="flex min-w-[110px] items-center gap-1 text-xs text-slate-600 dark:text-slate-300"
+            >
+              <i class="fas fa-user-shield text-slate-400" />普通用户：{{
+                roleIdsForFunction(item.kvid).length ? '已授权' : '未授权'
+              }}
             </div>
-            <div class="flex min-w-[110px] items-center gap-1 text-xs text-slate-600 dark:text-slate-300">
-              <i class="fas fa-sitemap text-slate-400" />{{ departmentIdsForFunction(item.kvid).length }} 个部门
+            <div
+              class="flex min-w-[110px] items-center gap-1 text-xs text-slate-600 dark:text-slate-300"
+            >
+              <i class="fas fa-sitemap text-slate-400" />{{
+                departmentIdsForFunction(item.kvid).length
+              }}
+              个部门
             </div>
             <div class="admin-list-actions">
-              <button class="admin-list-action" :class="item.is_active ? 'admin-list-action-neutral' : 'admin-list-action-danger'" :aria-label="`${item.is_active ? '停用' : '启用'} ${item.title || item.handler}`" @click="toggleEnabled(item)"><i class="fas" :class="item.is_active ? 'fa-circle-check' : 'fa-circle-pause'" />{{ item.is_active ? '已启用' : '已停用' }}</button>
-              <button class="admin-list-action admin-list-action-primary" :aria-expanded="expandedFunctionId === item.kvid" @click="toggleFunctionExpanded(item.kvid)"><i class="fas fa-shield-halved" />{{ expandedFunctionId === item.kvid ? '收起授权' : '设置授权' }}</button>
-              <button class="admin-list-action admin-list-action-neutral" @click="openEdit(item)"><i class="fas fa-pen" />编辑</button>
-              <button class="admin-list-action admin-list-action-danger" @click="deleteFunction(item)"><i class="fas fa-trash-can" />删除</button>
+              <button
+                class="admin-list-action"
+                :class="item.is_active ? 'admin-list-action-neutral' : 'admin-list-action-danger'"
+                :aria-label="`${item.is_active ? '停用' : '启用'} ${item.title || item.handler}`"
+                @click="toggleEnabled(item)"
+              >
+                <i
+                  class="fas"
+                  :class="item.is_active ? 'fa-circle-check' : 'fa-circle-pause'"
+                />{{ item.is_active ? '已启用' : '已停用' }}
+              </button>
+              <button
+                class="admin-list-action admin-list-action-primary"
+                :aria-expanded="expandedFunctionId === item.kvid"
+                @click="toggleFunctionExpanded(item.kvid)"
+              >
+                <i class="fas fa-shield-halved" />{{
+                  expandedFunctionId === item.kvid ? '收起授权' : '设置授权'
+                }}
+              </button>
+              <button
+                class="admin-list-action admin-list-action-neutral"
+                @click="openEdit(item)"
+              >
+                <i class="fas fa-pen" />编辑
+              </button>
+              <button
+                class="admin-list-action admin-list-action-danger"
+                @click="deleteFunction(item)"
+              >
+                <i class="fas fa-trash-can" />删除
+              </button>
             </div>
           </div>
-          <div v-if="expandedFunctionId === item.kvid" class="border-t border-slate-100 bg-slate-50 px-5 py-4 dark:border-slate-700 dark:bg-slate-900/30">
+          <div
+            v-if="expandedFunctionId === item.kvid"
+            class="border-t border-slate-100 bg-slate-50 px-5 py-4 dark:border-slate-700 dark:bg-slate-900/30"
+          >
             <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div>
-                <p class="text-sm font-semibold text-slate-800 dark:text-white">{{ item.title || item.handler }} · 访问权限</p>
-                <p class="mt-1 text-xs text-slate-500">普通用户需同时获得功能和部门授权；子部门继承上级授权，管理员始终可访问<span v-if="functionHasChanges(item.kvid)" class="ml-2 text-amber-600">· 待保存</span></p>
+                <p class="text-sm font-semibold text-slate-800 dark:text-white">
+                  {{ item.title || item.handler }} · 访问权限
+                </p>
+                <p class="mt-1 text-xs text-slate-500">
+                  普通用户需同时获得功能和部门授权；子部门继承上级授权，管理员始终可访问<span
+                    v-if="functionHasChanges(item.kvid)"
+                    class="ml-2 text-amber-600"
+                    >· 待保存</span
+                  >
+                </p>
               </div>
-              <button class="btn-primary rounded-lg px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50" :disabled="!ordinaryRole || !functionHasChanges(item.kvid) || savingFunctionId === item.kvid" @click="saveFunctionAccess(item.kvid)">{{ savingFunctionId === item.kvid ? '保存中...' : '保存授权' }}</button>
+              <button
+                class="btn-primary rounded-lg px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+                :disabled="
+                  !ordinaryRole || !functionHasChanges(item.kvid) || savingFunctionId === item.kvid
+                "
+                @click="saveFunctionAccess(item.kvid)"
+              >
+                {{ savingFunctionId === item.kvid ? '保存中...' : '保存授权' }}
+              </button>
             </div>
             <h4 class="mb-2 text-xs font-bold text-slate-700 dark:text-slate-300">普通用户</h4>
-            <p v-if="!ordinaryRole" class="mb-4 text-sm text-red-600">普通用户授权配置缺失，请先运行数据库迁移。</p>
-            <label v-else class="mb-4 inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm" :class="(functionRoleDrafts[item.kvid] ?? roleIdsForFunction(item.kvid)).includes(ordinaryRole.kvid) ? 'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-900/20' : 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-800'">
-              <input type="checkbox" class="h-4 w-4 rounded border-slate-300 text-blue-600" :checked="(functionRoleDrafts[item.kvid] ?? roleIdsForFunction(item.kvid)).includes(ordinaryRole.kvid)" @change="toggleFunctionRole(item.kvid, ordinaryRole.kvid)" />允许普通用户访问
+            <p
+              v-if="!ordinaryRole"
+              class="mb-4 text-sm text-red-600"
+            >
+              普通用户授权配置缺失，请先运行数据库迁移。
+            </p>
+            <label
+              v-else
+              class="mb-4 inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+              :class="
+                (functionRoleDrafts[item.kvid] ?? roleIdsForFunction(item.kvid)).includes(
+                  ordinaryRole.kvid
+                )
+                  ? 'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-900/20'
+                  : 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-800'
+              "
+            >
+              <input
+                type="checkbox"
+                class="h-4 w-4 rounded border-slate-300 text-blue-600"
+                :checked="
+                  (functionRoleDrafts[item.kvid] ?? roleIdsForFunction(item.kvid)).includes(
+                    ordinaryRole.kvid
+                  )
+                "
+                @change="toggleFunctionRole(item.kvid, ordinaryRole.kvid)"
+              />允许普通用户访问
             </label>
-            <h4 class="mb-2 text-xs font-bold text-slate-700 dark:text-slate-300">授权组织部门 · {{ (functionDepartmentDrafts[item.kvid] ?? departmentIdsForFunction(item.kvid)).length }} 个</h4>
-            <p v-if="departments.length === 0" class="text-sm text-slate-500">暂无组织部门，请先到“组织机构”创建。</p>
-            <div v-else class="flex flex-wrap gap-2">
-              <label v-for="department in departmentTree" :key="department.id" class="inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm" :class="(functionDepartmentDrafts[item.kvid] ?? departmentIdsForFunction(item.kvid)).includes(department.id) ? 'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-900/20' : 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-800'">
-                <input type="checkbox" class="h-4 w-4 rounded border-slate-300 text-blue-600" :checked="(functionDepartmentDrafts[item.kvid] ?? departmentIdsForFunction(item.kvid)).includes(department.id)" @change="toggleFunctionDepartment(item.kvid, department.id)" />{{ '— '.repeat(department.depth) }}{{ department.name }}<span v-if="!department.is_active" class="text-xs text-slate-400">（已停用）</span>
+            <h4 class="mb-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+              授权组织部门 ·
+              {{
+                (functionDepartmentDrafts[item.kvid] ?? departmentIdsForFunction(item.kvid)).length
+              }}
+              个
+            </h4>
+            <p
+              v-if="departments.length === 0"
+              class="text-sm text-slate-500"
+            >
+              暂无组织部门，请先到“组织机构”创建。
+            </p>
+            <div
+              v-else
+              class="flex flex-wrap gap-2"
+            >
+              <label
+                v-for="department in departmentTree"
+                :key="department.id"
+                class="inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+                :class="
+                  (
+                    functionDepartmentDrafts[item.kvid] ?? departmentIdsForFunction(item.kvid)
+                  ).includes(department.id)
+                    ? 'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-900/20'
+                    : 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-800'
+                "
+              >
+                <input
+                  type="checkbox"
+                  class="h-4 w-4 rounded border-slate-300 text-blue-600"
+                  :checked="
+                    (
+                      functionDepartmentDrafts[item.kvid] ?? departmentIdsForFunction(item.kvid)
+                    ).includes(department.id)
+                  "
+                  @change="toggleFunctionDepartment(item.kvid, department.id)"
+                />{{ '— '.repeat(department.depth) }}{{ department.name
+                }}<span
+                  v-if="!department.is_active"
+                  class="text-xs text-slate-400"
+                  >（已停用）</span
+                >
               </label>
             </div>
           </div>
@@ -256,6 +465,13 @@ const {
                 spellcheck="false"
                 class="w-full form-input font-mono text-xs resize-none"
               />
+              <p
+                v-if="parametersError"
+                role="alert"
+                class="mt-2 text-xs text-red-600"
+              >
+                {{ parametersError }}
+              </p>
             </div>
 
             <div>

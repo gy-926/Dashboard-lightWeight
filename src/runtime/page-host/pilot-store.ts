@@ -2,14 +2,8 @@ import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
 import { createPageInstanceKey } from './identity';
 import type { PageDescriptor, PageDestroyReason, PageIdentityQuery } from './types';
-import {
-  resolveFunctionAccessPayload,
-  type FunctionAccessPayload,
-} from './function-access';
-import {
-  destroyHostedPageLifecycle,
-  setHostedPageLifecycleActive,
-} from './lifecycle';
+import { resolveFunctionAccessPayload, type FunctionAccessPayload } from './function-access';
+import { destroyHostedPageLifecycle, setHostedPageLifecycleActive } from './lifecycle';
 import { pageHostDiagnostics } from './diagnostics';
 
 export interface PageHostPilotRoute {
@@ -52,6 +46,8 @@ export const usePageHostPilotStore = defineStore('page-host-pilot', () => {
   const pages = ref<Map<string, HostedPilotPageRecord>>(new Map());
   const activeInstanceKey = ref<string | null>(null);
   const claimedPath = ref<string | null>(null);
+  // 销毁与路由跳转之间继续预留路径，避免旧渲染链路重新挂载页面。
+  const retiringPath = ref<string | null>(null);
   const resolvingPath = ref<string | null>(null);
   const resolvingInstanceKey = ref<string | null>(null);
   const bounds = ref<PageHostBounds>({ top: 0, left: 0, width: 0, height: 0 });
@@ -74,6 +70,7 @@ export const usePageHostPilotStore = defineStore('page-host-pilot', () => {
 
   /** 在异步解析开始前同步预留实例身份，避免旧链路与 PageHost 同时渲染。 */
   function prepareRoute(route: PageHostPilotRoute, eligible: boolean): void {
+    retiringPath.value = null;
     if (!eligible) {
       resolvingPath.value = null;
       resolvingInstanceKey.value = null;
@@ -150,10 +147,7 @@ export const usePageHostPilotStore = defineStore('page-host-pilot', () => {
     umdRegistrationBridge = bridge;
   }
 
-  async function ensureUmdRegistered(
-    componentName: string,
-    scriptPath?: string
-  ): Promise<boolean> {
+  async function ensureUmdRegistered(componentName: string, scriptPath?: string): Promise<boolean> {
     if (!umdRegistrationBridge) return false;
     return umdRegistrationBridge(componentName, scriptPath);
   }
@@ -216,11 +210,7 @@ export const usePageHostPilotStore = defineStore('page-host-pilot', () => {
         return false;
       }
 
-      const resolved = resolveFunctionAccessPayload(
-        accessPayload,
-        config,
-        window.location.origin
-      );
+      const resolved = resolveFunctionAccessPayload(accessPayload, config, window.location.origin);
       if (!resolved) {
         pageHostDiagnostics.record({
           ...diagnosticBase(route),
@@ -256,15 +246,10 @@ export const usePageHostPilotStore = defineStore('page-host-pilot', () => {
           deactivateAll();
           return false;
         }
-        hostResolvedPage(
-          { ...descriptor, type: resolved.type },
-          src,
-          Date.now(),
-          {
-            componentTag: resolved.componentTag,
-            scriptPath: resolved.scriptPath,
-          }
-        );
+        hostResolvedPage({ ...descriptor, type: resolved.type }, src, Date.now(), {
+          componentTag: resolved.componentTag,
+          scriptPath: resolved.scriptPath,
+        });
         pageHostDiagnostics.record({
           ...diagnosticBase(route),
           event: 'hosted',
@@ -297,10 +282,7 @@ export const usePageHostPilotStore = defineStore('page-host-pilot', () => {
       }
       return false;
     } finally {
-      if (
-        generation === resolveGeneration &&
-        resolvingInstanceKey.value === requestedInstanceKey
-      ) {
+      if (generation === resolveGeneration && resolvingInstanceKey.value === requestedInstanceKey) {
         resolvingPath.value = null;
         resolvingInstanceKey.value = null;
       }
@@ -325,9 +307,11 @@ export const usePageHostPilotStore = defineStore('page-host-pilot', () => {
   }
 
   function removeByPath(path: string, reason: PageDestroyReason = 'close'): void {
+    if (claimedPath.value === path || resolvingPath.value === path) retiringPath.value = path;
     resolveGeneration++;
-    const records = Array.from(pages.value.entries())
-      .filter(([, page]) => page.descriptor.path === path)
+    const records = Array.from(pages.value.entries()).filter(
+      ([, page]) => page.descriptor.path === path
+    );
     const keys = records.map(([key]) => key);
     records.forEach(([key, page]) => {
       pageHostDiagnostics.record({
@@ -340,7 +324,10 @@ export const usePageHostPilotStore = defineStore('page-host-pilot', () => {
       destroyHostedPageLifecycle(key, reason);
       pages.value.delete(key);
     });
-    if (claimedPath.value === path || (activeInstanceKey.value && keys.includes(activeInstanceKey.value))) {
+    if (
+      claimedPath.value === path ||
+      (activeInstanceKey.value && keys.includes(activeInstanceKey.value))
+    ) {
       activeInstanceKey.value = null;
       claimedPath.value = null;
     }
@@ -351,6 +338,7 @@ export const usePageHostPilotStore = defineStore('page-host-pilot', () => {
   }
 
   function clear(reason: PageDestroyReason = 'logout'): void {
+    retiringPath.value = claimedPath.value || resolvingPath.value || retiringPath.value;
     resolveGeneration++;
     pages.value.forEach(page => {
       pageHostDiagnostics.record({
@@ -375,7 +363,9 @@ export const usePageHostPilotStore = defineStore('page-host-pilot', () => {
   }
 
   function isReservedPath(path: string): boolean {
-    return claimedPath.value === path || resolvingPath.value === path;
+    return (
+      claimedPath.value === path || resolvingPath.value === path || retiringPath.value === path
+    );
   }
 
   function setBounds(nextBounds: PageHostBounds): void {

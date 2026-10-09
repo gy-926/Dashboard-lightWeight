@@ -1,0 +1,83 @@
+.showcase-page .hero-shell {
+  border: 1px solid color-mix(in srgb, var(--color-primary) 58%, #0f172a);
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--color-primary) 76%, #0f172a),
+    var(--color-primary) 55%,
+    color-mix(in srgb, var(--color-primary) 70%, #7c3aed)
+  );
+  box-shadow: 0 28px 70px -38px rgba(15, 23, 42, 0.82);
+}
+
+.showcase-page .hero-glow {
+  position: absolute;
+  width: 520px;
+  height: 520px;
+  border-radius: 9999px;
+  filter: blur(6px);
+  pointer-events: none;
+}
+
+.showcase-page .hero-glow-blue {
+  right: -180px;
+  top: -210px;
+  background: radial-gradient(circle, rgba(14, 165, 233, 0.22), transparent 68%);
+}
+
+.showcase-page .hero-glow-violet {
+  bottom: -300px;
+  left: 18%;
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.18), transparent 68%);
+}
+
+.showcase-page .runtime-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: #34d399;
+  box-shadow:
+    0 0 0 4px rgba(52, 211, 153, 0.12),
+    0 0 18px rgba(52, 211, 153, 0.8);
+}
+
+.showcase-page .hero-title-accent {
+  display: block;
+  background: linear-gradient(105deg, #38bdf8, #818cf8 54%, #c084fc);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.showcase-page .hero-primary-btn {
+  color: white;
+  background: linear-gradient(110deg, #2563eb, #4f46e5);
+  box-shadow: 0 14px 32px -16px rgba(59, 130, 246, 0.9);
+}
+
+.showcase-page .hero-secondary-btn {
+  color: #cbd5e1;
+  border: 1px solid #334155;
+  background: rgba(30, 41, 59, 0.68);
+}
+
+.showcase-page .hero-secondary-btn:hover {
+  color: white;
+  border-color: #475569;
+  background: rgba(51, 65, 85, 0.78);
+}
+
+.showcase-page.home-dark .hero-shell {
+  border-color: color-mix(in srgb, var(--color-primary) 46%, #334155);
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--color-primary) 34%, #020617),
+    color-mix(in srgb, var(--color-primary) 24%, #0f172a) 55%,
+    color-mix(in srgb, var(--color-primary) 20%, #1e1b4b)
+  );
+}
+
+@media (max-width: 640px) {
+  .showcase-page .hero-shell {
+    border-radius: 18px;
+  }
+}

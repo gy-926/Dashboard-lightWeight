@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { computed, ref } from 'vue';
+import { computed, onScopeDispose, ref } from 'vue';
 import type { RouteRecordRaw } from 'vue-router';
 import type { MenuItem, ThemeConfig } from './types';
 import { findMenuParents, transformRouteToMenu } from './types';
@@ -132,15 +132,18 @@ export const useMenuStore = defineStore('global-menu', () => {
 
   const allMenuItems = ref<MenuItem[]>([]);
   const currentRole = ref(getCurrentUser()?.role);
-  const menuList = computed(() => currentRole.value === 'super_admin'
-    ? allMenuItems.value
-    : allMenuItems.value.filter(item => item.key !== 'system' && item.path !== '/system')
+  const menuList = computed(() =>
+    currentRole.value === 'super_admin'
+      ? allMenuItems.value
+      : allMenuItems.value.filter(item => item.key !== 'system' && item.path !== '/system')
   );
   const tabsList = ref<MenuItem[]>([]);
   onAuthChange(() => {
     currentRole.value = getCurrentUser()?.role;
     if (currentRole.value !== 'super_admin') {
-      const removed = tabsList.value.filter(tab => tab.path === '/system' || tab.path.startsWith('/system/'));
+      const removed = tabsList.value.filter(
+        tab => tab.path === '/system' || tab.path.startsWith('/system/')
+      );
       tabsList.value = tabsList.value.filter(tab => !removed.includes(tab));
       removed.forEach(tab => cleanupTabCache(tab));
     }
@@ -156,9 +159,7 @@ export const useMenuStore = defineStore('global-menu', () => {
   // 混合布局的顶部导航只负责切换根目录，子菜单统一由侧边栏展示。
   // 移除 children，避免 GlobalTopMenu 将根目录渲染成下拉菜单。
   const mixHeaderMenuList = computed(() =>
-    menuList.value
-      .filter(item => !item.hidden)
-      .map(item => ({ ...item, children: [] }))
+    menuList.value.filter(item => !item.hidden).map(item => ({ ...item, children: [] }))
   );
   const mixSiderMenuList = computed(() => {
     if (!mixActiveRootKey.value) return [];
@@ -174,14 +175,35 @@ export const useMenuStore = defineStore('global-menu', () => {
     return current ? [...parents, current] : parents;
   });
 
-  function setTheme(nextTheme: Partial<ThemeConfig>) {
+  function setTheme(nextTheme: Partial<ThemeConfig>, persist = true) {
     theme.value = {
       ...theme.value,
       ...nextTheme,
     };
-    persistTheme(theme.value);
+    if (persist) persistTheme(theme.value);
     applyTheme(theme.value);
   }
+
+  function syncStoredTheme(event: StorageEvent) {
+    if (event.key !== THEME_STORAGE_KEY || !event.newValue) return;
+    try {
+      const incoming = JSON.parse(event.newValue);
+      if (!incoming || typeof incoming !== 'object' || Array.isArray(incoming)) return;
+      const next: Partial<ThemeConfig> = {};
+      for (const key of Object.keys(defaultTheme) as Array<keyof ThemeConfig>) {
+        const value = incoming[key];
+        if (typeof value !== typeof defaultTheme[key]) continue;
+        if (key === 'layout' && !['side', 'top', 'mix'].includes(value)) continue;
+        if (typeof value === 'number' && !Number.isFinite(value)) continue;
+        Object.assign(next, { [key]: value });
+      }
+      setTheme(next, false);
+    } catch {
+      /* Ignore malformed configuration from another tab. */
+    }
+  }
+  window.addEventListener('storage', syncStoredTheme);
+  onScopeDispose(() => window.removeEventListener('storage', syncStoredTheme));
 
   function toggleDarkMode() {
     setTheme({ darkMode: !theme.value.darkMode });
@@ -237,7 +259,11 @@ export const useMenuStore = defineStore('global-menu', () => {
 
   function addTab(item: MenuItem) {
     if (!item?.path) return;
-    if ((item.path === '/system' || item.path.startsWith('/system/')) && currentRole.value !== 'super_admin') return;
+    if (
+      (item.path === '/system' || item.path.startsWith('/system/')) &&
+      currentRole.value !== 'super_admin'
+    )
+      return;
 
     const existingIndex = tabsList.value.findIndex(tab => tab.path === item.path);
     if (existingIndex !== -1) {

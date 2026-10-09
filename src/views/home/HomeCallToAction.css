@@ -1,0 +1,11 @@
+.showcase-page .final-cta {
+  background: linear-gradient(115deg, #1d4ed8, #4338ca 58%, #6d28d9);
+  box-shadow: 0 22px 50px -34px rgba(67, 56, 202, 0.9);
+}
+
+.showcase-page .cta-light-btn {
+  flex-shrink: 0;
+  color: #1d4ed8;
+  background: white;
+  box-shadow: 0 14px 30px -18px rgba(15, 23, 42, 0.5);
+}

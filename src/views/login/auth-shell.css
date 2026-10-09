@@ -1,0 +1,293 @@
+/* ════════════════════════════════════════
+     CSS 变量 — Dark 模式（默认）
+  ════════════════════════════════════════ */
+.login-page.is-dark {
+  --page-bg: #0a0f1e;
+  --orb1-color: #1d4ed8, #3b82f6;
+  --orb2-color: #1e40af, #6366f1;
+  --orb3-color: #0ea5e9, #38bdf8;
+  --orb-opacity: 0.45;
+  --orb3-opacity: 0.2;
+  --grid-color: rgba(59, 130, 246, 0.06);
+  --card-bg: rgba(255, 255, 255, 0.05);
+  --card-border: rgba(255, 255, 255, 0.12);
+  --card-shadow:
+    0 0 0 1px rgba(59, 130, 246, 0.25), 0 0 28px 6px rgba(59, 130, 246, 0.18),
+    0 0 64px 16px rgba(99, 102, 241, 0.12), 0 16px 40px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset, 0 1px 0 rgba(255, 255, 255, 0.1) inset;
+  --brand-name: #ffffff;
+  --tagline: rgba(148, 163, 184, 0.9);
+  --divider-line: rgba(255, 255, 255, 0.1);
+  --divider-text: rgba(148, 163, 184, 0.7);
+  --label: rgba(203, 213, 225, 0.9);
+  --input-bg: rgba(255, 255, 255, 0.07);
+  --input-border: rgba(255, 255, 255, 0.1);
+  --input-focus-border: rgba(59, 130, 246, 0.7);
+  --input-focus-bg: rgba(59, 130, 246, 0.06);
+  --input-focus-shadow: rgba(59, 130, 246, 0.15);
+  --input-text: #f1f5f9;
+  --input-placeholder: rgba(148, 163, 184, 0.4);
+  --icon-color: rgba(148, 163, 184, 0.7);
+  --eye-color: rgba(148, 163, 184, 0.5);
+  --eye-hover: rgba(148, 163, 184, 0.9);
+  --footer-border: rgba(255, 255, 255, 0.08);
+  --page-footer: rgba(100, 116, 139, 0.7);
+  --toggle-bg: rgba(255, 255, 255, 0.08);
+  --toggle-border: rgba(255, 255, 255, 0.12);
+  --toggle-color: rgba(203, 213, 225, 0.8);
+  --toggle-hover-bg: rgba(255, 255, 255, 0.14);
+}
+/* ════════════════════════════════════════
+     CSS 变量 — Light 模式
+  ════════════════════════════════════════ */
+.login-page.is-light {
+  --page-bg: #eef2ff;
+  --orb-opacity: 0.3;
+  --orb3-opacity: 0.15;
+  --grid-color: rgba(59, 130, 246, 0.05);
+  --card-bg: rgba(255, 255, 255, 0.78);
+  --card-border: rgba(255, 255, 255, 0.95);
+  --card-shadow:
+    0 0 0 1px rgba(59, 130, 246, 0.2), 0 0 24px 6px rgba(59, 130, 246, 0.14),
+    0 0 56px 14px rgba(99, 102, 241, 0.08), 0 12px 32px rgba(37, 99, 235, 0.1),
+    0 2px 8px rgba(0, 0, 0, 0.05), 0 1px 0 rgba(255, 255, 255, 0.9) inset;
+  --brand-name: #1e293b;
+  --tagline: #64748b;
+  --divider-line: #e2e8f0;
+  --divider-text: #94a3b8;
+  --label: #374151;
+  --input-bg: #f8fafc;
+  --input-border: #e2e8f0;
+  --input-focus-border: rgba(59, 130, 246, 0.6);
+  --input-focus-bg: rgba(59, 130, 246, 0.04);
+  --input-focus-shadow: rgba(59, 130, 246, 0.12);
+  --input-text: #1e293b;
+  --input-placeholder: #cbd5e1;
+  --icon-color: #94a3b8;
+  --eye-color: #94a3b8;
+  --eye-hover: #64748b;
+  --footer-border: #e2e8f0;
+  --demo-color: #94a3b8;
+  --page-footer: #94a3b8;
+  --toggle-bg: rgba(37, 99, 235, 0.07);
+  --toggle-border: rgba(37, 99, 235, 0.15);
+  --toggle-color: #2563eb;
+  --toggle-hover-bg: rgba(37, 99, 235, 0.13);
+}
+/* ── 页面容器 ── */
+.login-page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--page-bg);
+  overflow: hidden;
+  transition: background 0.4s ease;
+}
+/* ── 动态背景光晕 ── */
+.login-page .bg-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+.login-page .bg-orb-1 {
+  width: 520px;
+  height: 520px;
+  background: radial-gradient(circle, #1d4ed8, #3b82f6);
+  opacity: var(--orb-opacity);
+  top: -140px;
+  left: -140px;
+  animation: drift1 12s ease-in-out infinite alternate;
+}
+.login-page .bg-orb-2 {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, #1e40af, #6366f1);
+  opacity: var(--orb-opacity);
+  bottom: -100px;
+  right: -80px;
+  animation: drift2 15s ease-in-out infinite alternate;
+}
+.login-page .bg-orb-3 {
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(circle, #0ea5e9, #38bdf8);
+  opacity: var(--orb3-opacity);
+  top: 50%;
+  left: 55%;
+  transform: translate(-50%, -50%);
+  animation: drift3 18s ease-in-out infinite alternate;
+}
+@keyframes drift1 {
+  from {
+    transform: translate(0, 0) scale(1);
+  }
+  to {
+    transform: translate(40px, 60px) scale(1.1);
+  }
+}
+@keyframes drift2 {
+  from {
+    transform: translate(0, 0) scale(1);
+  }
+  to {
+    transform: translate(-50px, -40px) scale(1.08);
+  }
+}
+@keyframes drift3 {
+  from {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  to {
+    transform: translate(-46%, -54%) scale(1.15);
+  }
+}
+/* ── 网格纹理 ── */
+.login-page .bg-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--grid-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  transition: background-image 0.4s ease;
+}
+/* ── 玻璃卡片 ── */
+.login-page .glass-card {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 420px;
+  padding: 40px 40px 32px;
+  background: var(--card-bg);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  box-shadow: var(--card-shadow);
+  transition:
+    background 0.4s ease,
+    border-color 0.4s ease,
+    box-shadow 0.4s ease;
+}
+/* ── 主题切换按钮 ── */
+.login-page .theme-toggle {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  background: var(--toggle-bg);
+  border: 1px solid var(--toggle-border);
+  border-radius: 8px;
+  color: var(--toggle-color);
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    color 0.3s ease,
+    border-color 0.3s ease,
+    transform 0.2s ease;
+}
+.login-page .theme-toggle:hover {
+  background: var(--toggle-hover-bg);
+  transform: rotate(15deg) scale(1.05);
+}
+.login-page .theme-toggle svg {
+  transition: transform 0.35s ease;
+}
+/* ── 品牌区域 ── */
+.login-page .brand-area {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 28px;
+}
+.login-page .brand-logo svg {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  filter: drop-shadow(0 4px 12px rgba(59, 130, 246, 0.5));
+}
+.login-page .brand-name {
+  margin: 0 0 2px;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--brand-name);
+  letter-spacing: -0.3px;
+  transition: color 0.35s ease;
+}
+.login-page .brand-tagline {
+  margin: 0;
+  font-size: 12px;
+  color: var(--tagline);
+  letter-spacing: 0.3px;
+  transition: color 0.35s ease;
+}
+/* ── 分割线 ── */
+.login-page .divider {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24px;
+  gap: 12px;
+}
+.login-page .divider::before,
+.login-page .divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--divider-line);
+  transition: background 0.35s ease;
+}
+.login-page .divider span {
+  font-size: 12px;
+  color: var(--divider-text);
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+  transition: color 0.35s ease;
+}
+/* ── 表单 ── */
+/* ── 错误提示 ── */
+/* ── 登录按钮 ── */
+/* ── 卡片底部 ── */
+.login-page .card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--footer-border);
+  transition: border-color 0.35s ease;
+}
+.login-page .security-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: rgba(52, 211, 153, 0.8);
+  letter-spacing: 0.2px;
+}
+/* ── 页脚 ── */
+.login-page .page-footer {
+  position: relative;
+  z-index: 10;
+  margin-top: 28px;
+  font-size: 12px;
+  color: var(--page-footer);
+  letter-spacing: 0.3px;
+  transition: color 0.35s ease;
+}
+/* ── 响应式 ── */
+@media (max-width: 480px) {
+  .login-page .glass-card {
+    margin: 0 16px;
+    padding: 32px 28px 28px;
+  }
+}
