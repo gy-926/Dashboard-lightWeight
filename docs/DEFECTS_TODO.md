@@ -1,13 +1,15 @@
 # 项目缺陷修复清单
 
 > 按优先级排列，从高到低依次执行。每完成一项请勾选对应复选框。
-> 最后更新：2026-02-26
+> 最后更新：2026-10-08（逐项对照当前代码核对）
 
 ---
 
 ## 🔴 P0 — 安全级别（必须优先修复）
 
-### [ ] 1. 登录权限鉴定机制缺失
+### [x] 1. 登录权限鉴定机制缺失
+
+> 已修复：`guards.ts` 在 `beforeEach` 中检查 `IsAuthenticated`，未登录跳转登录页；令牌由 Nest API 签发。
 
 **文件：** `src/router/guards.ts`、`src/views/login/index.vue`
 
@@ -23,7 +25,9 @@
 
 ---
 
-### [ ] 2. Tab 持久化用户数据隔离失效
+### [x] 2. Tab 持久化用户数据隔离失效
+
+> 已修复：标签不再持久化到 `localStorage`，重新登录时 `ReLoginDialog` 会清理旧的 `kivii-tabs`，登出流程会重置会话。
 
 **文件：** `src/layouts/modules/global-menu/store.ts`
 
@@ -39,7 +43,9 @@
 
 ---
 
-### [ ] 3. 路由缓存 UserCode 硬编码导致权限隔离失效
+### [x] 3. 路由缓存 UserCode 硬编码导致权限隔离失效
+
+> 已修复：`src/utils/auth-state.ts` 登录后以用户邮箱写入 `UserCode`，路由缓存按用户隔离。
 
 **文件：** `src/router/routes/index.ts`
 
@@ -55,7 +61,9 @@
 
 ## 🟠 P1 — 功能级别（核心功能缺陷）
 
-### [ ] 4. UMD 动态组件与菜单标签绑定机制缺失
+### [x] 4. UMD 动态组件与菜单标签绑定机制缺失
+
+> 已修复：`iframe-page` 增加 `umd` 渲染类型，并由 PageHost（`src/runtime/page-host/`）承载 Hosted UMD。
 
 **文件：** `src/router/routes/index.ts`、`src/views/_builtin/iframe-page/index.vue`、`src/utils/remoteComponentLoader.ts`
 
@@ -72,7 +80,9 @@
 
 ---
 
-### [x] 5. 硬编码后端 origin 导致多环境部署失败
+### [ ] 5. 硬编码后端 origin 导致多环境部署失败
+
+> 未修复（此前误勾选）：`src/views/_builtin/iframe-page/index.vue` 的 `applyHandler` 仍对相对路径拼接 `'https://datav.kivii.org'`。
 
 **文件：** `src/views/_builtin/iframe-page/index.vue`，第 95 行
 
@@ -85,7 +95,9 @@
 
 ---
 
-### [ ] 6. 关闭标签时 kvid 未传递导致 Vue 组件缓存无法清理（内存泄漏）
+### [x] 6. 关闭标签时 kvid 未传递导致 Vue 组件缓存无法清理（内存泄漏）
+
+> 已修复：`transformRouteToMenu` 从 `route.meta.kvid` 或 `route.props.kvid` 提取 `kvid`。
 
 **文件：** `src/layouts/modules/global-menu/types.ts`（`transformRouteToMenu`）
 
@@ -100,7 +112,9 @@
 
 ---
 
-### [ ] 7. `extractComponentName` 逻辑不完整导致路由缓存恢复后页面空白
+### [x] 7. `extractComponentName` 逻辑不完整导致路由缓存恢复后页面空白
+
+> 已修复：提交 `bc1dd85` 改为组件映射，原解析函数已移除。
 
 **文件：** `src/router/routes/index.ts`，第 70-74 行
 
@@ -118,6 +132,8 @@
 
 ### [ ] 8. 双重登录验证竞态 + 已登录不跳转问题
 
+> 部分修复：`setTimeout` 触发已移除；已登录用户访问 `/login` 仍直接放行，未跳转首页。
+
 **文件：** `src/router/index.ts`、`src/router/guards.ts`、`src/views/login/index.vue`
 
 **问题：**
@@ -130,7 +146,9 @@
 
 ---
 
-### [ ] 9. 缺少完整的登出（Logout）流程
+### [x] 9. 缺少完整的登出（Logout）流程
+
+> 已修复：Header 提供登出入口，调用 `/auth/logout` 并重置菜单、路由与 PageHost 状态。
 
 **文件：** 全局（当前无登出功能）
 
@@ -151,7 +169,9 @@
 
 ## 🟢 P3 — 代码质量（不影响功能，影响可维护性）
 
-### [ ] 10. `PathInfo` 接口在同文件中重复定义
+### [x] 10. `PathInfo` 接口在同文件中重复定义
+
+> 已修复：文件中只保留一处定义。
 
 **文件：** `src/bridge/kivii-open-tab.ts`，第 16-23 行 和 第 46-59 行
 
@@ -161,7 +181,9 @@
 
 ---
 
-### [ ] 11. `canClose` 函数逻辑与注释不符
+### [x] 11. `canClose` 函数逻辑与注释不符
+
+> 已修复：`canClose` 及误导性注释已移除。
 
 **文件：** `src/layouts/modules/global-tab/index.vue`，第 22-24 行
 
@@ -175,6 +197,8 @@
 
 ### [ ] 12. 远程加载的 CSS 样式注入无安全校验
 
+> 按设计接受：项目只加载可信来源的模块（见 README），暂不引入样式沙箱；若开放不可信来源需重新评估。
+
 **文件：** `src/views/_builtin/iframe-page/vueComponent.vue`，第 121-124 行
 
 **问题：** `vue3-sfc-loader` 的 `addStyle` 回调直接将远程组件的 `<style>` 内容注入 `document.head`，无任何过滤
@@ -185,7 +209,9 @@
 
 ---
 
-### [ ] 13. `webview.vue` 中 `pointer-events` 重复声明
+### [x] 13. `webview.vue` 中 `pointer-events` 重复声明
+
+> 已修复：`.webview-container` 中只剩一处声明。
 
 **文件：** `src/views/_builtin/iframe-page/webview.vue`，第 196-204 行
 
@@ -199,12 +225,12 @@
 
 | 优先级 | 总计 | 已完成 |
 |--------|------|--------|
-| 🔴 P0  | 3    | 0      |
-| 🟠 P1  | 4    | 0      |
-| 🟡 P2  | 2    | 0      |
-| 🟢 P3  | 4    | 0      |
-| **合计** | **13** | **0** |
+| 🔴 P0  | 3    | 3      |
+| 🟠 P1  | 4    | 3      |
+| 🟡 P2  | 2    | 1      |
+| 🟢 P3  | 4    | 3      |
+| **合计** | **13** | **10** |
 
 ---
 
-> **执行建议：** P0 → P1 → P2 → P3 按序推进。P0 和 P1 中的第 4、6 项（UMD绑定 + kvid传递）存在关联，建议同步处理。
+> **剩余事项：** 第 5 项（硬编码 origin）、第 8 项（已登录访问登录页的跳转）；第 12 项按设计接受。
