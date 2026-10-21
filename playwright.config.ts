@@ -7,7 +7,7 @@ export default defineConfig({
   reporter: 'list',
   use: {
     baseURL: 'http://127.0.0.1:4173',
-    channel: 'chrome',
+    channel: process.env.CI ? undefined : 'chrome',
     trace: 'retain-on-failure',
   },
   projects: [
@@ -17,7 +17,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'pnpm exec vite --host 127.0.0.1 --port 4173',
+    command: process.env.E2E_PREVIEW
+      ? 'pnpm exec vite preview --host 127.0.0.1 --port 4173'
+      : 'pnpm exec vite --host 127.0.0.1 --port 4173',
     url: 'http://127.0.0.1:4173',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

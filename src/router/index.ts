@@ -110,14 +110,7 @@ async function initRoutes() {
         router.addRoute(route);
       });
 
-      // 移除初始的 404 路由（会被 addRoute 覆盖）
-      const initial404 = router
-        .getRoutes()
-        .find(r => r.path === '/404' && r.name === 'page-not-found');
-      if (initial404) {
-        router.removeRoute('page-not-found');
-      }
-
+      // 404 与兜底路由属于常量路由，始终保留，不参与会话动态路由清理。
       dynamicRoutesLoaded = true;
 
       // 默认跳转目标：有 AutoStartup 菜单时使用它，否则回到 /home

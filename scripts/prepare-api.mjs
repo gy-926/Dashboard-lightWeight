@@ -2,6 +2,7 @@ import { accessSync, constants, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { getDevApiUrl } from './dev-api-config.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const serverRoot = resolve(root, 'server');
@@ -47,10 +48,9 @@ export function prepareApi() {
   run(['run', 'seed:demo']);
 }
 
-
-export async function apiIsReady() {
+export async function apiIsReady(apiUrl = getDevApiUrl()) {
   try {
-    const response = await fetch('http://127.0.0.1:3000/');
+    const response = await fetch(`${apiUrl}/`, { signal: AbortSignal.timeout(2000) });
     if (!response.ok) return false;
     const payload = await response.json();
     return payload?.status === 200 && payload?.message === 'success';

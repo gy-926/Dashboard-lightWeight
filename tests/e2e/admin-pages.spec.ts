@@ -1,4 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { gzipSync } from 'node:zlib';
 
 async function mockApi(page: Page) {
   await page.route(
@@ -301,4 +304,112 @@ test('saving a related menu does not erase the root form draft', async ({ page }
   await input.press('Enter');
   await expect(editor.getByText('已保存页面名称', { exact: true })).toBeVisible();
   await expect(rootTitle).toHaveValue('根目录未保存草稿');
+});
+
+for (const path of ['/missing-page/nested?source=direct', '/404']) {
+  test(`renders 404 on initial navigation to ${path}`, async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', error => errors.push(error.message));
+    page.on('console', message => {
+      if (message.type() === 'error') errors.push(message.text());
+    });
+
+    await page.goto(`/#${path}`);
+    await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
+    await expect(page).toHaveURL(/#\/404(?:\?source=direct)?$/);
+    expect(errors).toEqual([]);
+  });
+}
+
+test('unknown SPA routes render 404 and allow navigation back to home', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('console', message => {
+    if (message.type() === 'error') errors.push(message.text());
+  });
+
+  await page.goto('/#/home');
+  const home = page.getByRole('heading', { name: '一次远程模块如何进入工作台' });
+  await expect(home).toBeVisible();
+  for (const path of ['/missing-page/nested', '/404']) {
+    await page.evaluate(path => { window.location.hash = `#${path}`; }, path);
+    await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
+    await expect(page).toHaveURL(/#\/404$/);
+    await page.evaluate(() => { window.location.hash = '#/home'; });
+    await expect(home).toBeVisible();
+  }
+  expect(errors).toEqual([]);
+});
+
+test('404 remains available after logout and login rebuild the dynamic routes', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('console', message => {
+    if (message.type() === 'error') errors.push(message.text());
+  });
+
+  await page.goto('/#/home');
+  await expect(page.getByRole('heading', { name: '一次远程模块如何进入工作台' })).toBeVisible();
+  await page.getByRole('button', { name: 'Admin' }).hover();
+  await page.getByText('退出登录', { exact: true }).click();
+  await expect(page).toHaveURL(/#\/login$/);
+  await page.getByPlaceholder('请输入邮箱').fill('admin@example.com');
+  await page.getByPlaceholder('请输入密码').fill('admin@123456');
+  await page.locator('.login-form button[type="submit"]').click();
+  await expect(page.getByRole('heading', { name: '一次远程模块如何进入工作台' })).toBeVisible();
+  await page.evaluate(() => { window.location.hash = '#/missing-after-login'; });
+  await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
+  await expect(page).toHaveURL(/#\/404$/);
+  expect(errors).toEqual([]);
+});
+
+const workspaceResource = /vendor-(?:echarts|sfc-loader|kivii)|kivii-public-components|vue3-sfc-loader|echarts|\/umd-showcase\/|\/bootstrap\/workspace/;
+
+test('login renders without requesting workspace resources or runtime menus', async ({ page }) => {
+  const requests: string[] = [];
+  page.on('request', request => requests.push(request.url()));
+  await page.goto('/#/login');
+  await expect(page.getByText('安全登录', { exact: true })).toBeVisible();
+  await page.getByText('没有账号？去注册', { exact: true }).click();
+  await expect(page.getByText('创建账号', { exact: true })).toBeVisible();
+  expect(requests.filter(url => workspaceResource.test(url))).toEqual([]);
+  expect(requests.filter(url => /\/menus\/runtime|\/me\/roles/.test(url))).toEqual([]);
+  if (process.env.E2E_PREVIEW) {
+    const scripts = [...new Set(requests.map(url => new URL(url).pathname))]
+      .filter(path => path.endsWith('.js'));
+    const compressedBytes = scripts.reduce((total, path) =>
+      total + gzipSync(readFileSync(join(process.cwd(), 'dist', path))).byteLength, 0);
+    console.log(`Login JavaScript: ${(compressedBytes / 1024).toFixed(1)} KiB gzip`);
+    expect(compressedBytes).toBeLessThan(200 * 1024);
+  }
+
+});
+
+test('unauthenticated business entry loads login first and reloads once to its target after login', async ({ page }) => {
+  let authenticated = false;
+  await page.route('**/api/auth/refresh', route => authenticated
+    ? route.fallback()
+    : route.fulfill({ status: 401, json: { message: 'Unauthenticated' } }));
+  await page.route('**/api/auth/login', async route => {
+    authenticated = true;
+    await route.fallback();
+  });
+  const requests: string[] = [];
+  let documents = 0;
+  page.on('request', request => {
+    requests.push(request.url());
+    if (request.isNavigationRequest() && request.frame() === page.mainFrame()) documents++;
+  });
+
+  await page.goto('/#/system/menu-config');
+  await expect(page.getByText('安全登录', { exact: true })).toBeVisible();
+  expect(requests.filter(url => workspaceResource.test(url))).toEqual([]);
+  expect(documents).toBe(1);
+  await page.getByPlaceholder('请输入邮箱').fill('admin@example.com');
+  await page.getByPlaceholder('请输入密码').fill('admin@123456');
+  await page.locator('.login-form button[type="submit"]').click();
+  await expect(page.locator('.menu-config')).toBeVisible();
+  await expect(page).toHaveURL(/#\/system\/menu-config$/);
+  expect(documents).toBe(2);
+  expect(requests.some(url => /\/umd-showcase\//.test(url))).toBe(true);
 });

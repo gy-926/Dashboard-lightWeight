@@ -1,12 +1,9 @@
 import { reactive, ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute } from 'vue-router';
 import { login, register } from '@/api/nest-client';
-import { reloadDynamicRoutes } from '@/router';
-import { syncAuthState } from '@/utils/auth-state';
 import { validateNewPassword } from '@/utils/password-policy';
 
 export function useLoginForm() {
-  const router = useRouter();
   const route = useRoute();
   const form = reactive({ username: '', password: '' });
   const isLoading = ref(false);
@@ -37,15 +34,18 @@ export function useLoginForm() {
     errorMsg.value = '';
     try {
       await (isSignUp.value ? register : login)(email, form.password);
-      await syncAuthState();
-      await reloadDynamicRoutes();
       const target = route.query.redirect;
       const redirect =
         typeof target === 'string' && target.startsWith('/') && !target.startsWith('//')
           ? target
           : '/';
-      if (import.meta.env.PROD) sessionStorage.setItem('need_reload_after_login', 'true');
-      await router.replace(redirect);
+      // 清理上一会话持久化状态，直接刷新进入工作台，避免刷新前先加载整套运行时。
+      localStorage.removeItem('DYNAMIC_ROUTES_CACHE');
+      localStorage.removeItem('kivii-tabs');
+      const url = new URL(window.location.href);
+      url.hash = redirect;
+      window.history.replaceState(window.history.state, '', url);
+      window.location.reload();
     } catch (error) {
       errorMsg.value = error instanceof Error ? error.message : '操作失败，请稍后重试';
     } finally {

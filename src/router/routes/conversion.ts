@@ -139,6 +139,7 @@ export function getStaticRoutes(): RouteRecordRaw[] {
     },
     {
       path: '/:pathMatch(.*)*',
+      name: 'not-found-redirect',
       redirect: '/404',
       meta: { hidden: true },
     },

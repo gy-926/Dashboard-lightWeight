@@ -51,5 +51,16 @@
     "vitest": "^4.1.10",
     "vue-tsc": "^2.2.12"
   },
-  "packageManager": "pnpm@10.28.1+sha1.20817ab95fb7f61154ba5ff3bcb61f27defb6142"
+  "packageManager": "pnpm@10.28.1+sha1.20817ab95fb7f61154ba5ff3bcb61f27defb6142",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gy-926/Dashboard-lightWeight.git"
+  },
+  "bugs": {
+    "url": "https://github.com/gy-926/Dashboard-lightWeight/issues"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
 }

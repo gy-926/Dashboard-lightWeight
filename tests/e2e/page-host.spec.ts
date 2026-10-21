@@ -150,7 +150,6 @@ const mountId = Math.random().toString(36).slice(2)
     });
   });
 
-  await page.route(/^https:\/\/datav\.kivii\.org\/Content\//, route => route.abort());
 }
 
 async function diagnosticSummary(page: Page) {
@@ -249,6 +248,7 @@ test('body teleported UMD dialogs appear above hosted page content', async ({ pa
 
 test('close all destroys every hosted page through the public tab menu', async ({ page }) => {
   await page.goto(`/entry/page-host-e2e#${secondPath}`);
+  await expect(page.locator('#page-host-root [data-page-host-instance]')).toHaveCount(2);
   await page.goto(`/entry/page-host-e2e#${umdPath}`);
   await expect(page.locator('#page-host-root [data-page-host-instance]')).toHaveCount(3);
   const destroyBefore = (await diagnosticSummary(page))?.destroy ?? 0;

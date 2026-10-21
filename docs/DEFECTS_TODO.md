@@ -80,18 +80,9 @@
 
 ---
 
-### [ ] 5. 硬编码后端 origin 导致多环境部署失败
+### [x] 5. 硬编码后端 origin 导致多环境部署失败
 
-> 未修复（此前误勾选）：`src/views/_builtin/iframe-page/index.vue` 的 `applyHandler` 仍对相对路径拼接 `'https://datav.kivii.org'`。
-
-**文件：** `src/views/_builtin/iframe-page/index.vue`，第 95 行
-
-**问题：**
-- `const origin = 'https://datav.kivii.org'` 硬编码，在测试/私有部署环境中所有 webview 加载失败
-
-**修复目标：**
-- 从配置文件（`vite.config.ts` 的环境变量 `import.meta.env.VITE_BACKEND_ORIGIN`）或 `globalConfig` 中读取 `backendOrigin`
-- 兜底使用 `window.location.origin`，移除硬编码字符串
+> 已修复：`iframe-page` 与 PageHost 共用 Handler 解析，优先使用显式后端配置，默认使用当前站点域名。开发环境旧接口代理通过可选 `DEV_LEGACY_PROXY_TARGET` 配置，不再绑定固定外部域名。
 
 ---
 

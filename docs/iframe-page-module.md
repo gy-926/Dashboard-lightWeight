@@ -50,7 +50,7 @@ Handler 的判定规则如下：
 2. 以 `<` 开头且包含 `>`：UMD 组件标签。
 3. 其他值：WebView URL。
 
-绝对 HTTP(S) Handler 会直接使用；相对 Handler 当前会拼接 `https://datav.kivii.org`。这是现有兼容行为，不应把该默认地址视为可移植配置。
+绝对 HTTP(S) Handler 会直接使用；相对 Handler 与 PageHost 共用解析逻辑，优先使用 `backendOrigin` prop 或全局 `Origin`，默认跟随 `window.location.origin`，无需填写固定域名。显式关闭 `UseWindowOrigin` 且未设置后端地址时保留相对路径。
 
 组件 props 或路由参数变化时，入口会让旧请求失效，重新解析 Handler、注销旧页面实例并注册新实例，避免较慢的旧请求覆盖新页面状态。
 

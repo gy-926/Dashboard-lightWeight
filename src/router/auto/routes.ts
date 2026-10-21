@@ -1,6 +1,6 @@
 import type { RouteRecordRaw } from 'vue-router';
 
-// 手动配置的路由（禁用 auto-router）
+// 手动配置的业务路由（禁用 auto-router）；404 等常量路由由 getStaticRoutes 统一提供。
 export const autoRoutes: RouteRecordRaw[] = [
   {
     path: '/',
@@ -144,21 +144,6 @@ export const autoRoutes: RouteRecordRaw[] = [
         ],
       },
     ],
-  },
-  {
-    path: '/404',
-    name: 'page-not-found',
-    component: () => import('../../views/404.vue'),
-    meta: {
-      hidden: true,
-    },
-  },
-  {
-    path: '/:pathMatch(.*)*',
-    redirect: '/404',
-    meta: {
-      hidden: true,
-    },
   },
 ];
 

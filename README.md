@@ -57,6 +57,12 @@ flowchart LR
 
 UMD 模板将 Vue、ECharts 和 `@kivii.com/bridge` 设为外部依赖，避免业务组件携带第二份运行时。宿主从本地 npm 依赖提供 ECharts，并通过 `app.use()` 或具名导出完成注册；页面不再加载远程 ECharts 和 MD5 脚本。
 
+## 登录页资源加载
+
+登录、注册和修改密码使用独立的轻量认证入口，不加载 ECharts、公共业务组件、远程 Vue 加载器或演示 UMD。访问需要登录的页面时，先恢复会话；未登录则显示登录页，并保存原目标地址。
+
+登录成功后直接刷新一次进入目标页面，再初始化工作台、角色、菜单和页面运行时，避免刷新前重复加载工作台资源。已登录用户刷新业务页面时直接启动工作台。
+
 ## PageHost 页面保活
 
 后端菜单生成的 KVID 动态页默认由应用根级 PageHost 承载，支持 iframe、远程 Vue SFC 和 Hosted UMD。标签切换只隐藏页面并保留真实实例；关闭、刷新和会话重建进入明确的销毁链路，填写中的表单不会因普通标签切换被清空。
@@ -105,7 +111,7 @@ pnpm dev:web
 
 ### 环境要求
 
-- Node.js 24（同时开发前端和内置 API）；只开发前端时最低为 20.19
+- Node.js 24（同时开发前端和内置 API）；只开发前端时最低为 22.12
 - pnpm 10（前端）和 npm（内置 API）
 - MySQL 8 或兼容版本
 
@@ -120,13 +126,17 @@ cp .env.example .env
 pnpm dev
 ```
 
-在 `.env` 中填写 Nest API 地址：
+默认使用同源 `/api`，无需填写固定域名。`.env` 中可按需覆盖 API 路径：
 
 ```dotenv
 VITE_API_BASE_URL=/api
 ```
 
 前端开发服务器默认监听 `127.0.0.1:5173`，并将 `/api` 代理到内置 Nest API 的 `127.0.0.1:3000`。源码开发时先进入 `server/` 配置 MySQL、执行迁移并启动 API。生产环境也需要把同源 `/api` 转发到 Nest，并将响应 cookie 的 `/auth` 路径改写为 `/api/auth`。
+
+修改 API 端口时，只需调整 `server/.env` 中的 `PORT`（默认 `3000`）。开发代理、服务就绪检查和启动日志会使用同一配置；进程环境变量 `PORT`、`HOST` 优先于 `server/.env`。修改后重新启动开发命令。
+
+动态页面的相对路径默认使用当前站点域名；独立后端仍可通过 `uiGlobalConfig.Origin` 指定。仅在本地对接旧 Kivii 服务时，在 `.env` 中设置 `DEV_LEGACY_PROXY_TARGET`，即可为 `/auth`、`/kivii`、`/Restful`、`/codet` 启用开发代理；未设置时不会代理到外部站点。生产环境的同源接口由部署服务器路由。
 
 ### 常用命令
 
@@ -257,6 +267,14 @@ pnpm build-only
 ```
 
 修改 UMD 协议时，请同时验证旧 `GlobalName` 和新 Registry 两种加载方式。
+
+## 参与贡献
+
+开发流程和验证命令见 [贡献指南](CONTRIBUTING.md)。问题与建议请使用仓库 Issue 模板；安全问题请按 [安全报告说明](SECURITY.md) 私下报告。
+
+CI 自动运行前后端检查以及生产构建的 Playwright 浏览器回归测试，并检查登录页没有加载工作台大资源。浏览器测试使用模拟 API，无需 MySQL；CI 使用 Playwright 自带 Chromium，本地默认使用已安装的 Chrome。
+
+随仓库分发的演示组件来源记录见 [资源来源](docs/asset-sources.md)。
 
 ## License
 

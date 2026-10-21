@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { apiIsReady, prepareApi, serverRoot } from './prepare-api.mjs';
+import { getDevApiUrl } from './dev-api-config.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
@@ -25,12 +26,7 @@ async function waitForApi(api) {
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
     if (api.exitCode !== null) throw new Error('后端启动失败');
-    try {
-      const response = await fetch('http://127.0.0.1:3000/');
-      if (response.ok) return;
-    } catch {
-      // 后端仍在启动。
-    }
+    if (await apiIsReady()) return;
     await new Promise(resolvePromise => setTimeout(resolvePromise, 500));
   }
   throw new Error('等待后端启动超时');
@@ -46,7 +42,7 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
 try {
   prepareApi();
   if (await apiIsReady()) {
-    console.log('[dev] 检测到 3000 端口已有兼容 API，继续使用现有后端。');
+    console.log(`[dev] 检测到 ${getDevApiUrl()} 已有兼容 API，继续使用现有后端。`);
   } else {
     const api = start(npmCommand, ['run', 'start:dev'], serverRoot);
     console.log('[dev] 后端启动中，前端将在 API 就绪后启动...');

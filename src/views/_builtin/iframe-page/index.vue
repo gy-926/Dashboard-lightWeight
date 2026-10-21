@@ -11,6 +11,11 @@
   import VueComponent from './vueComponent.vue';
   import UmdComponentPage from '../umd-component/index.vue';
   import { loadUmdOnDemand } from '@/utils/remoteComponentLoader';
+  import { getGlobalConfig } from '@/router/routes/config';
+  import {
+    resolveFunctionAccessPayload,
+    resolveFunctionPageType as determineRenderTypeByHandler,
+  } from '@/runtime/page-host/function-access';
 
   // 路由 props
   const props = defineProps<{
@@ -75,43 +80,18 @@
     return props.backendOrigin || '';
   });
 
-  // 根据 Handler 判断渲染类型
-  function determineRenderTypeByHandler(handler: string): PageType {
-    if (!handler) return 'webview';
-
-    // 以 .vue 结尾的为 Vue 组件
-    if (handler.endsWith('.vue')) {
-      return 'vue';
-    }
-
-    // 以组件标签形式配置的按 UMD 组件处理
-    if (handler.startsWith('<') && handler.includes('>')) {
-      return 'umd';
-    }
-
-    return 'webview';
-  }
-
-  // 从类似 <SmartStandardLibrary> 的标签中提取组件名
-  function extractComponentName(tag: string): string {
-    if (!tag) return '';
-    const match = tag.match(/<([a-zA-Z0-9-]+)[^>]*>/);
-    return match ? match[1] : tag;
-  }
-  // 将 handler 字符串解析并应用到响应式状态
+  // 与 PageHost 共用地址解析，默认跟随当前站点，允许显式指定后端地址。
   function applyHandler(handler: string) {
-    if (!handler) return;
-    const resolvedType = determineRenderTypeByHandler(handler);
-    dynamicRenderType.value = resolvedType;
-
-    if (resolvedType === 'umd') {
-      dynamicHandler.value = extractComponentName(handler);
-      dynamicUmdTag.value = handler;
-    } else if (handler.startsWith('http')) {
-      dynamicHandler.value = handler;
-    } else {
-      dynamicHandler.value = 'https://datav.kivii.org' + handler;
-    }
+    const config = getGlobalConfig();
+    const resolved = resolveFunctionAccessPayload(
+      { Results: [{ Handler: handler }] },
+      { ...config, Origin: props.backendOrigin || config.Origin },
+      window.location.origin
+    );
+    if (!resolved) return;
+    dynamicRenderType.value = resolved.type;
+    dynamicHandler.value = resolved.url;
+    dynamicUmdTag.value = resolved.componentTag || '';
   }
 
   async function applyHandlerWithScript(handler: string, scriptPath?: string) {
@@ -219,7 +199,7 @@
   // UMD 组件参数处理
   const umdComponentProps = computed(() => {
     if (renderType.value === 'umd') {
-      // 这里的 renderUrl.value 应该已经是通过 extractComponentName 处理过的组件名
+      // 这里的 renderUrl.value 应该已经是解析过的组件名
       const compName = renderUrl.value;
       return {
         componentName: compName,
