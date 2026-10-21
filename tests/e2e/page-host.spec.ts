@@ -352,3 +352,28 @@ test('401 relogin clears stale persistence and rebuilds the current PageHost pag
     )
     .toEqual({ routes: null, tabs: null });
 });
+
+test('Bridge and menu tabs share navigation semantics without losing query or fragment', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  const target = `${secondPath}?filter=active#details`;
+  expect(await page.evaluate(path => window.kivii!.openTab.openPath(path), target)).toBe(true);
+  await expect(page.frameLocator('iframe[src$="/e2e/page-b.html"]:visible').locator('#draft')).toBeVisible();
+  expect(new URL(page.url()).hash).toBe(`#${target}`);
+  await expect(page.locator('.tab-item', { hasText: '表单页面 B' })).toHaveCount(1);
+
+  expect(await page.evaluate(kvid => window.kivii!.openTab.openByKvid(kvid), firstKvid)).toBe(true);
+  await expect(page.frameLocator('iframe[src$="/e2e/page-a.html"]').locator('#draft')).toBeVisible();
+  expect(new URL(page.url()).hash).toBe(`#${firstPath}`);
+  expect(await page.evaluate(path => window.kivii!.openTab.openPath(path, { activateExisting: false }), secondPath)).toBe(true);
+  expect(new URL(page.url()).hash).toBe(`#${firstPath}`);
+
+  // PageHost 按 query 区分实例；切回无参数路径时验证当前可见实例，标签仍按 path 去重。
+  await page.locator('.tab-item', { hasText: '表单页面 B' }).click();
+  await expect(page.frameLocator('iframe[src$="/e2e/page-b.html"]:visible').locator('#draft')).toBeVisible();
+  await expect(page.locator('.tab-item', { hasText: '表单页面 B' })).toHaveCount(1);
+  const currentUrl = page.url();
+  expect(await page.evaluate(() => window.kivii!.openTab.openByKvid('missing-kvid'))).toBe(false);
+  expect(page.url()).toBe(currentUrl);
+  expect(errors).toEqual([]);
+});

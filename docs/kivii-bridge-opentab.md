@@ -1,260 +1,89 @@
-# KiviiBridge OpenTab 使用指南
+# OpenTab 使用指南
 
-## 概述
+OpenTab 的业务逻辑统一位于 `src/services/open-tab.ts`。Vue composable 和 Kivii Bridge 分别为本地页面与远程组件提供入口，共享路径处理、菜单查找、选项语义和导航结果。
 
-`kivii.openTab` 提供标签页打开功能，支持默认实现和自定义实现。
+```mermaid
+flowchart TD
+  A[本地菜单、搜索、标签] --> B[useKiviiOpenTab]
+  C[远程组件调用 kivii.openTab] --> D[KiviiOpenTab Bridge 适配层]
+  B --> E[createOpenTabService]
+  D --> E
+  E --> F[Vue Router 导航 / 浏览器外链]
+  E --> G[已确认页面的标签元数据]
+```
 
-## API 列表
+## 项目文件
+
+| 文件 | 职责 |
+| --- | --- |
+| `src/services/open-tab.ts` | 唯一业务实现；接收 Router 与菜单 Store |
+| `src/composables/useKiviiOpenTab.ts` | 在 Vue setup 中提供 Router、Store 并返回服务方法 |
+| `src/bridge/kivii-open-tab.ts` | 适配 `IOpenTab`，保留旧快捷函数导出 |
+| `src/bootstrap/workspace.ts` | 初始化工作台时注册 Bridge 实现 |
+
+composable 直接调用共享服务，不再先调用 Bridge、失败后再执行一遍路由回退。直接通过 Vue Router 打开的页面仍由全局守卫和布局维护标签。
+
+## 方法
 
 | 方法 | 说明 |
-|------|------|
-| `open(url, options)` | 打开外部 URL 或内部路径 |
-| `openPath(path, options)` | 打开内部路径 |
-| `openByKvid(kvid, options)` | 通过 kvid 打开功能模块 |
+| --- | --- |
+| `openTab(url, options)` / Bridge 的 `open(url, options)` | 打开 HTTP(S) 外链或内部路由 |
+| `openPath(path, options)` | 打开内部路由；HTTP(S) 地址按外链处理 |
+| `openByKvid(kvid, options)` | 递归查找菜单的 KVID 或 key，打开对应路径 |
+| `openMenuItem(item, options)` | 打开菜单项；composable 提供 |
+| `findPathInfo(path)` / `findPathInfoByKvid(kvid)` | 查询菜单信息；composable 提供 |
 
-## 使用方式
+导航方法返回 `Promise<boolean>`：
 
-### 1. 默认实现
+- 内部导航等待 Vue Router 完成；重复访问当前地址视为成功。
+- 守卫阻止、导航取消、导航抛错、空路径或未知 KVID 返回 `false`。
+- 未知 KVID 不会额外跳转首页。
+- 路由重定向遵循 Router 规则；成功表示导航完成，不表示最终页面一定是原请求页面。
+- 外链返回 `true` 表示已发起浏览器导航；浏览器仍可能限制弹窗。
 
-```typescript
-// 打开外部链接
-kivii.openTab.open('https://example.com');
+## 选项
 
-// 打开内部路径
-kivii.openTab.openPath('/dashboard');
-```
-
-### 2. 自定义实现
-
-```typescript
-import { IOpenTab } from '@kivii.com/bridge';
-
-class CustomOpenTab extends IOpenTab {
-  open(url, options) {
-    // 自定义打开逻辑
-    // console.log('自定义打开:', url);
-    return true;
-  }
-
-  openPath(path) {
-    // 自定义路径打开逻辑
-    // console.log('自定义路径:', path);
-    return true;
-  }
-}
-
-// 注册自定义实现
-kivii.register(new CustomOpenTab());
-```
-
-### 3. 项目集成（KiviiOpenTab）
-
-项目已实现 `KiviiOpenTab` 类，统一管理 IframePage 三种渲染类型的标签页打开：
-
-**文件结构：**
-```
-src/
-├── bridge/
-│   └── kivii-open-tab.ts  # 自定义 OpenTab 实现
-└── main.ts                 # 注册自定义实现
-```
-
-**核心功能：**
-- `open()` - 识别外部 URL 或内部路径
-- `openPath()` - 内部路径导航 + 标签页添加
-- `openByKvid()` - 通过 kvid 打开功能模块
-
-**初始化流程：**
-```typescript
-// main.ts
-import { KiviiOpenTab } from './bridge/kivii-open-tab'
-
-if ((window as any).kivii) {
-  (window as any).kivii.register(new KiviiOpenTab())
-}
-```
-
-### 4. 快捷函数
-
-项目提供了快捷函数：
-
-```typescript
-import { openTab, openTabPath, openTabByKvid } from '@/bridge/kivii-open-tab'
-
-// 打开 URL
-openTab('https://example.com')
-
-// 打开路径
-openTabPath('/dashboard')
-
-// 通过 kvid 打开
-openTabByKvid('analysis_overview')
-```
-
-### 5. 完整示例
-
-```typescript
-import { kiviiBridge } from '@kivii.com/bridge';
-
-class CustomOpenTab extends IOpenTab {
-  open(url, options) {
-    // 在新窗口中打开
-    window.open(url, '_blank', 'noopener,noreferrer');
-    return true;
-  }
-
-  openPath(path) {
-    // 使用路由跳转
-    window.location.hash = path;
-    return true;
-  }
-}
-
-// 注册
-kiviiBridge.register(new CustomOpenTab());
-
-// 使用
-kiviiBridge.openTab.open('https://example.com');
-kiviiBridge.openPath('/dashboard');
-```
-
-## 接口定义
-
-```typescript
-interface IOpenTab {
-  open(url: string, options?: any): Promise<boolean>;
-  openPath(path: string, options?: any): Promise<boolean>;
-  openByKvid?(kvid: string, options?: any): Promise<boolean>;
-}
-
+```ts
 interface OpenTabOptions {
   newTab?: boolean;
   activateExisting?: boolean;
+  replace?: boolean;
 }
 ```
 
-## IframePage 渲染类型
+| 选项 | 语义 |
+| --- | --- |
+| `newTab` | 仅用于外链；默认在新窗口打开，`false` 使用当前窗口。内部路由始终使用工作台标签，不强制创建重复标签 |
+| `activateExisting` | 默认 `true`；设为 `false` 且标签已经存在时，保留当前页面，不修改已有标签的参数。标签尚不存在时正常导航 |
+| `replace` | 内部导航使用 `router.replace`；外链且 `newTab: false` 时使用 `location.replace` |
 
-IframePage 支持两种渲染类型，统一通过 kiviiBridge.openTab 管理：
+内部路径保留 query 和 hash，例如 `orders?id=123#details` 会导航到 `/orders?id=123#details`。菜单查找及标签身份仍按路径 `/orders` 匹配，同一路径的不同参数不会创建多个标签。
 
-| 类型 | 说明 | 渲染组件 |
-|------|------|----------|
-| webview | iframe 渲染外部/内部页面 | `webview.vue` |
-| vue | 远程 Vue 组件渲染 | `vueComponent.vue` |
+## 本地 Vue 页面
 
-**页面类型判断规则：**
-1. `functionKvid` 以 `.vue` 结尾 → Vue 组件
-2. 其他情况 → WebView（iframe）
+```ts
+import { useKiviiOpenTab } from '@/composables/useKiviiOpenTab';
 
-**打开方式统一为：**
-```typescript
-// 所有类型都可以通过这种方式打开
-kivii.openTab.open('/analysis/overview');
-kivii.openTab.openPath('/content/article');
+const { openTab, openPath, openByKvid, openMenuItem } = useKiviiOpenTab();
+
+await openPath('/orders?id=123#details');
+await openByKvid('orders-menu-kvid');
+await openMenuItem(menuItem);
+await openTab('https://example.com', { newTab: false });
 ```
 
-## 注意事项
+## Bridge 调用
 
-- `register()` 之后所有 `openTab` 调用都会使用自定义实现
-- 自定义实现需要继承 `IOpenTab` 并实现所有方法
-- 方法返回值 `true` 表示成功，`false` 表示失败
-- 内部路径会自动添加到标签页列表
+宿主提供 `window.kivii` 的运行环境可以调用：
 
-## 菜单系统集成
-
-项目中的所有页面打开入口都已集成 `kivii.openTab`：
-
-| 组件 | 位置 | 打开方式 |
-|------|------|----------|
-| 侧边栏菜单 | `src/layouts/modules/global-menu/index.vue` | `openPath()` |
-| 顶部菜单 | `src/layouts/modules/global-menu/GlobalTopMenu.vue` | `openPath()` |
-| 面包屑导航 | `src/layouts/modules/global-breadcrumb/index.vue` | `openPath()` |
-| 标签页切换 | `src/layouts/modules/global-tab/index.vue` | `openPath()` |
-
-**使用场景示例：**
-```typescript
-// 在 Vue 组件中使用
-import { useKiviiOpenTab } from '@/composables/useKiviiOpenTab'
-
-const { openPath, openByKvid } = useKiviiOpenTab()
-
-// 点击菜单打开页面
-await openPath('/analysis/overview')
-
-// 通过 kvid 打开
-await openByKvid('analysis_overview')
+```ts
+await window.kivii.openTab.openPath('/orders?id=123#details');
+await window.kivii.openTab.openByKvid('orders-menu-kvid');
+await window.kivii.openTab.open('https://example.com');
 ```
 
-## 在 IframePage 中使用
+本地旧代码仍可从 `@/bridge/kivii-open-tab` 导入 `openTab`、`openTabPath`、`openTabByKvid`；这些快捷函数通过已经注册的 Bridge 适配层调用同一服务。
 
-### 1. WebView 中使用
+## 验证
 
-在 `webview.vue` 加载的页面中，可以通过 `window.kivii` 调用：
-
-```typescript
-// 在 iframe 内部的页面中
-// 打开外部链接
-window.kivii.openTab.open('https://example.com');
-
-// 打开内部路径
-window.kivii.openTab.openPath('/dashboard');
-```
-
-### 2. Vue 组件中使用
-
-在远程 Vue 组件中使用：
-
-```typescript
-// 打开路径
-(window as any).kivii.openTab.openPath('/analysis/report');
-
-// 通过 kvid 打开
-(window as any).kivii.openTab.openByKvid ?
-  (window as any).kivii.openTab.openByKvid('analysis_overview') :
-  false;
-```
-
-### 3. 项目内部使用
-
-使用 composable 统一管理：
-
-```typescript
-import { useKiviiOpenTab } from '@/composables/useKiviiOpenTab'
-
-const { openTab, openPath, openByKvid, openMenuItem } = useKiviiOpenTab()
-
-// 打开路径
-await openPath('/dashboard')
-
-// 打开菜单项
-await openMenuItem(menuItem)
-
-// 通过 kvid 打开
-await openByKvid('analysis_overview')
-```
-
-## 内部实现原理
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                      主窗口                               │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │  window.kivii                                   │   │
-│  │  ├── openTab                                   │   │
-│  │  │   ├── open(url, options)                    │   │
-│  │  │   ├── openPath(path, options)               │   │
-│  │  │   └── openByKvid(kvid, options)            │   │
-│  │  └── register(impl)                            │   │
-│  └─────────────────────────────────────────────────┘   │
-│                        ↓                                │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │  KiviiOpenTab (自定义实现)                      │   │
-│  │  ├── router.push(path)                         │   │
-│  │  └── menuStore.addTab(menuItem)                │   │
-│  └─────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────┘
-                        ↓
-┌─────────────────────────────────────────────────────────┐
-│  IframePage (webview / extjs / vue)                     │
-└─────────────────────────────────────────────────────────┘
-```
+`tests/open-tab-service.spec.ts` 使用真实的内存 Router 验证参数保留、守卫等待、导航失败、重定向、菜单身份与选项行为。`tests/e2e/page-host.spec.ts` 验证生产页面中的 Bridge、标签点击及 PageHost 的配合。

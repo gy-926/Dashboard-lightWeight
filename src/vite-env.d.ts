@@ -31,8 +31,9 @@ interface CustomRouteParamsManager {
 
 // ── KiviiBridge（由宿主 HTML 注入到 window.kivii）──────────────
 interface KiviiOpenTabBridge {
-  open(url: string, options?: unknown): Promise<boolean>;
-  openByKvid(kvid: string, options?: unknown): Promise<boolean>;
+  open(url: string, options?: import('@/services/open-tab').OpenTabOptions): Promise<boolean>;
+  openPath(path: string, options?: import('@/services/open-tab').OpenTabOptions): Promise<boolean>;
+  openByKvid(kvid: string, options?: import('@/services/open-tab').OpenTabOptions): Promise<boolean>;
 }
 
 interface KiviiBridge {
