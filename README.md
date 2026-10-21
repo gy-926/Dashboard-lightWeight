@@ -68,7 +68,7 @@ UMD 模板将 Vue、ECharts 和 `@kivii.com/bridge` 设为外部依赖，避免�
 
 后端菜单生成的 KVID 动态页默认由应用根级 PageHost 承载，支持 iframe、远程 Vue SFC 和 Hosted UMD。标签切换只隐藏页面并保留真实实例；关闭、刷新和会话重建进入明确的销毁链路，填写中的表单不会因普通标签切换被清空。
 
-PageHost 不需要在构建时预知 KVID。可通过 `PageHostEnabled: false` 全局回退，或使用 `PageHostExcludedKvids` 精确排除个别页面。详细行为、诊断命令和新旧方案对比见 [PageHost 页面保活](docs/page-host.md)。阶段 6 的驻留上限和 LRU 当前暂缓。
+PageHost 不需要在构建时预知 KVID。可通过 `PageHostEnabled: false` 全局回退，或使用 `PageHostExcludedKvids` 精确排除个别页面。详细行为、诊断命令和新旧方案对比见 [PageHost 页面保活](docs/page-host.md)。PageHost 最多驻留 15 个页面实例；达到上限后会提示关闭未使用标签，并保留当前页面。已有实例仍可切换、刷新，不自动淘汰后台页面。
 
 ## 技术栈
 

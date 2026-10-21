@@ -1,4 +1,7 @@
 import type { Router } from 'vue-router';
+import { usePageHostPilotStore } from '@/runtime/page-host/pilot-store';
+import { getPageHostPilotDecision } from '@/runtime/page-host/pilot-config';
+import { toPageHostRoute } from '@/runtime/page-host/route';
 import { waitForRoutesReady, isDynamicRoutesReady, setTargetNavigation } from './index';
 import { getGlobalConfig, syncInternalCodeToEntryPath } from '@/router/routes';
 import { getCurrentUser } from '@/api/nest-client';
@@ -90,6 +93,14 @@ export function setupRouteGuards(router: Router) {
     if ((to.path === '/system' || to.path.startsWith('/system/') || to.meta?.requiresSuperAdmin)
       && getCurrentUser()?.role !== 'super_admin') {
       next('/home');
+      return;
+    }
+
+    const pageRoute = toPageHostRoute(to);
+    const pageHost = usePageHostPilotStore();
+    if (getPageHostPilotDecision(getGlobalConfig(), pageRoute.kvid).eligible && !pageHost.canHostRoute(pageRoute)) {
+      pageHost.showCapacityWarning();
+      next(false);
       return;
     }
 

@@ -10,7 +10,7 @@ const secondPath = `/${rootKvid}/${secondKvid}`;
 const umdPath = `/${rootKvid}/${umdKvid}`;
 const vuePath = `/${rootKvid}/${vueKvid}`;
 
-async function installPageHostFixtures(page: Page) {
+async function installPageHostFixtures(page: Page, extraPages = 0) {
   await page.addInitScript(() => {
     window.uiGlobalConfig = {
       InternalCode: 'page-host-e2e',
@@ -73,8 +73,16 @@ async function installPageHostFixtures(page: Page) {
                 FunctionKvid: 'remote-form.vue',
                 Handler: '/e2e/remote-form.vue',
               },
+              ...Array.from({ length: extraPages }, (_, index) => ({
+                Kvid: `E2E-LIMIT-${index}`,
+                ParentKvid: rootKvid,
+                Title: `容量页面 ${index + 1}`,
+                Type: 'Page',
+                FunctionKvid: `function-limit-${index}`,
+                Handler: `/e2e/page-limit-${index}.html`,
+              })),
             ],
-            Total: 5,
+            Total: 5 + extraPages,
           },
         };
       }
@@ -376,4 +384,43 @@ test('Bridge and menu tabs share navigation semantics without losing query or fr
   expect(await page.evaluate(() => window.kivii!.openTab.openByKvid('missing-kvid'))).toBe(false);
   expect(page.url()).toBe(currentUrl);
   expect(errors).toEqual([]);
+});
+
+test('caps resident pages at 15 while preserving switching, refresh and reopening after close', async ({ page }) => {
+  await installPageHostFixtures(page, 16);
+  await page.reload();
+  const residents = page.locator('#page-host-root [data-page-host-instance]');
+  await expect(residents).toHaveCount(1);
+  const firstFrame = page.frameLocator('iframe[src$="/e2e/page-a.html"]');
+  await firstFrame.locator('#draft').fill('preserve at capacity');
+  for (let index = 0; index < 14; index++) {
+    await page.evaluate(path => { window.location.hash = `#${path}`; }, `/${rootKvid}/E2E-LIMIT-${index}`);
+    await expect(residents).toHaveCount(index + 2);
+  }
+  const before = page.url();
+  const tabCount = await page.locator('.tab-item').count();
+  const blockedPath = `/${rootKvid}/E2E-LIMIT-14`;
+  expect(await page.evaluate(path => window.kivii!.openTab.openPath(path), blockedPath)).toBe(false);
+  await expect(page.getByRole('alert')).toHaveText(/页面驻留已达上限（15 个），请关闭未使用标签。/);
+  expect(page.url()).toBe(before);
+  await page.getByRole('button', { name: '关闭驻留上限提示' }).click();
+  await page.evaluate(path => { window.location.hash = `#${path}`; }, blockedPath);
+  await expect(page.getByRole('alert')).toBeVisible();
+  await expect(page).toHaveURL(before);
+  await expect(residents).toHaveCount(15);
+  await expect(page.locator('.tab-item')).toHaveCount(tabCount);
+  await expect(page.locator('.tab-item').filter({ has: page.getByText('容量页面 15', { exact: true }) })).toHaveCount(0);
+
+  await page.locator('.tab-item', { hasText: '表单页面 A' }).click();
+  await expect(firstFrame.locator('#draft')).toHaveValue('preserve at capacity');
+  const mountBefore = await firstFrame.locator('body').getAttribute('data-mount-id');
+  await page.getByRole('button', { name: '刷新当前页', exact: true }).click();
+  await expect.poll(() => firstFrame.locator('body').getAttribute('data-mount-id')).not.toBe(mountBefore);
+  await expect(residents).toHaveCount(15);
+  await page.locator('.tab-item').filter({ has: page.getByText('容量页面 1', { exact: true }) }).locator('.tab-close-btn').click();
+  await expect(residents).toHaveCount(14);
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  expect(await page.evaluate(path => window.kivii!.openTab.openPath(path), blockedPath)).toBe(true);
+  await expect(residents).toHaveCount(15);
+  await expect(page.locator('.tab-item').filter({ has: page.getByText('容量页面 15', { exact: true }) })).toHaveCount(1);
 });

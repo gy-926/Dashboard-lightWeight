@@ -6,6 +6,10 @@ import { resolveFunctionAccessPayload, type FunctionAccessPayload } from './func
 import { destroyHostedPageLifecycle, setHostedPageLifecycleActive } from './lifecycle';
 import { pageHostDiagnostics } from './diagnostics';
 
+export const PAGE_HOST_RESIDENT_LIMIT = 15;
+
+class PageHostCapacityError extends Error {}
+
 export interface PageHostPilotRoute {
   path: string;
   name?: string | symbol | null;
@@ -45,6 +49,8 @@ export type UmdRegistrationBridge = (
 export const usePageHostPilotStore = defineStore('page-host-pilot', () => {
   const pages = ref<Map<string, HostedPilotPageRecord>>(new Map());
   const activeInstanceKey = ref<string | null>(null);
+  const blockedPath = ref<string | null>(null);
+  const capacityWarning = ref(false);
   const claimedPath = ref<string | null>(null);
   // 销毁与路由跳转之间继续预留路径，避免旧渲染链路重新挂载页面。
   const retiringPath = ref<string | null>(null);
@@ -68,14 +74,39 @@ export const usePageHostPilotStore = defineStore('page-host-pilot', () => {
     };
   }
 
+  function canHostRoute(route: PageHostPilotRoute): boolean {
+    const key = createPageInstanceKey(createDescriptorBase(route));
+    if (pages.value.has(key) || resolvingInstanceKey.value === key) return true;
+    const pending = resolvingInstanceKey.value && !pages.value.has(resolvingInstanceKey.value) ? 1 : 0;
+    return pages.value.size + pending < PAGE_HOST_RESIDENT_LIMIT;
+  }
+
+  function showCapacityWarning(): void {
+    capacityWarning.value = true;
+  }
+
+  function dismissCapacityWarning(): void {
+    capacityWarning.value = false;
+  }
+
+  function blockAtCapacity(route: PageHostPilotRoute): void {
+    blockedPath.value = route.path;
+    showCapacityWarning();
+  }
+
   /** 在异步解析开始前同步预留实例身份，避免旧链路与 PageHost 同时渲染。 */
-  function prepareRoute(route: PageHostPilotRoute, eligible: boolean): void {
+  function prepareRoute(route: PageHostPilotRoute, eligible: boolean): boolean {
+    if (eligible && !canHostRoute(route)) {
+      blockAtCapacity(route);
+      return false;
+    }
+    blockedPath.value = null;
     retiringPath.value = null;
     if (!eligible) {
       resolvingPath.value = null;
       resolvingInstanceKey.value = null;
       deactivateAll();
-      return;
+      return true;
     }
 
     const instanceKey = createPageInstanceKey(createDescriptorBase(route));
@@ -84,12 +115,13 @@ export const usePageHostPilotStore = defineStore('page-host-pilot', () => {
       resolvingPath.value = null;
       resolvingInstanceKey.value = null;
       activate(instanceKey, route.path);
-      return;
+      return true;
     }
 
     deactivateAll();
     resolvingPath.value = route.path;
     resolvingInstanceKey.value = instanceKey;
+    return true;
   }
 
   function deactivateAll(): void {
@@ -121,6 +153,10 @@ export const usePageHostPilotStore = defineStore('page-host-pilot', () => {
   ): string {
     const instanceKey = createPageInstanceKey(descriptor);
     const existing = pages.value.get(instanceKey);
+    if (!existing && pages.value.size >= PAGE_HOST_RESIDENT_LIMIT) {
+      showCapacityWarning();
+      throw new PageHostCapacityError('PageHost resident limit reached');
+    }
 
     pages.value.set(instanceKey, {
       instanceKey,
@@ -167,6 +203,11 @@ export const usePageHostPilotStore = defineStore('page-host-pilot', () => {
 
       if (!shouldPilotPageHostKvid(config, route.kvid)) {
         deactivateAll();
+        return false;
+      }
+
+      if (!canHostRoute(route)) {
+        blockAtCapacity(route);
         return false;
       }
 
@@ -271,6 +312,10 @@ export const usePageHostPilotStore = defineStore('page-host-pilot', () => {
       return true;
     } catch (error) {
       if (generation === resolveGeneration) {
+        if (error instanceof PageHostCapacityError) {
+          blockAtCapacity(route);
+          return false;
+        }
         pageHostDiagnostics.record({
           ...diagnosticBase(route),
           event: 'fallback',
@@ -308,7 +353,8 @@ export const usePageHostPilotStore = defineStore('page-host-pilot', () => {
 
   function removeByPath(path: string, reason: PageDestroyReason = 'close'): void {
     if (claimedPath.value === path || resolvingPath.value === path) retiringPath.value = path;
-    resolveGeneration++;
+    // 关闭其他标签不应取消当前页面的异步创建，否则会遗留无效的容量占位。
+    if (resolvingPath.value === path || currentRouteResolution?.path === path) resolveGeneration++;
     const records = Array.from(pages.value.entries()).filter(
       ([, page]) => page.descriptor.path === path
     );
@@ -335,9 +381,12 @@ export const usePageHostPilotStore = defineStore('page-host-pilot', () => {
       resolvingPath.value = null;
       resolvingInstanceKey.value = null;
     }
+    if (pages.value.size < PAGE_HOST_RESIDENT_LIMIT) dismissCapacityWarning();
   }
 
   function clear(reason: PageDestroyReason = 'logout'): void {
+    blockedPath.value = null;
+    dismissCapacityWarning();
     retiringPath.value = claimedPath.value || resolvingPath.value || retiringPath.value;
     resolveGeneration++;
     pages.value.forEach(page => {
@@ -364,7 +413,7 @@ export const usePageHostPilotStore = defineStore('page-host-pilot', () => {
 
   function isReservedPath(path: string): boolean {
     return (
-      claimedPath.value === path || resolvingPath.value === path || retiringPath.value === path
+      claimedPath.value === path || resolvingPath.value === path || retiringPath.value === path || blockedPath.value === path
     );
   }
 
@@ -379,6 +428,10 @@ export const usePageHostPilotStore = defineStore('page-host-pilot', () => {
   return {
     pages,
     allPages,
+    capacityWarning,
+    canHostRoute,
+    showCapacityWarning,
+    dismissCapacityWarning,
     activeInstanceKey,
     claimedPath,
     resolvingPath,
