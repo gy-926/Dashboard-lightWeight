@@ -12,11 +12,7 @@ import { getStaticRoutes, transformRoutesToVueRoutes } from './conversion';
 
 // 保持所有现有导入路径，领域实现位于独立模块。
 export { setGlobalConfig, getGlobalConfig, syncInternalCodeToEntryPath } from './config';
-export {
-  cacheDynamicRoutes,
-  clearDynamicRoutesCache,
-  restoreDynamicRoutesFromCache,
-} from './cache';
+export { clearDynamicRoutesCache } from './cache';
 export { autoStartupKvid } from './menu-state';
 export { getMenuTree, analyzeTree, generateRoutes } from './menu-routes';
 export {
@@ -53,7 +49,7 @@ export async function generateDynamicRoutes(): Promise<{
   // 等待后台 UMD 组件加载完成，确保能正确生成 UMD 路由
   await umdComponentsReady;
 
-  // 始终生成 UMD 路由（组件在 main.ts 中已触发加载，并在上面等待完成，此处直接读取）
+  // 始终生成 UMD 路由（组件在 bootstrap/workspace.ts 中已触发加载，并在上面等待完成，此处直接读取）
   const umdVueRoutes = transformRoutesToVueRoutes(generateUmdRoutes());
 
   // 权限可能随角色和部门变化，登录后必须从服务端获取当前可见菜单。

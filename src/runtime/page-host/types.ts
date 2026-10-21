@@ -17,14 +17,6 @@ export interface PageDescriptor {
   query?: PageIdentityQuery;
 }
 
-export type HostedPageStatus =
-  | 'mounting'
-  | 'active'
-  | 'inactive'
-  | 'destroying'
-  | 'destroyed'
-  | 'error';
-
 export type PageDestroyReason = 'close' | 'refresh' | 'logout' | 'lru' | 'replace';
 
 export interface PageHostContext {
@@ -62,13 +54,4 @@ export interface PageAdapter<TInstance extends PageInstance = PageInstance> {
   activate(instance: TInstance): void | Promise<void>;
   deactivate(instance: TInstance): void | Promise<void>;
   destroy(instance: TInstance, reason: PageDestroyReason): void | Promise<void>;
-}
-
-export interface HostedPageRecord {
-  instanceKey: string;
-  descriptor: PageDescriptor;
-  status: HostedPageStatus;
-  createdAt: number;
-  activatedAt?: number;
-  error?: string;
 }

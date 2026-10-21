@@ -1,5 +1,7 @@
 # PageHost 页面保活
 
+当前动态页面由 PageHost 主链路承载，兼容路径及远程 Vue 组件缓存仍使用 TeleportManager。迁移阶段的旁路 Observer 已移除；当前页面状态通过 PageHost Store 和诊断接口查看。
+
 PageHost 是后端菜单 KVID 动态页的默认承载层。它把页面实例放在应用根级、`router-view` 之外，使标签切换只改变激活状态和可见性，不卸载正在填写的表单、iframe 文档或远程组件实例。
 
 ## 为什么需要 PageHost

@@ -1,6 +1,7 @@
 import { reactive, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { login, register } from '@/api/nest-client';
+import { clearDynamicRoutesCache } from '@/router/routes/cache';
 import { validateNewPassword } from '@/utils/password-policy';
 
 export function useLoginForm() {
@@ -40,7 +41,7 @@ export function useLoginForm() {
           ? target
           : '/';
       // 清理上一会话持久化状态，直接刷新进入工作台，避免刷新前先加载整套运行时。
-      localStorage.removeItem('DYNAMIC_ROUTES_CACHE');
+      clearDynamicRoutesCache();
       localStorage.removeItem('kivii-tabs');
       const url = new URL(window.location.href);
       url.hash = redirect;

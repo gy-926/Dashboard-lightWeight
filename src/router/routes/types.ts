@@ -1,5 +1,3 @@
-import type { RouteRecordRaw } from 'vue-router';
-
 // 菜单项类型
 export interface MenuItem {
   Kvid: string;
@@ -64,15 +62,6 @@ export interface GlobalConfig {
   customRouteManager?: {
     getRoutes: () => any[];
   };
-}
-
-// 缓存的路由数据
-export interface CachedRoutes {
-  routes: ElegantRoute[];
-  timestamp: number;
-  userCode: string;
-  internalCode: string;
-  menuRootKvid?: string;
 }
 
 // Elegant 路由格式（字符串形式的组件路径）

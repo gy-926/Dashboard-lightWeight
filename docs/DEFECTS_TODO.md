@@ -43,19 +43,9 @@
 
 ---
 
-### [x] 3. 路由缓存 UserCode 硬编码导致权限隔离失效
+### [x] 3. 路由缓存 UserCode 硬编码导致权限隔离失效（历史问题）
 
-> 已修复：`src/utils/auth-state.ts` 登录后以用户邮箱写入 `UserCode`，路由缓存按用户隔离。
-
-**文件：** `src/router/routes/index.ts`
-
-**问题：**
-- `defaultGlobalConfig.UserCode` 写死为 `'admin'`，缓存的用户隔离校验形同虚设
-- 不同权限的用户会共享同一份路由缓存，权限变更后缓存不失效
-
-**修复目标：**
-- 登录成功后，从接口响应中获取真实 `UserCode`，调用 `setGlobalConfig({ UserCode: realUserCode })` 更新
-- 确保 `setGlobalConfig` 在 `reloadDynamicRoutes` 之前执行，使缓存隔离生效
+> 当前实现已移除路由缓存读写能力，动态路由每次从服务端菜单重新生成。登录后仍同步真实用户信息，并清理旧版本遗留的本地路由数据。
 
 ---
 
@@ -103,19 +93,9 @@
 
 ---
 
-### [x] 7. `extractComponentName` 逻辑不完整导致路由缓存恢复后页面空白
+### [x] 7. 路由缓存恢复后组件映射丢失（历史问题）
 
-> 已修复：提交 `bc1dd85` 改为组件映射，原解析函数已移除。
-
-**文件：** `src/router/routes/index.ts`，第 70-74 行
-
-**问题：**
-- 缓存路由时仅能识别 `iframe-page` 和 `base-layout` 两种组件
-- 新增视图（如 `home.vue`、`dashboard/index.vue`）从缓存恢复时 `component` 为 `undefined`，页面空白
-
-**修复目标：**
-- 扩展 `extractComponentName` 的识别列表，覆盖所有 `views/` 下的已知视图
-- 或改为在 `views` 映射表中注册所有已知视图，缓存时存储视图 key 而非解析函数字符串
+> 当前实现已移除路由缓存恢复代码及其专用测试，不再存在该恢复路径。组件转换仍服务于后端菜单与 UMD 路由生成。
 
 ---
 

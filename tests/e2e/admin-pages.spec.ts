@@ -405,11 +405,19 @@ test('unauthenticated business entry loads login first and reloads once to its t
   await expect(page.getByText('安全登录', { exact: true })).toBeVisible();
   expect(requests.filter(url => workspaceResource.test(url))).toEqual([]);
   expect(documents).toBe(1);
+  await page.evaluate(() => {
+    localStorage.setItem('DYNAMIC_ROUTES_CACHE', 'legacy-routes');
+    localStorage.setItem('kivii-tabs', 'legacy-tabs');
+  });
   await page.getByPlaceholder('请输入邮箱').fill('admin@example.com');
   await page.getByPlaceholder('请输入密码').fill('admin@123456');
   await page.locator('.login-form button[type="submit"]').click();
   await expect(page.locator('.menu-config')).toBeVisible();
   await expect(page).toHaveURL(/#\/system\/menu-config$/);
   expect(documents).toBe(2);
+  expect(await page.evaluate(() => ({
+    routes: localStorage.getItem('DYNAMIC_ROUTES_CACHE'),
+    tabs: localStorage.getItem('kivii-tabs'),
+  }))).toEqual({ routes: null, tabs: null });
   expect(requests.some(url => /\/umd-showcase\//.test(url))).toBe(true);
 });

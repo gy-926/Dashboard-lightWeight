@@ -8,14 +8,11 @@
 flowchart TD
   A[应用启动] --> B[等待 UMD 初始加载]
   B --> C[静态 autoRoutes]
-  B --> D{后端菜单缓存有效?}
-  D -- 是 --> E[恢复并转换缓存]
-  D -- 否 --> F[请求菜单]
+  B --> F[请求服务端菜单]
   F --> G[构建菜单树]
-  G --> H[生成并缓存 ElegantRoute]
+  G --> H[生成并转换 ElegantRoute]
   B --> I[根据已加载库生成 UMD 路由]
   C --> J[合并 authRoutes]
-  E --> J
   H --> J
   I --> J
   J --> K[递归注册 Vue Router]
@@ -25,7 +22,7 @@ flowchart TD
 路由来源包括：
 
 - [auto/routes.ts](../src/router/auto/routes.ts)：首页、UMD 管理、示例、菜单配置和系统功能等固定页面。
-- [routes/index.ts](../src/router/routes/index.ts)：后端菜单获取、树构建、缓存、转换与合并。
+- [routes/index.ts](../src/router/routes/index.ts)：后端菜单获取、树构建、转换与合并。
 - [umd/routes.ts](../src/utils/umd/routes.ts)：根据成功加载且允许展示的 UMD 库生成路由。
 - [router/index.ts](../src/router/index.ts)：初始化路由、递归注册、菜单同步和登录后重载。
 
@@ -34,7 +31,7 @@ flowchart TD
 动态菜单使用 `window.uiGlobalConfig` 初始化运行参数。主要字段包括：
 
 - `InternalCode`：菜单工作空间标识。优先从 `/entry/{InternalCode}` 路径读取，其次使用全局配置，默认 `umdDashboard`。
-- `UserCode`：参与缓存隔离，默认 `admin`。
+- `UserCode`：登录后同步为当前用户邮箱，用于标识当前用户。
 - `Origin` / `UseWindowOrigin`：后端来源配置。
 - `DisplayName`、`Icon`、`Scope`、`Parameters`：工作空间展示与扩展参数。
 - `IsAuthenticated`、`PublicLoginUrl`：认证状态与外部登录地址。
@@ -129,18 +126,11 @@ flowchart TD
 
 每个库生成 `/umd/{library}` 容器，每个组件生成 `/umd/{library}/{component}` 页面，并从 Manifest/组件详情读取中文名称、图标和描述。Runtime Lab 临时按需加载的库默认 `showInMenu: false`，不会自动进入导航。
 
-## 路由缓存
+## 路由数据来源
 
-后端菜单路由以 `DYNAMIC_ROUTES_CACHE` 写入 localStorage。当前缓存版本为 `v6`，有效期 24 小时，并校验：
+后端菜单路由每次初始化都从 Nest API 获取并转换，不再写入或恢复 localStorage 路由缓存。当前服务端返回的菜单和权限是路由生成依据。
 
-- 缓存版本。
-- `UserCode`。
-- `InternalCode`。
-- 路由数据至少具有有效 `path`。
-
-缓存只包含后端生成的 `ElegantRoute` 和 `menuRootKvid`。固定路由与 UMD 路由每次启动重新合并，不写入该缓存。
-
-localStorage 缓存是性能优化，不是权限边界。服务端仍必须验证菜单接口和实际业务接口权限。
+`routes/cache.ts` 仅保留 `clearDynamicRoutesCache()`，用于登录、退出和菜单变更时清除旧版本留下的 `DYNAMIC_ROUTES_CACHE`。这与远程 Vue 组件缓存、PageHost 页面实例保活是不同的机制；后两者仍然保留。
 
 ## 合并与注册顺序
 
@@ -160,22 +150,18 @@ localStorage 缓存是性能优化，不是权限边界。服务端仍必须验�
 
 ## 登录、退出与重载
 
-登录成功后的 `reloadDynamicRoutes()` 按以下顺序执行：
+登录成功后先清除旧版本路由缓存和用户标签持久化数据，再完整刷新进入目标页面，由工作台重新获取角色和菜单。
 
-1. 等待正在进行的路由加载结束。
-2. 调用 TeleportManager 的 `clearUserRuntime()`，清除页面实例及远程 Vue 缓存。
-3. 清除动态路由 localStorage 缓存。
-4. 移除之前动态注册的路由名。
-5. 重置加载状态并重新初始化。
+`reloadDynamicRoutes()` 仍可用于当前会话中主动重建动态路由：等待当前生成结束，清理用户菜单、PageHost 页面及 TeleportManager 兼容缓存，移除动态路由后重新请求服务端菜单。404 等常量路由始终保留。
 
-退出登录使用 `clearDynamicRoutesState()` 清理路由缓存和动态注册状态，但不会卸载应用级 UMD 脚本。
+退出登录使用 `clearDynamicRoutesState()` 清理旧版本缓存数据和动态注册状态，但不会卸载应用级 UMD 脚本。
 
 ## 排查顺序
 
 1. 检查 `InternalCode` 是否来自预期的 `/entry/{code}` 或全局配置。
 2. 检查菜单接口响应是否包含 `MenuRoot` 和 `MenusMain.Results`。
 3. 检查异常节点的 `Kvid`、`ParentKvid`、`FunctionKvid` 和 `Handler`。
-4. 清除 `DYNAMIC_ROUTES_CACHE` 后重试，排除旧缓存。
+4. 检查菜单请求是否成功；当前实现不从 localStorage 恢复路由。
 5. 检查 UMD 库的加载状态、`showInMenu` 和导出组件清单。
 6. 检查路由是否已注册，以及 `meta.hidden` 是否导致菜单被过滤。
 

@@ -4,7 +4,6 @@ import type { RouteRecordRaw } from 'vue-router';
 import type { MenuItem, ThemeConfig } from './types';
 import { findMenuParents, transformRouteToMenu } from './types';
 import { useTeleportManager } from '@/store/modules/teleport-manager';
-import { usePageHostObserver } from '@/runtime/page-host/observer';
 import { usePageHostPilotStore } from '@/runtime/page-host/pilot-store';
 import type { PageDestroyReason } from '@/runtime/page-host/types';
 import { getCurrentUser, onAuthChange } from '@/api/nest-client';
@@ -279,7 +278,6 @@ export const useMenuStore = defineStore('global-menu', () => {
   }
 
   function cleanupTabCache(tab: MenuItem, reason: PageDestroyReason = 'close') {
-    usePageHostObserver().removeByPath(tab.path);
     usePageHostPilotStore().removeByPath(tab.path, reason);
     teleportManager.removeComponentCacheByPath(tab.path, getTabKvid(tab));
   }
@@ -355,7 +353,6 @@ export const useMenuStore = defineStore('global-menu', () => {
     selectedKey.value = '';
     siderCollapsed.value = false;
     mixActiveRootKey.value = '';
-    usePageHostObserver().clear();
     usePageHostPilotStore().clear('logout');
   }
 
