@@ -69,6 +69,7 @@ describe('UsersService', () => {
           name: user.name,
           email: user.email,
           role: user.role,
+          avatarFileId: null,
           createdAt: undefined,
           updatedAt: undefined,
         },

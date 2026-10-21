@@ -377,6 +377,7 @@ describe('AppController (e2e)', () => {
     const feature = `feature-${suffix}`;
     const menu = `menu-${suffix}`;
     const role = `role-${suffix}`;
+    const departmentId = crypto.randomUUID();
     const auth = (token: string) => ({ Authorization: `Bearer ${token}` });
     try {
       await request(app.getHttpServer()).get('/dashboard-admin/admin/menu-config').set(auth(memberToken)).expect(403);
@@ -388,10 +389,22 @@ describe('AppController (e2e)', () => {
       await request(app.getHttpServer()).post('/dashboard-admin/admin/roles').set(auth(adminToken)).send({ kvid: role, code: role, name: 'Tester' }).expect(200);
       await request(app.getHttpServer()).put(`/dashboard-admin/admin/roles/${role}/functions`).set(auth(adminToken)).send({ functionKvids: [feature] }).expect(200);
       await request(app.getHttpServer()).put(`/dashboard-admin/admin/users/${member.created.body.Results.id}/roles`).set(auth(adminToken)).send({ roleKvids: [role] }).expect(200);
+      // 自定义角色绑定不再授予普通用户访问；当前模型要求普通用户功能授权和部门授权。
+      const legacy = await request(app.getHttpServer()).get('/dashboard-admin/menus/runtime').query({ internalCode: root }).set(auth(memberToken)).expect(200);
+      expect(legacy.body.Results.MenusMain.Total).toBe(0);
+      await request(app.getHttpServer()).post('/dashboard-admin/admin/departments').set(auth(adminToken))
+        .send({ id: departmentId, code: `dept-${suffix}`, name: 'Test department' }).expect(200);
+      const [ordinaryRole] = await db.query("SELECT kvid FROM dashboard_roles WHERE code = 'user'");
+      await request(app.getHttpServer()).put(`/dashboard-functions/${feature}/access`).set(auth(adminToken))
+        .send({ roleKvids: [ordinaryRole.kvid], departmentIds: [departmentId] }).expect(200);
+      await request(app.getHttpServer()).put(`/dashboard-admin/admin/users/${member.created.body.Results.id}/department`).set(auth(adminToken))
+        .send({ departmentId }).expect(200);
       const after = await request(app.getHttpServer()).get('/dashboard-admin/menus/runtime').query({ internalCode: root }).set(auth(memberToken)).expect(200);
       expect(after.body.Results.MenusMain.Results[0].Handler).toBe('/demo');
       expect(after.body.Results.MenusMain.Total).toBe(1);
     } finally {
+      await db.query('UPDATE users SET department_id = NULL WHERE department_id = ?', [departmentId]);
+      await db.query('DELETE FROM dashboard_departments WHERE id = ?', [departmentId]);
       await db.query('DELETE FROM dashboard_user_roles WHERE role_kvid = ?', [role]);
       await db.query('DELETE FROM dashboard_role_functions WHERE role_kvid = ?', [role]);
       await db.query('DELETE FROM dashboard_menus WHERE kvid = ?', [menu]);
@@ -516,6 +529,87 @@ describe('AppController (e2e)', () => {
       await db.query('DELETE FROM dashboard_umd_packages WHERE module_key = ?', [moduleKey]);
       for (const fileId of fileIds) await files.removeStored(fileId);
     }
+  });
+
+  it('persists the current user display name through session refresh and rejects identity fields', async () => {
+    const { loggedIn, created } = await registerAndLogin();
+    const token = loggedIn.body.Results.accessToken;
+    await request(app.getHttpServer()).get('/users/me').expect(401);
+    const initial = await request(app.getHttpServer()).get('/users/me').set('Authorization', `Bearer ${token}`).expect(200);
+    expect(initial.body.Results.id).toBe(created.body.Results.id);
+    expect(initial.body.Results).not.toHaveProperty('passwordHash');
+    await request(app.getHttpServer()).patch('/users/me').set('Authorization', `Bearer ${token}`)
+      .send({ name: '   ' }).expect(400);
+    await request(app.getHttpServer()).patch('/users/me').set('Authorization', `Bearer ${token}`)
+      .send({ name: '张三', role: 'super_admin' }).expect(400);
+    const updated = await request(app.getHttpServer()).patch('/users/me').set('Authorization', `Bearer ${token}`)
+      .send({ name: ' 张三 ' }).expect(200);
+    expect(updated.body.Results).toMatchObject({ name: '张三', role: 'user', avatarFileId: null });
+    const refreshed = await request(app.getHttpServer()).post('/auth/refresh')
+      .set('Cookie', loggedIn.headers['set-cookie']).expect(200);
+    expect(refreshed.body.Results.user.name).toBe('张三');
+  });
+
+  it('persists private avatars, rejects unsupported and oversized uploads, and clears deleted file bindings', async () => {
+    const owner = await registerAndLogin();
+    const other = await registerAndLogin();
+    const token = owner.loggedIn.body.Results.accessToken;
+    const otherToken = other.loggedIn.body.Results.accessToken;
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGP4DwQACfsD/fteaysAAAAASUVORK5CYII=', 'base64');
+    await request(app.getHttpServer()).post('/users/me/avatar').set('Authorization', `Bearer ${token}`)
+      .attach('file', Buffer.from('<svg/>'), { filename: 'fake.png', contentType: 'image/png' }).expect(400);
+    await request(app.getHttpServer()).post('/users/me/avatar').set('Authorization', `Bearer ${token}`)
+      .attach('file', Buffer.alloc(2 * 1024 * 1024 + 1), { filename: 'huge.png', contentType: 'image/png' }).expect(413);
+    const uploaded = await request(app.getHttpServer()).post('/users/me/avatar').set('Authorization', `Bearer ${token}`)
+      .attach('file', png, { filename: '头像.png', contentType: 'image/png' }).expect(201);
+    const fileId = uploaded.body.Results.avatarFileId;
+    expect(fileId).toMatch(/^[0-9a-f-]{36}$/);
+    const profile = await request(app.getHttpServer()).get('/users/me').set('Authorization', `Bearer ${token}`).expect(200);
+    expect(profile.body.Results.avatarFileId).toBe(fileId);
+    const refreshed = await request(app.getHttpServer()).post('/auth/refresh')
+      .set('Cookie', owner.loggedIn.headers['set-cookie']).expect(200);
+    expect(refreshed.body.Results.user.avatarFileId).toBe(fileId);
+    const nextToken = refreshed.body.Results.accessToken;
+    const avatar = await request(app.getHttpServer()).get('/users/me/avatar').set('Authorization', `Bearer ${nextToken}`)
+      .expect(200).expect('Content-Type', /image\/png/).expect('Cache-Control', 'private, no-store');
+    expect(avatar.body).toEqual(png);
+    await request(app.getHttpServer()).get('/users/me/avatar').expect(401);
+    await request(app.getHttpServer()).get('/users/me/avatar').set('Authorization', `Bearer ${otherToken}`).expect(404);
+    await request(app.getHttpServer()).get(`/files/${fileId}/download`).set('Authorization', `Bearer ${otherToken}`).expect(403);
+    await request(app.getHttpServer()).delete(`/files/${fileId}`).set('Authorization', `Bearer ${nextToken}`).expect(200);
+    const cleared = await request(app.getHttpServer()).get('/users/me').set('Authorization', `Bearer ${nextToken}`).expect(200);
+    expect(cleared.body.Results.avatarFileId).toBeNull();
+  });
+
+  it('keeps demo profile writes read-only when DEMO_READONLY is enabled', async () => {
+    const { email, loggedIn } = await registerAndLogin();
+    const oldReadonly = process.env.DEMO_READONLY;
+    const oldEmail = process.env.DEMO_ADMIN_EMAIL;
+    process.env.DEMO_READONLY = '1';
+    process.env.DEMO_ADMIN_EMAIL = email;
+    try {
+      const auth = { Authorization: `Bearer ${loggedIn.body.Results.accessToken}` };
+      await request(app.getHttpServer()).get('/users/me').set(auth).expect(200);
+      await request(app.getHttpServer()).patch('/users/me').set(auth).send({ name: 'Not allowed' }).expect(403);
+      await request(app.getHttpServer()).post('/users/me/avatar').set(auth).expect(403);
+    } finally {
+      if (oldReadonly === undefined) delete process.env.DEMO_READONLY; else process.env.DEMO_READONLY = oldReadonly;
+      if (oldEmail === undefined) delete process.env.DEMO_ADMIN_EMAIL; else process.env.DEMO_ADMIN_EMAIL = oldEmail;
+    }
+  });
+
+  it('allows deleting an account with an owned avatar despite the two-way file relation', async () => {
+    const db = app.get(DataSource);
+    const userId = crypto.randomUUID();
+    const fileId = crypto.randomUUID();
+    await db.transaction(async manager => {
+      await manager.query('INSERT INTO users (id, name, email) VALUES (?, ?, ?)', [userId, 'Avatar relation test', `${userId}@example.test`]);
+      await manager.query('INSERT INTO stored_files (id, owner_user_id, original_name, stored_name, mime_type, size, sha256) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [fileId, userId, 'avatar.png', crypto.randomUUID(), 'image/png', 1, '0'.repeat(64)]);
+      await manager.query('UPDATE users SET avatar_file_id = ? WHERE id = ?', [fileId, userId]);
+      await manager.query('DELETE FROM users WHERE id = ?', [userId]);
+      expect(await manager.query('SELECT id FROM stored_files WHERE id = ?', [fileId])).toEqual([]);
+    });
   });
 
   afterEach(async () => {

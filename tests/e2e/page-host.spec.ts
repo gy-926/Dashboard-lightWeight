@@ -299,7 +299,7 @@ test('normal logout destroys every PageHost instance and clears the session tabs
   await expect(page.locator('#page-host-root [data-page-host-instance]')).toHaveCount(3);
   const destroyBefore = (await diagnosticSummary(page))?.destroy ?? 0;
 
-  await page.getByRole('button', { name: 'Admin' }).hover();
+  await page.getByRole('button', { name: 'E2E', exact: true }).hover();
   await page.getByText('退出登录', { exact: true }).click();
 
   await expect(page).toHaveURL(/#\/login$/);

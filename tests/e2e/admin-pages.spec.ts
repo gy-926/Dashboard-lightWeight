@@ -421,3 +421,79 @@ test('unauthenticated business entry loads login first and reloads once to its t
   }))).toEqual({ routes: null, tabs: null });
   expect(requests.some(url => /\/umd-showcase\//.test(url))).toBe(true);
 });
+
+test('profile uses the authenticated user and persists display name and private avatar across reload', async ({ page }) => {
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGP4DwQACfsD/fteaysAAAAASUVORK5CYII=', 'base64');
+  const user = { id: 'profile-user', name: '张三', email: 'zhangsan@example.com', role: 'super_admin', avatarFileId: null as string | null };
+  let avatarAuthorization = '';
+  const legacyRequests: string[] = [];
+  page.on('request', request => {
+    if (request.url().includes('/Restful/')) legacyRequests.push(request.url());
+  });
+  await page.addInitScript(() => {
+    (window as any).KiviiContext = { CurrentMember: { FullName: '旧 Kivii 用户', Avatar: '/legacy-avatar.png' } };
+  });
+  await page.route('**/api/auth/refresh', route => route.fulfill({ json: {
+    status: 200, message: 'success', Results: { accessToken: 'a'.repeat(43), expiresIn: 900, user },
+  } }));
+  await page.route('**/api/users/me', route => {
+    if (route.request().method() === 'PATCH') user.name = route.request().postDataJSON().name;
+    return route.fulfill({ json: { status: 200, message: 'success', Results: user } });
+  });
+  await page.route('**/api/users/me/avatar', route => {
+    if (route.request().method() === 'POST') {
+      user.avatarFileId = 'avatar-file';
+      return route.fulfill({ json: { status: 201, message: 'success', Results: user } });
+    }
+    avatarAuthorization = route.request().headers().authorization;
+    return route.fulfill({ contentType: 'image/png', body: png });
+  });
+
+  await page.goto('/#/home');
+  const header = page.locator('header').first();
+  await expect(header.getByRole('button', { name: '张三', exact: true })).toBeVisible();
+  await header.getByRole('button', { name: '张三', exact: true }).hover();
+  await page.getByText('个人中心', { exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: '个人中心' });
+  await dialog.getByRole('button', { name: '修改显示名称', exact: true }).click();
+  await dialog.getByPlaceholder('请输入显示名称').fill('李四');
+  await dialog.getByRole('button', { name: '保存显示名称', exact: true }).click();
+  await expect(dialog.getByText('显示名称更新成功', { exact: true })).toBeVisible();
+  await expect(header.getByRole('button', { name: '李四', exact: true })).toBeVisible();
+  await dialog.getByRole('button', { name: '关闭个人中心' }).click();
+  await header.getByRole('button', { name: '李四', exact: true }).hover();
+  await page.getByText('个人中心', { exact: true }).click();
+  await dialog.locator('input[type="file"]').first().setInputFiles({ name: 'avatar.png', mimeType: 'image/png', buffer: png });
+  await dialog.getByRole('button', { name: '保存头像', exact: true }).click();
+  await expect(dialog.getByText('头像更新成功', { exact: true })).toBeVisible();
+  await expect.poll(() => avatarAuthorization).toBe(`Bearer ${'a'.repeat(43)}`);
+  await expect.poll(() => header.locator('img[alt="avatar"]').evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(1);
+  await page.reload();
+  await expect(header.getByRole('button', { name: '李四', exact: true })).toBeVisible();
+  await expect.poll(() => header.locator('img[alt="avatar"]').evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(1);
+  expect(legacyRequests).toEqual([]);
+});
+
+test('profile write failures are shown without changing the displayed name or avatar', async ({ page }) => {
+  const message = '演示账号为只读，不能修改数据';
+  await page.route('**/api/users/me', route => route.fulfill({ status: 403, json: { message } }));
+  await page.route('**/api/users/me/avatar', route => route.fulfill({ status: 403, json: { message } }));
+  await page.goto('/#/home');
+  const header = page.locator('header').first();
+  await header.getByRole('button', { name: 'Admin', exact: true }).hover();
+  await page.getByText('个人中心', { exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: '个人中心' });
+  await dialog.getByRole('button', { name: '修改显示名称', exact: true }).click();
+  await dialog.getByPlaceholder('请输入显示名称').fill('不会保存');
+  await dialog.getByRole('button', { name: '保存显示名称', exact: true }).click();
+  await expect(dialog.getByText(message, { exact: true })).toBeVisible();
+  await expect(header.getByRole('button', { name: 'Admin', exact: true })).toBeVisible();
+  await dialog.getByRole('button', { name: '修改头像', exact: true }).click();
+  await dialog.locator('input[type="file"]').first().setInputFiles({
+    name: 'avatar.png', mimeType: 'image/png',
+    buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGP4DwQACfsD/fteaysAAAAASUVORK5CYII=', 'base64'),
+  });
+  await dialog.getByRole('button', { name: '保存头像', exact: true }).click();
+  await expect(dialog.getByText(message, { exact: true })).toBeVisible();
+  await expect(header.locator('img[alt="avatar"]')).toHaveCount(0);
+});

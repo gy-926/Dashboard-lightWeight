@@ -1,9 +1,9 @@
 <script setup lang="ts">
-  import { ref, computed, watch } from 'vue';
-  import { kivii } from '@kivii.com/bridge';
-  import { apiRequest, getCurrentUser } from '@/api/nest-client';
+  import { ref, watch } from 'vue';
+  import { apiRequest, clearAuth } from '@/api/nest-client';
+  import { useUserProfile } from '@/composables/useUserProfile';
+  import { updateMyAvatar, updateMyName } from '@/api/user-profile';
   import { validateNewPassword } from '@/utils/password-policy';
-  import { uploadFile } from '@/api/files';
 
   const props = defineProps<{
     visible: boolean;
@@ -21,15 +21,7 @@
   type Tab = 'avatar' | 'password' | 'alias';
   const activeTab = ref<Tab>('avatar');
 
-  // 当前用户信息
-  const currentUserName = computed(() => getCurrentUser()?.name || (window as any).KiviiContext?.CurrentMember?.FullName || '用户');
-  const currentAvatar = computed(() => {
-    const avatar = (window as any).KiviiContext?.CurrentMember?.Avatar;
-    if (!avatar) return '';
-    if (avatar.startsWith('http')) return avatar;
-    const base = ((window as any).KiviiContext?.UrlBase || '').replace(/\/$/, '');
-    return base + avatar;
-  });
+  const { currentUserName, currentUserAvatar: currentAvatar } = useUserProfile();
 
   // ── 头像 ──
   const avatarPreview = ref<string>('');
@@ -40,13 +32,14 @@
   watch(
     () => props.visible,
     val => {
+      if (!val) avatarFile.value = null;
       if (val) {
         avatarPreview.value = currentAvatar.value;
         avatarFile.value = null;
         avatarMessage.value = null;
         passwordForm.value = { old: '', next: '', confirm: '' };
         passwordMessage.value = null;
-        aliasForm.value = { displayName: (window as any).KiviiContext?.CurrentMember?.FullName || currentUserName.value };
+        aliasForm.value = { displayName: currentUserName.value };
         aliasMessage.value = null;
         activeTab.value = 'avatar';
       }
@@ -57,8 +50,8 @@
     const input = e.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      avatarMessage.value = { type: 'error', text: '请选择图片文件' };
+    if (!['image/png', 'image/jpeg', 'image/gif', 'image/webp'].includes(file.type)) {
+      avatarMessage.value = { type: 'error', text: '请选择 PNG、JPEG、GIF 或 WebP 图片' };
       return;
     }
     if (file.size > 2 * 1024 * 1024) {
@@ -69,7 +62,7 @@
     avatarMessage.value = null;
     const reader = new FileReader();
     reader.onload = ev => {
-      avatarPreview.value = ev.target?.result as string;
+      if (avatarFile.value === file) avatarPreview.value = ev.target?.result as string;
     };
     reader.readAsDataURL(file);
     // 重置 input，允许重复选同一文件
@@ -77,6 +70,7 @@
   }
 
   async function saveAvatar() {
+    if (avatarLoading.value) return;
     if (!avatarFile.value) {
       avatarMessage.value = { type: 'error', text: '请先选择头像图片' };
       return;
@@ -84,12 +78,9 @@
     avatarLoading.value = true;
     avatarMessage.value = null;
     try {
-      await uploadFile(avatarFile.value);
-      const member = (window as any).KiviiContext?.CurrentMember;
-      if (member) {
-        member.Avatar = avatarPreview.value;
-      }
-      avatarMessage.value = { type: 'success', text: '头像已保存到本地文件存储' };
+      await updateMyAvatar(avatarFile.value);
+      avatarFile.value = null;
+      avatarMessage.value = { type: 'success', text: '头像更新成功' };
     } catch (error: any) {
       avatarMessage.value = { type: 'error', text: error?.message || '头像上传失败，请重试' };
     } finally {
@@ -105,6 +96,7 @@
   const showConfirm = ref(false);
 
   async function savePassword() {
+    if (passwordLoading.value) return;
     if (!passwordForm.value.old || !passwordForm.value.next || !passwordForm.value.confirm) {
       passwordMessage.value = { type: 'error', text: '请填写原密码、新密码和确认密码' };
       return;
@@ -124,6 +116,7 @@
       await apiRequest('/auth/change-password', { method: 'POST', body: JSON.stringify({ oldPassword: passwordForm.value.old, newPassword: passwordForm.value.next }) });
       passwordMessage.value = { type: 'success', text: '密码修改成功' };
       passwordForm.value = { old: '', next: '', confirm: '' };
+      clearAuth();
     } catch {
       passwordMessage.value = { type: 'error', text: '密码修改失败，请重试' };
     } finally {
@@ -137,27 +130,20 @@
   const aliasMessage = ref<{ type: 'success' | 'error'; text: string } | null>(null);
 
   async function saveAlias() {
+    if (aliasLoading.value) return;
     const name = aliasForm.value.displayName.trim();
     if (!name) {
-      aliasMessage.value = { type: 'error', text: '显示名称不能为空' };
-      return;
-    }
-    const member = (window as any).KiviiContext?.CurrentMember;
-    if (!member?.Kvid) {
-      aliasMessage.value = { type: 'error', text: '无法获取当前用户信息，请刷新后重试' };
+      aliasMessage.value = { type: 'error', text: '请输入显示名称' };
       return;
     }
     aliasLoading.value = true;
     aliasMessage.value = null;
     try {
-      await kivii.request.post('/Restful/Kivii.Organizations.Entities.Member/Update.json', {
-        Item: { FullName: name, Metadata: {}, Kvid: member.Kvid },
-      });
-      member.FullName = name;
-      member.DisplayName = name;
+      const user = await updateMyName(name);
+      aliasForm.value.displayName = user.name;
       aliasMessage.value = { type: 'success', text: '显示名称更新成功' };
-    } catch {
-      aliasMessage.value = { type: 'error', text: '显示名称更新失败，请重试' };
+    } catch (error: any) {
+      aliasMessage.value = { type: 'error', text: error?.message || '显示名称更新失败，请重试' };
     } finally {
       aliasLoading.value = false;
     }
@@ -192,6 +178,9 @@
             v-if="visible"
             class="relative w-full max-w-md mx-4 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden"
             style="width: 420px;"
+            role="dialog"
+            aria-modal="true"
+            aria-label="个人中心"
           >
             <!-- Header -->
             <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
@@ -207,6 +196,7 @@
               <button
                 class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                 @click="close"
+                aria-label="关闭个人中心"
               >
                 <i class="fas fa-times" />
               </button>
@@ -261,7 +251,8 @@
                       <i class="fas fa-camera text-white text-xl" />
                       <input
                         type="file"
-                        accept="image/*"
+                        accept="image/png,image/jpeg,image/gif,image/webp"
+                    :disabled="avatarLoading"
                         class="hidden"
                         @change="onAvatarFileChange"
                       />
@@ -280,7 +271,8 @@
                   </span>
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/png,image/jpeg,image/gif,image/webp"
+                    :disabled="avatarLoading"
                     class="hidden"
                     @change="onAvatarFileChange"
                   />
@@ -386,16 +378,16 @@
               <!-- 修改显示名称 -->
               <div v-else-if="activeTab === 'alias'" class="space-y-4">
                 <div class="space-y-1">
-                  <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">显示名称（FullName）</label>
+                  <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">显示名称</label>
                   <input
                     v-model="aliasForm.displayName"
                     type="text"
-                    placeholder="请输入显示名称（FullName）"
-                    maxlength="32"
+                    placeholder="请输入显示名称"
+                    maxlength="100"
                     class="w-full px-3 py-2.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     @keydown.enter="saveAlias"
                   />
-                  <p class="text-xs text-gray-400 dark:text-gray-500 text-right">{{ aliasForm.displayName.length }}/32</p>
+                  <p class="text-xs text-gray-400 dark:text-gray-500 text-right">{{ aliasForm.displayName.length }}/100</p>
                 </div>
 
                 <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg px-4 py-3 text-xs text-gray-500 dark:text-gray-400 space-y-1">
@@ -405,7 +397,7 @@
                   </p>
                   <p class="flex items-center gap-1.5">
                     <i class="fas fa-info-circle text-blue-400" />
-                    支持中英文、数字，最多 32 个字符
+                    支持中英文、数字等字符，最多 100 个字符
                   </p>
                 </div>
 

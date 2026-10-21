@@ -6,9 +6,9 @@
   import UserProfileModal from './UserProfileModal.vue';
   import GlobalFunctionSearch from './GlobalFunctionSearch.vue';
   import type { MenuItem } from '../global-menu/types';
-  import { kivii } from '@kivii.com/bridge';
   import { normalizeBrandText } from '@/utils/brand';
   import { logout } from '@/api/nest-client';
+  import { useUserProfile } from '@/composables/useUserProfile';
   import { reloadDynamicRoutes, clearDynamicRoutesState } from '@/router';
   import { setAuthenticatedFlag } from '@/utils/auth-state';
   import { useTeleportManager } from '@/store/modules/teleport-manager';
@@ -121,12 +121,6 @@
 
       await logout();
 
-      // [保留旧的后端退出逻辑，如有需要可以取消注释]
-      // await kivii.request.post('/auth/logout.json', undefined, {
-      //   header: {
-      //     'Content-Type': 'application/json',
-      //   },
-      // });
     } catch (error) {
       console.error('Logout failed:', error);
     } finally {
@@ -166,17 +160,7 @@
     return (window as any).uiGlobalConfig?.Icon || 'fas fa-bolt';
   });
 
-  const currentUserName = computed(() => {
-    return (window as any).KiviiContext?.CurrentMember?.FullName || 'Admin';
-  });
-
-  const currentUserAvatar = computed(() => {
-    const avatar = (window as any).KiviiContext?.CurrentMember?.Avatar;
-    if (!avatar) return '';
-    if (avatar.startsWith('http')) return avatar;
-    const base = ((window as any).KiviiContext?.UrlBase || '').replace(/\/$/, '');
-    return base + avatar;
-  });
+  const { currentUserName, currentUserAvatar } = useUserProfile();
 </script>
 
 <template>
@@ -247,6 +231,7 @@
       >
         <button
           class="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
+          :aria-label="currentUserName"
         >
           <div
             class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center overflow-hidden"
@@ -393,6 +378,7 @@
       >
         <button
           class="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
+          :aria-label="currentUserName"
         >
           <div
             class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center overflow-hidden"

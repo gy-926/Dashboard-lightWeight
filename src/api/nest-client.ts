@@ -1,3 +1,5 @@
+import { readonly, shallowRef } from 'vue';
+
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '');
 
 export function isNestApiRequest(url: string): boolean {
@@ -11,6 +13,7 @@ export interface ApiUser {
   name: string;
   email: string;
   role: 'user' | 'super_admin';
+  avatarFileId?: string | null;
 }
 interface AuthResult {
   accessToken: string;
@@ -19,7 +22,7 @@ interface AuthResult {
 }
 
 let accessToken: string | null = null;
-let currentUser: ApiUser | null = null;
+const currentUser = shallowRef<ApiUser | null>(null);
 let refreshPromise: Promise<boolean> | null = null;
 const listeners = new Set<() => void>();
 
@@ -34,13 +37,23 @@ export function getAccessToken() {
   return accessToken;
 }
 export function getCurrentUser() {
-  return currentUser;
+  return currentUser.value;
 }
 function setAuth(result: AuthResult | null) {
   accessToken = result?.accessToken ?? null;
-  currentUser = result?.user ?? null;
+  currentUser.value = result?.user ?? null;
   notify();
 }
+export function useCurrentUser() {
+  return readonly(currentUser);
+}
+
+export function updateCurrentUserProfile(user: ApiUser) {
+  if (currentUser.value?.id !== user.id) return;
+  currentUser.value = user;
+  notify();
+}
+
 export function clearAuth() {
   setAuth(null);
 }

@@ -12,7 +12,7 @@ import { User, UserRole } from './entities/user.entity.js';
 
 export type PublicUser = Pick<
   User,
-  'id' | 'name' | 'email' | 'role' | 'createdAt' | 'updatedAt'
+  'id' | 'name' | 'email' | 'role' | 'avatarFileId' | 'createdAt' | 'updatedAt'
 >;
 
 export function toPublicUser(user: User): PublicUser {
@@ -21,6 +21,7 @@ export function toPublicUser(user: User): PublicUser {
     name: user.name,
     email: user.email,
     role: user.role,
+    avatarFileId: user.avatarFileId ?? null,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };

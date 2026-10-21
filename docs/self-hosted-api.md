@@ -67,12 +67,24 @@ JSON 接口使用统一响应格式：
 | `POST` | `/auth/login` | 登录并返回访问令牌 |
 | `POST` | `/auth/refresh` | 轮换刷新 Cookie 并返回新访问令牌 |
 | `GET` | `/auth/me` | 获取当前用户 |
+| `GET` | `/users/me` | 获取本人资料，包含 `name` 和 `avatarFileId` |
+| `PATCH` | `/users/me` | 更新本人显示名称，提交 `name`（去除首尾空格，1–100 字符） |
+| `POST` | `/users/me/avatar` | multipart `file` 上传并绑定本人头像，最大 2MB |
+| `GET` | `/users/me/avatar` | 携带访问令牌读取本人头像图片 |
 | `POST` | `/auth/change-password` | 修改密码并撤销全部已有会话 |
 | `POST` | `/auth/logout` | 撤销当前刷新会话 |
 | `GET` | `/users` | 普通用户只查看本人，超级管理员查看全部 |
 | `GET` | `/users/:id` | 本人或超级管理员查看 |
 
 密码为 8–128 位，必须同时包含字母、数字和符号，不能包含空格。同一邮箱在 15 分钟内连续失败 10 次后锁定 15 分钟。数据库只保存带随机盐的密码哈希。
+
+## 个人资料与头像
+
+应用统一使用 Nest 用户信息显示顶栏和个人中心，不再读取 `KiviiContext` 或调用旧 Member 接口。登录、续期和资料更新响应均包含头像文件 ID；前端保存成功后立即更新姓名，并通过带 Bearer 令牌的请求读取私有头像，转为 Blob URL 展示。账号切换时释放旧头像 URL。
+
+头像仅支持 PNG、JPEG、GIF 和 WebP，服务端校验文件头及 2MB 大小限制，不接受 SVG。文件存入现有本地存储，`users.avatar_file_id` 记录绑定关系；删除头像文件时外键自动清空绑定。替换头像后旧文件仍在本人文件存储中，可自行删除。头像访问仅允许当前登录用户，浏览器不直接通过无认证图片 URL 请求文件。
+
+更新既有部署前，在 `server/` 执行 `npm run migration:run`，应用 `AddUserAvatar1790050000000` 迁移，再启动新版 API。公开只读演示账号仍受 `DEMO_READONLY` 限制；修改密码沿用撤销全部会话的行为，前端会回到登录页。
 
 ## Dashboard 接口
 

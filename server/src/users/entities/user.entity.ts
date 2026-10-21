@@ -32,6 +32,9 @@ export class User {
   @Column({ name: 'department_id', type: 'char', length: 36, nullable: true })
   departmentId: string | null;
 
+  @Column({ name: 'avatar_file_id', type: 'char', length: 36, nullable: true })
+  avatarFileId: string | null;
+
   // 旧账号暂时没有密码，不能登录；查询用户时不读取此列。
   @Column({
     name: 'password_hash',
