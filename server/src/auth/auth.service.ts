@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createHash, randomBytes } from 'node:crypto';
+import { performance } from 'node:perf_hooks';
 import { IsNull, Repository } from 'typeorm';
 import { User } from '../users/entities/user.entity.js';
 import { toPublicUser } from '../users/users.service.js';
@@ -36,54 +37,84 @@ export class AuthService {
     private readonly attempts: Repository<LoginAttempt>,
   ) {}
 
-  async login(email: string, password: string) {
+  async login(
+    email: string,
+    password: string,
+    onTiming?: (stage: string, milliseconds: number) => void,
+  ) {
+    async function measure<T>(
+      stage: string,
+      work: () => Promise<T>,
+    ): Promise<T> {
+      const started = performance.now();
+      try {
+        return await work();
+      } finally {
+        onTiming?.(stage, performance.now() - started);
+      }
+    }
     const emailHash = tokenHash(email.trim().toLowerCase());
-    const result = await this.attempts.manager.transaction(async (manager) => {
-      // INSERT IGNORE 解决首次并发登录时计数行不存在的问题。
-      await manager.query(
-        'INSERT IGNORE INTO `auth_login_attempts` (`email_hash`) VALUES (?)',
-        [emailHash],
-      );
-      const attempt = await manager
-        .getRepository(LoginAttempt)
-        .createQueryBuilder('attempt')
-        .setLock('pessimistic_write')
-        .where('attempt.emailHash = :emailHash', { emailHash })
-        .getOneOrFail();
-      const now = Date.now();
-      if (attempt.lockedUntil && attempt.lockedUntil.getTime() > now) {
-        return { status: 'locked' as const };
-      }
-      if (
-        !attempt.windowStartedAt ||
-        now - attempt.windowStartedAt.getTime() >= LOGIN_WINDOW_MS
-      ) {
-        attempt.failedCount = 0;
-        attempt.windowStartedAt = new Date(now);
-        attempt.lockedUntil = null;
-      }
+    const result = await measure('auth_transaction', () =>
+      this.attempts.manager.transaction(async (manager) => {
+        // INSERT IGNORE 解决首次并发登录时计数行不存在的问题。
+        await measure('attempt_init', () =>
+          manager.query(
+            'INSERT IGNORE INTO `auth_login_attempts` (`email_hash`) VALUES (?)',
+            [emailHash],
+          ),
+        );
+        const attempt = await measure('attempt_lock', () =>
+          manager
+            .getRepository(LoginAttempt)
+            .createQueryBuilder('attempt')
+            .setLock('pessimistic_write')
+            .where('attempt.emailHash = :emailHash', { emailHash })
+            .getOneOrFail(),
+        );
+        const now = Date.now();
+        if (attempt.lockedUntil && attempt.lockedUntil.getTime() > now) {
+          return { status: 'locked' as const };
+        }
+        if (
+          !attempt.windowStartedAt ||
+          now - attempt.windowStartedAt.getTime() >= LOGIN_WINDOW_MS
+        ) {
+          attempt.failedCount = 0;
+          attempt.windowStartedAt = new Date(now);
+          attempt.lockedUntil = null;
+        }
 
-      const user = await manager
-        .getRepository(User)
-        .createQueryBuilder('user')
-        .addSelect('user.passwordHash')
-        .where('user.email = :email', { email })
-        .getOne();
-      const valid = user?.passwordHash
-        ? await verifyPassword(password, user.passwordHash)
-        : false;
-      if (valid && user) {
-        await manager.getRepository(LoginAttempt).delete({ emailHash });
-        return { status: 'success' as const, user };
-      }
+        const user = await measure('user_lookup', () =>
+          manager
+            .getRepository(User)
+            .createQueryBuilder('user')
+            .addSelect('user.passwordHash')
+            .where('user.email = :email', { email })
+            .getOne(),
+        );
+        const passwordHash = user?.passwordHash;
+        const valid = passwordHash
+          ? await measure('password_verify', () =>
+              verifyPassword(password, passwordHash),
+            )
+          : false;
+        if (valid && user) {
+          await measure('attempt_update', () =>
+            manager.getRepository(LoginAttempt).delete({ emailHash }),
+          );
+          return { status: 'success' as const, user };
+        }
 
-      attempt.failedCount += 1;
-      if (attempt.failedCount >= MAX_LOGIN_FAILURES) {
-        attempt.lockedUntil = new Date(now + LOGIN_WINDOW_MS);
-      }
-      await manager.getRepository(LoginAttempt).save(attempt);
-      return { status: 'invalid' as const };
-    });
+        attempt.failedCount += 1;
+        if (attempt.failedCount >= MAX_LOGIN_FAILURES) {
+          attempt.lockedUntil = new Date(now + LOGIN_WINDOW_MS);
+        }
+        await measure('attempt_update', () =>
+          manager.getRepository(LoginAttempt).save(attempt),
+        );
+        return { status: 'invalid' as const };
+      }),
+    );
 
     if (result.status === 'locked') {
       throw new HttpException(
@@ -94,7 +125,7 @@ export class AuthService {
     if (result.status === 'invalid') {
       throw new UnauthorizedException('邮箱或密码错误');
     }
-    return this.createSession(result.user);
+    return measure('session_create', () => this.createSession(result.user));
   }
 
   private async createSession(user: User) {

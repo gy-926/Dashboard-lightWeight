@@ -10,8 +10,12 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import { performance } from 'node:perf_hooks';
 import { AccessTokenGuard } from './access-token.guard.js';
-import { envLimit, IpRateLimitGuard } from '../common/guards/ip-rate-limit.guard.js';
+import {
+  envLimit,
+  IpRateLimitGuard,
+} from '../common/guards/ip-rate-limit.guard.js';
 import type { AuthenticatedRequest } from './access-token.guard.js';
 import { AuthService, REFRESH_TOKEN_SECONDS } from './auth.service.js';
 import { ChangePasswordDto } from './dto/change-password.dto.js';
@@ -55,15 +59,27 @@ export class AuthController {
     @Body() body: LoginDto,
     @Res({ passthrough: true }) response: Response,
   ) {
-    const { refreshToken, ...result } = await this.auth.login(
-      body.email,
-      body.password,
-    );
-    response.cookie(COOKIE_NAME, refreshToken, {
-      ...cookieOptions(),
-      maxAge: REFRESH_TOKEN_SECONDS * 1000,
-    });
-    return { ...result, tokenType: 'Bearer' };
+    const started = performance.now();
+    const metrics: string[] = [];
+    try {
+      const { refreshToken, ...result } = await this.auth.login(
+        body.email,
+        body.password,
+        (stage, milliseconds) =>
+          metrics.push(`${stage};dur=${milliseconds.toFixed(1)}`),
+      );
+      response.cookie(COOKIE_NAME, refreshToken, {
+        ...cookieOptions(),
+        maxAge: REFRESH_TOKEN_SECONDS * 1000,
+      });
+      return { ...result, tokenType: 'Bearer' };
+    } finally {
+      // 请求级时间，不包含密码、邮箱和令牌；错误响应也保留已完成阶段。
+      metrics.push(
+        `auth_total;dur=${(performance.now() - started).toFixed(1)}`,
+      );
+      response.setHeader('Server-Timing', metrics.join(', '));
+    }
   }
 
   @Post('refresh')
