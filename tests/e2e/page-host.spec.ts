@@ -307,6 +307,15 @@ test('normal logout destroys every PageHost instance and clears the session tabs
   await expect(page.locator('#page-host-root [data-page-host-instance]')).toHaveCount(3);
   const destroyBefore = (await diagnosticSummary(page))?.destroy ?? 0;
 
+  await page.evaluate(() => {
+    localStorage.setItem('DYNAMIC_ROUTES_CACHE', 'stale-routes');
+    localStorage.setItem('kivii-tabs', 'stale-tabs');
+    localStorage.setItem('kivii-theme', JSON.stringify({ primaryColor: '#10b981', showFooter: true }));
+    localStorage.setItem('kivii-umd-menu-config', '{"example":{"enabled":false,"components":{}}}');
+    localStorage.setItem('other-app-data', 'keep-local');
+    sessionStorage.setItem('other-app-data', 'keep-session');
+  });
+
   await page.getByRole('button', { name: 'E2E', exact: true }).hover();
   await page.getByText('退出登录', { exact: true }).click();
 
@@ -315,6 +324,23 @@ test('normal logout destroys every PageHost instance and clears the session tabs
   await expect.poll(async () => (await diagnosticSummary(page))?.destroy).toBe(destroyBefore + 3);
   await expect(page.locator('.tab-item')).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => window.uiGlobalConfig?.IsAuthenticated)).toBe(false);
+  expect(await page.evaluate(() => ({
+    routes: localStorage.getItem('DYNAMIC_ROUTES_CACHE'),
+    tabs: localStorage.getItem('kivii-tabs'),
+    theme: JSON.parse(localStorage.getItem('kivii-theme') || '{}'),
+    umd: localStorage.getItem('kivii-umd-menu-config'),
+    local: localStorage.getItem('other-app-data'),
+    session: sessionStorage.getItem('other-app-data'),
+    user: window.uiGlobalConfig?.CurrentUser,
+  }))).toEqual({
+    routes: null,
+    tabs: null,
+    theme: { primaryColor: '#10b981', showFooter: true },
+    umd: '{"example":{"enabled":false,"components":{}}}',
+    local: 'keep-local',
+    session: 'keep-session',
+    user: null,
+  });
 });
 
 test('401 relogin clears stale persistence and rebuilds the current PageHost page', async ({

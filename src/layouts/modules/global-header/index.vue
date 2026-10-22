@@ -132,8 +132,8 @@
 
       // 清理 store 和缓存
       menuStore.resetState();
-      localStorage.clear();
-      sessionStorage.clear();
+      // 只删除旧版本的会话标签缓存，保留主题、UMD 菜单偏好及同源其他应用的数据。
+      localStorage.removeItem('kivii-tabs');
     }
   }
 
