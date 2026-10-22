@@ -1,3 +1,4 @@
+import { UmdLoadError } from '@/utils/umd/loader';
 import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
 import { createPageInstanceKey } from './identity';
@@ -61,6 +62,8 @@ export const usePageHostPilotStore = defineStore('page-host-pilot', () => {
   let umdRegistrationBridge: UmdRegistrationBridge | null = null;
   let currentRouteResolution: { path: string; promise: Promise<boolean> } | null = null;
 
+  const loadError = ref<{ path: string; message: string } | null>(null);
+
   const allPages = computed(() => Array.from(pages.value.values()));
 
   function createDescriptorBase(route: PageHostPilotRoute): PageDescriptor {
@@ -96,6 +99,7 @@ export const usePageHostPilotStore = defineStore('page-host-pilot', () => {
 
   /** 在异步解析开始前同步预留实例身份，避免旧链路与 PageHost 同时渲染。 */
   function prepareRoute(route: PageHostPilotRoute, eligible: boolean): boolean {
+    loadError.value = null;
     if (eligible && !canHostRoute(route)) {
       blockAtCapacity(route);
       return false;
@@ -316,6 +320,12 @@ export const usePageHostPilotStore = defineStore('page-host-pilot', () => {
           blockAtCapacity(route);
           return false;
         }
+        if (error instanceof UmdLoadError) {
+          deactivateAll();
+          blockedPath.value = route.path;
+          loadError.value = { path: route.path, message: error.message };
+          return false;
+        }
         pageHostDiagnostics.record({
           ...diagnosticBase(route),
           event: 'fallback',
@@ -399,6 +409,7 @@ export const usePageHostPilotStore = defineStore('page-host-pilot', () => {
       });
       destroyHostedPageLifecycle(page.instanceKey, reason);
     });
+    loadError.value = null;
     pages.value.clear();
     activeInstanceKey.value = null;
     claimedPath.value = null;
@@ -428,6 +439,7 @@ export const usePageHostPilotStore = defineStore('page-host-pilot', () => {
   return {
     pages,
     allPages,
+    loadError,
     capacityWarning,
     canHostRoute,
     showCapacityWarning,

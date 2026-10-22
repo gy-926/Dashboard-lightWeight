@@ -113,12 +113,12 @@ export function getCurrentUserRoles(accessToken?: string): Promise<AuthRoleRecor
   );
 }
 
-export function getRuntimeMenu(internalCode: string): Promise<MenuApiResponse> {
-  return request<MenuApiResponse>(`/menus/runtime?internalCode=${encodeURIComponent(internalCode)}`);
+export function getRuntimeMenu(internalCode: string, signal?: AbortSignal): Promise<MenuApiResponse> {
+  return request<MenuApiResponse>(`/menus/runtime?internalCode=${encodeURIComponent(internalCode)}`, { signal });
 }
 
-export function getAutoStartupMenuKvid(menuRootKvid: string): Promise<string | null> {
-  return request<string | null>(`/menus/autostart?menuRootKvid=${encodeURIComponent(menuRootKvid)}`);
+export function getAutoStartupMenuKvid(menuRootKvid: string, signal?: AbortSignal): Promise<string | null> {
+  return request<string | null>(`/menus/autostart?menuRootKvid=${encodeURIComponent(menuRootKvid)}`, { signal });
 }
 
 export function getMenuConfig(): Promise<MenuConfigData> {

@@ -2,7 +2,11 @@ import type { ComponentConfig } from './types';
 import { umdLoadingCount } from './state';
 import { createUmdRequestUrl } from '@/utils/umd-cache';
 
+export const UMD_LOAD_TIMEOUT_MS = 15000;
+export class UmdLoadError extends Error {}
+
 const umdLoadPromises = new Map<string, Promise<any>>();
+const umdRetryCounts = new Map<string, number>();
 
 interface KiviiUmdRegistry {
   byUrl?: Record<string, any>;
@@ -100,7 +104,12 @@ export function relocateUmdStyles(existingStyleSet: Set<Element>): void {
 }
 
 export function loadUMDComponent(url: string, globalName?: string): Promise<any> {
-  const requestUrl = createUmdRequestUrl(url);
+  const retryKey = new URL(url, document.baseURI).href;
+  const attempt = umdRetryCounts.get(retryKey) || 0;
+  const request = new URL(createUmdRequestUrl(url), document.baseURI);
+  // 被移除的 script 在部分浏览器中仍可能保持网络请求；重试使用独立 URL 避免复用挂起请求。
+  if (attempt) request.searchParams.set('__kivii_umd_retry', String(attempt));
+  const requestUrl = request.href;
   const absoluteUrl = new URL(requestUrl, document.baseURI).href;
   const loadKey = `${absoluteUrl}::${globalName || 'auto'}`;
   const pendingLoad = umdLoadPromises.get(loadKey);
@@ -109,62 +118,61 @@ export function loadUMDComponent(url: string, globalName?: string): Promise<any>
   umdLoadingCount.value++;
 
   const loadPromise = new Promise<any>((resolve, reject) => {
-    const existingScript = Array.from(document.scripts).find(
-      script => script.src === absoluteUrl
-    );
-
-    const resolveGlobalComponent = () => {
-      const resolved = resolveLoadedUmdLibrary(requestUrl, globalName);
-      if (resolved) {
-        console.log(`[UMD] ${url} resolved by ${resolved.resolvedBy}`);
+    let script = Array.from(document.scripts).find(script => script.src === absoluteUrl);
+    const existingStyles = new Set<Element>(document.head.querySelectorAll('style'));
+    let settled = false;
+    const cleanup = () => {
+      clearTimeout(timer);
+      script?.removeEventListener('load', onLoad);
+      script?.removeEventListener('error', onError);
+    };
+    const fail = (message: string) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      if (script) {
+        script.dataset.umdLoadState = 'error';
+        script.remove();
+      }
+      umdRetryCounts.set(retryKey, attempt + 1);
+      reject(new UmdLoadError(message));
+    };
+    const onError = () => fail(`UMD 脚本加载失败，请重试: ${url}`);
+    const onLoad = () => {
+      if (settled) return;
+      try {
+        const resolved = resolveLoadedUmdLibrary(requestUrl, globalName);
+        if (!resolved) {
+          fail(`UMD 脚本已执行，但无法解析导出对象: ${url}`);
+          return;
+        }
+        script!.dataset.umdLoadState = 'loaded';
+        relocateUmdStyles(existingStyles);
+        settled = true;
+        cleanup();
         resolve(resolved.library);
-      } else {
-        reject(
-          new Error(
-            `UMD 脚本已执行，但无法解析导出对象: ${url}` +
-              (globalName ? ` (globalName: ${globalName})` : '')
-          )
-        );
+      } catch (error) {
+        fail(`UMD 模块解析失败: ${url} - ${error}`);
       }
     };
-
-    if (existingScript) {
-      const loadState = existingScript.dataset.umdLoadState;
-      const resourceLoaded =
-        loadState === 'loaded' || performance.getEntriesByName(absoluteUrl).length > 0;
-
-      if (resourceLoaded) {
-        resolveGlobalComponent();
-        return;
-      }
-      if (loadState === 'error') {
-        reject(new Error(`脚本加载失败: ${url}`));
-        return;
-      }
-
-      existingScript.addEventListener('load', resolveGlobalComponent, { once: true });
-      existingScript.addEventListener(
-        'error',
-        () => reject(new Error(`脚本加载失败: ${url}`)),
-        { once: true }
-      );
+    const timer = setTimeout(() => fail(`UMD 脚本加载超时，请检查网络后重试: ${url}`), UMD_LOAD_TIMEOUT_MS);
+    if (script?.dataset.umdLoadState === 'error') {
+      script.remove();
+      script = undefined;
+    }
+    if (script?.dataset.umdLoadState === 'loaded') {
+      onLoad();
       return;
     }
-
-    const existingStyles = new Set<Element>(document.head.querySelectorAll('style'));
-    const script = document.createElement('script');
-    script.src = requestUrl;
-    script.dataset.umdLoadState = 'loading';
-    script.onload = () => {
-      script.dataset.umdLoadState = 'loaded';
-      relocateUmdStyles(existingStyles);
-      resolveGlobalComponent();
-    };
-    script.onerror = () => {
-      script.dataset.umdLoadState = 'error';
-      reject(new Error(`脚本加载失败: ${url}`));
-    };
-    document.head.appendChild(script);
+    const isNew = !script;
+    if (!script) {
+      script = document.createElement('script');
+      script.src = requestUrl;
+      script.dataset.umdLoadState = 'loading';
+    }
+    script.addEventListener('load', onLoad);
+    script.addEventListener('error', onError);
+    if (isNew) document.head.appendChild(script);
   });
 
   const trackedPromise = loadPromise.finally(() => {

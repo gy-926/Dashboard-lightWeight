@@ -1,3 +1,5 @@
+import { ApiError } from '@/api/nest-client';
+import { withRequestTimeout } from '@/utils/request-timeout';
 import { getAutoStartupMenuKvid, getRuntimeMenu } from '@/api/dashboard-admin';
 import type { MenuApiResponse } from './types';
 
@@ -11,7 +13,7 @@ export class UnauthorizedError extends Error {
 
 export async function fetchAutoStartupKvid(menuRootKvid: string): Promise<string | null> {
   try {
-    return await getAutoStartupMenuKvid(menuRootKvid);
+    return await withRequestTimeout(signal => getAutoStartupMenuKvid(menuRootKvid, signal), '自动启动菜单加载超时');
   } catch (error) {
     console.warn('[MenuService] 获取自动启动菜单失败:', error);
     return null;
@@ -20,9 +22,9 @@ export async function fetchAutoStartupKvid(menuRootKvid: string): Promise<string
 
 export async function fetchMenuData(internalCode: string): Promise<MenuApiResponse> {
   try {
-    return await getRuntimeMenu(internalCode);
+    return await withRequestTimeout(signal => getRuntimeMenu(internalCode, signal), '菜单加载超时，请检查网络后重试');
   } catch (error) {
-    console.warn('[MenuService] 获取菜单失败:', error);
-    return { MenuRoot: { Kvid: '', Title: '' }, MenusMain: { Results: [], Total: 0 } };
+    if (error instanceof ApiError && error.status === 401) throw new UnauthorizedError();
+    throw error;
   }
 }

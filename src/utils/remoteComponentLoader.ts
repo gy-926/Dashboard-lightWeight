@@ -1,3 +1,4 @@
+import { withRequestTimeout } from './request-timeout';
 import type { App } from 'vue';
 import * as Vue from 'vue';
 import type { ComponentConfig, Config } from './umd/types';
@@ -20,9 +21,11 @@ export {
 export { generateUmdRoutes } from './umd/routes';
 
 const loadConfig = async (configPath: string): Promise<Config> => {
-  const response = await fetch(configPath);
-  if (!response.ok) throw new Error(`UMD 配置加载失败（HTTP ${response.status}）`);
-  return response.json() as Promise<Config>;
+  return withRequestTimeout(async signal => {
+    const response = await fetch(configPath, { signal });
+    if (!response.ok) throw new Error(`UMD 配置加载失败（HTTP ${response.status}）`);
+    return response.json() as Promise<Config>;
+  }, 'UMD 配置加载超时，请检查网络后重试');
 };
 
 // 清理 UMD 脚本执行后意外插入 <body> 的 CSS 文本节点

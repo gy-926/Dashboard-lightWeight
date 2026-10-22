@@ -1,6 +1,13 @@
 <template>
+  <div v-if="menuLoadError && $route.path !== '/login'" class="app-loading-overlay" role="alert">
+    <div class="app-loading-content">
+      <p class="text-lg font-medium text-gray-800">菜单加载失败</p>
+      <p class="app-loading-text my-4">{{ menuLoadError }}</p>
+      <button type="button" class="rounded bg-blue-600 px-5 py-2 text-white disabled:opacity-50" :disabled="retrying" @click="retryMenus">{{ retrying ? '重试中...' : '重新加载菜单' }}</button>
+    </div>
+  </div>
   <!-- 加载遮罩层：动态路由加载完成前显示，但登录页除外 -->
-  <div v-if="!isReady && $route.path !== '/login'" class="app-loading-overlay">
+  <div v-else-if="!isReady && $route.path !== '/login'" class="app-loading-overlay">
     <div class="app-loading-content">
       <div class="app-loading-spinner"></div>
       <p class="app-loading-text">加载中...</p>
@@ -18,7 +25,8 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { waitForRoutesReady } from '@/router'
+import { waitForRoutesReady, reloadDynamicRoutes } from '@/router'
+import { menuLoadError } from '@/router/load-state'
 import { useReLogin } from '@/composables/useReLogin'
 import ReLoginDialog from '@/components/ReLoginDialog.vue'
 import PageHostPilot from '@/runtime/page-host/PageHostPilot.vue'
@@ -34,6 +42,14 @@ const route = useRoute()
 const pageHostPilot = usePageHostPilotStore()
 
 const isReady = ref(false)
+const retrying = ref(false)
+async function retryMenus() {
+  if (retrying.value) return
+  retrying.value = true
+  isReady.value = false
+  try { await reloadDynamicRoutes() }
+  finally { isReady.value = true; retrying.value = false }
+}
 
 watch(
   () => route.fullPath,

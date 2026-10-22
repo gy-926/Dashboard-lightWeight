@@ -58,9 +58,16 @@ export function clearAuth() {
   setAuth(null);
 }
 
+export class ApiError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
 async function parse<T>(response: Response): Promise<T> {
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.message || `请求失败（HTTP ${response.status}）`);
+  if (!response.ok) throw new ApiError(payload.message || `请求失败（HTTP ${response.status}）`, response.status);
   return payload.Results as T;
 }
 

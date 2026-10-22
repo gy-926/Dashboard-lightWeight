@@ -42,6 +42,7 @@
   const dynamicHandler = ref<string>('');
   const dynamicUmdTag = ref<string>('');
   const isLoading = ref(true);
+  const loadError = ref('');
   let isDisposed = false;
   let functionAccessRequestId = 0;
 
@@ -134,6 +135,7 @@
       return true;
     } catch (error) {
       if (isCurrentRequest()) {
+        loadError.value = error instanceof Error ? error.message : '页面加载失败，请重试';
         console.error('[IframePage] 获取功能权限失败:', error);
       }
       return isCurrentRequest();
@@ -147,9 +149,15 @@
   async function applyRouteHandler(handler: string): Promise<boolean> {
     functionAccessRequestId++;
     if (isDisposed) return false;
-    await applyHandlerWithScript(handler, props.scriptPath);
-    isLoading.value = false;
-    return true;
+    try {
+      await applyHandlerWithScript(handler, props.scriptPath);
+      return !isDisposed;
+    } catch (error) {
+      if (!isDisposed) loadError.value = error instanceof Error ? error.message : '页面加载失败，请重试';
+      return false;
+    } finally {
+      if (!isDisposed) isLoading.value = false;
+    }
   }
 
   // 生成页面实例 ID
@@ -228,7 +236,9 @@
     }
   }
 
-  onMounted(async () => {
+  async function initializePage() {
+    loadError.value = '';
+    isLoading.value = true;
     // 路由层明确完成解析后，不再回退调用旧 Function Access 接口。
     const shouldInitialize = props.handlerResolved || !!props.handler
       ? await applyRouteHandler(props.handler || '')
@@ -237,7 +247,8 @@
 
     registerCurrentPage();
     handleCustomRouteParams();
-  });
+  }
+  onMounted(initializePage);
 
   // 激活时更新状态
   onActivated(() => {
@@ -256,6 +267,7 @@
   watch(
     () => [props.url, props.kvid, props.type, props.handler, props.handlerResolved, props.scriptPath],
     async () => {
+      loadError.value = '';
       isLoading.value = true;
       dynamicHandler.value = '';
       dynamicUmdTag.value = '';
@@ -276,9 +288,13 @@
 
 <template>
   <div class="iframe-page-entry">
+    <div v-if="loadError" role="alert" class="pointer-events-auto p-6 text-center text-sm text-gray-600 dark:text-gray-300">
+      <p>{{ loadError }}</p>
+      <button type="button" class="mt-4 rounded bg-primary px-4 py-2 text-white" @click="initializePage">重新加载页面</button>
+    </div>
     <!-- 加载中状态 -->
     <div
-      v-if="isLoading"
+      v-else-if="isLoading"
       class="loading-state"
     >
       <i class="fas fa-spinner fa-spin" />

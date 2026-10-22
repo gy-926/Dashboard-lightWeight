@@ -450,3 +450,57 @@ test('caps resident pages at 15 while preserving switching, refresh and reopenin
   await expect(residents).toHaveCount(15);
   await expect(page.locator('.tab-item').filter({ has: page.getByText('容量页面 15', { exact: true }) })).toHaveCount(1);
 });
+
+test('menu server failure shows an error and retry restores the requested page', async ({ page }) => {
+  let failing = true;
+  await page.route('**/api/dashboard-admin/menus/runtime?**', route =>
+    failing ? route.fulfill({ status: 503, json: { message: '菜单服务暂时不可用' } }) : route.fallback()
+  );
+  await page.reload();
+  await expect(page.getByRole('alert')).toContainText('菜单加载失败');
+  await expect(page.getByRole('alert')).toContainText('菜单服务暂时不可用');
+  failing = false;
+  await page.getByRole('button', { name: '重新加载菜单', exact: true }).click();
+  await expect(page.getByText('菜单加载失败', { exact: true })).toHaveCount(0);
+  await expect(page.locator('#page-host-root iframe')).toHaveCount(1);
+  await expect(page).toHaveURL(new RegExp(`#${firstPath}$`));
+});
+
+test('stalled UMD load ends with a retry and does not fall back to a second loader', async ({ page }) => {
+  await page.clock.install();
+  let stalled = true;
+  await page.route('**/e2e/e2e-umd.js*', route => stalled ? undefined : route.fallback());
+  const requested = page.waitForRequest('**/e2e/e2e-umd.js*');
+  await page.goto(`/entry/page-host-e2e#${umdPath}`);
+  await requested;
+  await page.clock.fastForward(15001);
+  await expect(page.getByRole('alert')).toContainText('UMD 脚本加载超时');
+  stalled = false;
+  await page.getByRole('button', { name: '重新加载页面', exact: true }).click();
+  await expect(page.locator('#page-host-root #umd-draft')).toBeVisible();
+  await expect(page.getByText('页面加载中...', { exact: true })).toHaveCount(0);
+});
+
+test('menu request timeout is visible and retry can recover', async ({ page }) => {
+  await page.clock.install();
+  let stalled = true;
+  await page.route('**/api/dashboard-admin/menus/runtime?**', route => stalled ? undefined : route.fallback());
+  const requested = page.waitForRequest('**/api/dashboard-admin/menus/runtime?**');
+  await page.reload();
+  await requested;
+  await page.clock.fastForward(15001);
+  await expect(page.getByRole('alert')).toContainText('菜单加载超时');
+  stalled = false;
+  await page.getByRole('button', { name: '重新加载菜单', exact: true }).click();
+  await expect(page.locator('#page-host-root iframe')).toHaveCount(1);
+});
+
+test('menu 401 with expired refresh session returns to login instead of an empty workspace', async ({ page }) => {
+  await page.route('**/api/dashboard-admin/menus/runtime?**', route => route.fulfill({ status: 401, json: { message: 'expired' } }));
+  let refreshes = 0;
+  await page.route('**/api/auth/refresh', route => ++refreshes === 1 ? route.fallback() : route.fulfill({ status: 401, json: { message: 'expired' } }));
+  await page.reload();
+  await expect(page).toHaveURL(/#\/login/);
+  await expect(page.getByPlaceholder('请输入邮箱')).toBeVisible();
+  await expect(page.getByText('菜单加载失败', { exact: true })).toHaveCount(0);
+});

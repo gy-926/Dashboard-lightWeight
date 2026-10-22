@@ -4,6 +4,7 @@
   import { useMenuStore } from '@/layouts/modules/global-menu/store';
   import { useTeleportManager } from '@/store/modules/teleport-manager';
   import { isDynamicPageRoute, shouldBypassRouteKeepAlive } from '@/router/page-route';
+  import { toPageHostRoute } from '@/runtime/page-host/route';
   import { usePageHostPilotStore } from '@/runtime/page-host/pilot-store';
 
   const props = withDefaults(
@@ -89,6 +90,10 @@
     return props.keepAlive && !bypassRouteKeepAlive.value;
   });
   const isPilotReserved = computed(() => pageHostPilot.isReservedPath(route.path));
+  function retryHostedPage() {
+    const pageRoute = toPageHostRoute(route);
+    if (pageHostPilot.prepareRoute(pageRoute, true)) void pageHostPilot.resolveRoute(pageRoute);
+  }
   const isPilotResolving = computed(() => pageHostPilot.resolvingPath === route.path);
 
   // 缓存的组件列表（使用路由名称作为缓存 key）
@@ -180,8 +185,12 @@
           route.name === 'organization' ? 'flex h-full flex-col' : '',
         ]"
       >
+        <div v-if="pageHostPilot.loadError?.path === route.path" role="alert" class="p-6 text-center text-sm text-gray-600 dark:text-gray-300">
+          <p>{{ pageHostPilot.loadError.message }}</p>
+          <button type="button" class="mt-4 rounded bg-primary px-4 py-2 text-white" @click="retryHostedPage">重新加载页面</button>
+        </div>
         <div
-          v-if="isPilotResolving"
+          v-else-if="isPilotResolving"
           class="absolute inset-0 flex items-center justify-center text-sm text-gray-500"
         >
           页面加载中...

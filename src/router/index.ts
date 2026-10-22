@@ -1,3 +1,4 @@
+import { menuLoadError } from './load-state';
 import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router';
 import { setupRouteGuards } from './guards';
 import {
@@ -89,11 +90,14 @@ async function initRoutes() {
 
   routesLoadPromise = (async () => {
     const generation = ++routeGeneration;
+    menuLoadError.value = '';
     try {
       // 优先使用 targetNavigation（来自 guards），否则使用当前路由
       const restorePath = targetNavigation || router.currentRoute.value.path;
 
       const { constantRoutes, authRoutes, initialRedirect } = await generateDynamicRoutes();
+
+      if (generation !== routeGeneration) return;
 
       // 保存原始路由树，用于构建菜单
       originalAuthRoutes = authRoutes;
@@ -157,6 +161,7 @@ async function initRoutes() {
       }
       void updateMenuFromRoutes(generation);
     } catch (error) {
+      if (generation !== routeGeneration) return;
       // 401：权限不足，跳转到登录页
       if (error instanceof UnauthorizedError) {
         const currentPath = router.currentRoute.value.path;
@@ -190,7 +195,8 @@ async function initRoutes() {
       }
 
       console.error('[Router] 动态路由加载失败:', error);
-      dynamicRoutesLoaded = true; // 标记为已完成，避免无限等待
+      menuLoadError.value = error instanceof Error ? error.message : '请检查网络后重试';
+      dynamicRoutesLoaded = true; // 本次尝试已结束，错误界面允许显式重试。
     }
   })();
 
@@ -285,6 +291,8 @@ export async function reloadDynamicRoutes(): Promise<void> {
 
 // 清除动态路由状态（仅用于退出登录，不重新请求菜单接口）
 export function clearDynamicRoutesState(): void {
+  menuLoadError.value = '';
+  targetNavigation = null;
   routeGeneration++;
   clearDynamicRoutesCache();
 
