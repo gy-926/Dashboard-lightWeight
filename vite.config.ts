@@ -40,7 +40,6 @@ export default defineConfig(({ mode }) => {
             'vendor-echarts': ['echarts'],
             'vendor-sfc-loader': ['vue3-sfc-loader'],
             'vendor-kivii': ['@kivii.com/bridge'],
-            'kivii-public-components': ['kivii-public-components'],
           },
         },
       },

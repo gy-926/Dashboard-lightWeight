@@ -10,9 +10,6 @@ import router from '@/router';
 import * as LayoutComponents from '@/layouts/modules';
 // 引入 kivii.com/bridge 库
 import '@kivii.com/bridge';
-// 引入公共组件及样式
-import * as KiviiPublicComponents from 'kivii-public-components';
-import 'kivii-public-components/style';
 import * as echarts from 'echarts';
 // 引入自定义 OpenTab 实现
 import { KiviiOpenTab } from '@/bridge/kivii-open-tab';
@@ -36,13 +33,6 @@ const initApp = async () => {
   // 注册布局全局组件
   for (const [key, component] of Object.entries(LayoutComponents)) {
     if (component) {
-      app.component(key, component);
-    }
-  }
-
-  // TODO: 如果需要 UMD 组件中直接使用公共组件标签，请取消以下注释进行全局注册
-  for (const [key, component] of Object.entries(KiviiPublicComponents)) {
-    if (component && (typeof component === 'object' || typeof component === 'function')) {
       app.component(key, component);
     }
   }

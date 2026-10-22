@@ -363,7 +363,7 @@ test('404 remains available after logout and login rebuild the dynamic routes', 
   expect(errors).toEqual([]);
 });
 
-const workspaceResource = /vendor-(?:echarts|sfc-loader|kivii)|kivii-public-components|vue3-sfc-loader|echarts|\/umd-showcase\/|\/bootstrap\/workspace/;
+const workspaceResource = /vendor-(?:echarts|sfc-loader|kivii)|vue3-sfc-loader|echarts|\/umd-showcase\/|\/bootstrap\/workspace/;
 
 test('login renders without requesting workspace resources or runtime menus', async ({ page }) => {
   const requests: string[] = [];
