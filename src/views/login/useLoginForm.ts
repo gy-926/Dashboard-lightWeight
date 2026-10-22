@@ -6,7 +6,8 @@ import { validateNewPassword } from '@/utils/password-policy';
 
 export function useLoginForm() {
   const route = useRoute();
-  const form = reactive({ username: '', password: '' });
+  // 演示项目默认填入公开的演示账号，用户仍可修改。
+  const form = reactive({ username: 'admin@example.com', password: 'admin@123456' });
   const isLoading = ref(false);
   const errorMsg = ref('');
   const isSignUp = ref(false);
