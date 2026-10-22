@@ -131,9 +131,9 @@
     </div>
 
     <!-- 底部折叠按钮 -->
-    <div class="border-t border-gray-200 dark:border-gray-700 p-3">
+    <div class="h-[54px] shrink-0 flex items-center border-t border-gray-200 dark:border-gray-700 px-3">
       <button
-        class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors duration-200"
+        class="h-7 w-full flex items-center justify-center gap-2 px-3 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors duration-200"
         @click="menuStore.toggleSider()"
       >
         <i

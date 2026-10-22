@@ -16,7 +16,6 @@ const defaultTheme: ThemeConfig = {
   darkMode: false,
   siderWidth: 220,
   showTabs: true,
-  showBreadcrumb: true,
   showFooter: false,
   showWatermark: false,
   watermarkText: 'Dashboard',

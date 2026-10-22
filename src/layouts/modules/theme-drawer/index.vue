@@ -220,20 +220,6 @@ function toggleCustomColor() {
               </label>
 
               <label class="flex items-center justify-between cursor-pointer">
-                <span class="text-sm text-gray-600 dark:text-gray-400">显示面包屑</span>
-                <div
-                  class="relative w-11 h-6 rounded-full transition-colors cursor-pointer"
-                  :class="theme.showBreadcrumb ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'"
-                  @click="menuStore.setTheme({ showBreadcrumb: !theme.showBreadcrumb })"
-                >
-                  <div
-                    class="absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform"
-                    :class="theme.showBreadcrumb ? 'translate-x-5' : 'translate-x-0'"
-                  />
-                </div>
-              </label>
-
-              <label class="flex items-center justify-between cursor-pointer">
                 <span class="text-sm text-gray-600 dark:text-gray-400">显示页脚</span>
                 <div
                   class="relative w-11 h-6 rounded-full transition-colors cursor-pointer"

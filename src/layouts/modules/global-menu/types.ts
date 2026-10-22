@@ -54,8 +54,6 @@ export interface ThemeConfig {
   siderWidth: number
   /** 是否显示标签页 */
   showTabs: boolean
-  /** 是否显示面包屑 */
-  showBreadcrumb: boolean
   /** 是否显示页脚 */
   showFooter: boolean
   /** 是否显示全屏水印 */

@@ -66,6 +66,8 @@ onMounted(() => {
 
       <!-- 内容区 -->
       <GlobalContent class="flex-1" />
+
+      <GlobalFooter v-if="menuStore.theme.showFooter" class="flex-shrink-0" />
     </div>
 
     <GlobalWatermark />
